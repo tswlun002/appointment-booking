@@ -6,7 +6,7 @@ jobs:
   build-app:
     runs-on: ubuntu-latest
     container:
-      image: maven:3.9.6
+      image: gradle:9.2.0
     permissions:
       contents: write
       actions: read
