@@ -1,0 +1,84 @@
+name: Build an application
+
+inputs:
+  ARTIFACT_ID:
+    required: true
+    description: ''
+  MODULE_PATH:
+    required: false
+    default: .
+
+outputs:
+  VERSION:
+    value: ${{ steps.version.outputs.VERSION }}
+    description: ''
+  ARTIFACT_PATH:
+    value: ${{ steps.build.outputs.ARTIFACT_PATH }}
+    description: ''
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Print Inputs
+      run: |
+        echo "===================="
+        echo "ARTIFACT_ID=${{ inputs.ARTIFACT_ID }}"
+        echo "======================"
+      shell: bash
+
+    - name: Rewrite version
+      id: version
+      run: |
+        DATE_TIME=$(date '+%Y.%m.%d.%H.%M')
+        SHA8=$(git rev-parse --short HEAD)
+        VERSION="${DATE_TIME}-${SHA8}"
+        find ${{ inputs.MODULE_PATH }} -name 'build.gradle.kts' -exec sed -i "s/VARSITYBLOCK-UNSET-VERSION/${VERSION}/g" {} +
+        echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
+        echo "VERSION=${VERSION}"
+      shell: bash
+      env:
+        TZ: Africa/Johannesburg
+    - name: Cache Gradle dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-kotlin-${{ hashFiles('**/*.gradle.kts', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-kotlin-
+
+    - name: Create Gradle directories
+      run: |
+        mkdir -p ~/.gradle/caches
+        mkdir -p ~/.gradle/wrapper
+
+      shell: bash
+    - name: Build with Gradle
+      id: build
+      run: |
+        ./gradlew clean build --console=plain --no-daemon  -DexcludedTags=kafka
+        ARTIFACT_PATH=$(pwd)/build/libs/${ARTIFACT_ID}-${VERSION}.jar
+        echo "ARTIFACT_PATH=${ARTIFACT_PATH}" >> "$GITHUB_OUTPUT"
+        echo "ARTIFACT_PATH=${ARTIFACT_PATH}"
+      shell: bash
+      env:
+        VERSION: ${{ steps.version.outputs.VERSION }}
+        ARTIFACT_ID: ${{ inputs.ARTIFACT_ID }}
+
+    - name: Print Outputs
+      run: |
+        echo "=============="
+        echo "VERSION: ${{ steps.version.outputs.VERSION }}" 
+        echo "ARTIFACT_PATH: ${{ steps.build.outputs.ARTIFACT_PATH }}" 
+        echo "==============="
+      shell: bash
+
+    - name: Upload Artifact
+      id: upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.ARTIFACT_ID }}-${{ steps.version.outputs.VERSION }}
+        path: ${{ steps.build.outputs.ARTIFACT_PATH }}
+        retention-days: 1
