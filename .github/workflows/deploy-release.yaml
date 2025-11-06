@@ -1,0 +1,92 @@
+name: Java CI/CD With Gradle 🛠️🔨🌩️🔥🔥😂😭
+on:
+  workflow_dispatch: #Manual kickoff
+
+jobs:
+  build-app:
+    runs-on: ubuntu-latest
+    container:
+      image: maven:3.9.6
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      VERSION: ${{ steps.build.outputs.VERSION }}
+      ARTIFACT_PATH: ${{ steps.build.outputs.ARTIFACT_PATH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Git
+        run: |
+          apt update -y
+          apt install -y git  #  Install Git
+
+      - name: Check branch status
+        run: |
+          git config --global --add safe.directory "*"
+          git fetch origin main
+          current_branch=$(git branch --show-current)
+          commits_behind=$(git rev-list --left-right --count origin/main..$current_branch | cut -f1)
+          if [ "$commits_behind" -gt 0 ]; then
+            echo "$current_branch is behind origin/main by $commits_behind commits"
+            echo "Please run the following command locally to rebase:"
+            echo ""
+            echo "   git pull --rebase origin main"
+            echo ""
+            echo "Resolve conflicts if needed, then push your changes before retrying this workflow."
+            exit 1
+          fi
+          echo " $current_branch is up to date with origin/main"
+
+      - name: Build with Gradle
+        id: build
+        uses: ./.github/actions/gradle-build
+        with:
+          ARTIFACT_ID: "appointment-booking"
+
+  build-docker:
+    needs:
+      - build-app
+    runs-on: ubuntu-latest
+    outputs:
+      IMAGE_NAME: ${{ steps.upload.outputs.IMAGE_NAME }}
+      IMAGE_DIGEST: ${{ steps.upload.outputs.IMAGE_DIGEST }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Upload image to registry
+        id: upload
+        uses: ./.github/actions/docker-build
+        with:
+          ARTIFACT_ID: "appointment-booking"
+          ARTIFACT_PATH: ${{ needs.build-app.outputs.ARTIFACT_PATH }}
+          MODULE: "appointment-booking"
+          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY }}
+          VERSION: ${{ needs.build-app.outputs.VERSION }}
+          IMAGE_REGISTRY: ${{ vars.IMAGE_REGISTRY }}
+          REGISTRY_ACCESS_ID: ${{ secrets.IMAGE_ACCESS_KEY }}
+          REGISTRY_ACCESS_SECRET: ${{ secrets.IMAGE_SECRET_KEY }}
+          REGISTRY_REGION: ${{ vars.IMAGE_SERVER_REGION }}
+  release-notes:
+    name: Create Release Notes
+    needs:
+      - build-app
+      - build-docker
+#      - Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create Github Release
+        run: |
+          gh release create $VERSION --target main --generate-notes
+          BODY=$(gh release view $VERSION --json body --jq '.body')
+          echo "$BODY" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "**Docker Image**: ${IMAGE}" >> release-notes.md
+          gh release edit $VERSION --notes-file release-notes.md
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.build-app.outputs.VERSION }}
+          IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}

@@ -1,0 +1,80 @@
+name: Build a Docker Container
+
+inputs:
+  VERSION:
+    required: true
+  MODULE:
+    required: true
+  MODULE_PATH:
+    default: .
+  IMAGE_REPOSITORY:
+    required: true
+  ARTIFACT_ID:
+    required: true
+  ARTIFACT_PATH:
+    required: true
+  IMAGE_REGISTRY:
+    required: true
+  REGISTRY_ACCESS_ID:
+    required: true
+  REGISTRY_ACCESS_SECRET:
+    required: true
+  REGISTRY_REGION:
+    required: true
+
+
+
+
+outputs:
+  IMAGE_NAME:
+    value: ${{ steps.variables.outputs.IMAGE_NAME }}
+  IMAGE_DIGEST:
+    value: ${{ steps.docker_build.outputs.IMAGE_DIGEST }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Print Inputs
+      run: |
+        echo "======================"
+        echo "VERSION=${{ inputs.VERSION}}"
+        echo "MODULE=${{ inputs.MODULE }}"
+        echo "MODULE_PATH=${{ inputs.MODULE_PATH }}"
+        echo "IMAGE_REPOSITORY=${{ inputs.IMAGE_REPOSITORY }}"
+        echo "ARTIFACT_ID=${{ inputs.ARTIFACT_ID }}"
+        echo "IMAGE_REGISTRY=${{ inputs.IMAGE_REGISTRY }}"
+        echo "==========================="
+      shell: bash
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.ARTIFACT_ID }}-${{ inputs.VERSION }}
+        path: ${{ inputs.MODULE_PATH }}/build/libs
+
+    - name: Set Variables
+      id: variables
+      run: |
+        IMAGE_NAME="${{ inputs.IMAGE_REGISTRY }}/${{ inputs.IMAGE_REPOSITORY }}:${{ inputs.VERSION }}"
+        echo "IMAGE_NAME=${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_NAME=${IMAGE_NAME}"
+      shell: bash
+      env:
+        IMAGE_REPOSITORY: ${{ inputs.IMAGE_REPOSITORY }}
+        VERSION: ${{ inputs.VERSION }}
+        IMAGE_REGISTRY: ${{ inputs.IMAGE_REGISTRY }}
+
+    - name: Docker Build
+      id: docker_build
+      run: |
+        docker build --build-arg JAR_FILE="${{ inputs.ARTIFACT_ID }}-${{ inputs.VERSION }}.jar" --iidfile=image-sha.txt -t "${{ steps.variables.outputs.IMAGE_NAME }}" "${{ inputs.MODULE_PATH }}" --no-cache
+        IMAGE_DIGEST=$(cat image-sha.txt) # Capture the digest
+        IMAGE_FILE="${{ steps.variables.outputs.IMAGE_NAME }}@${IMAGE_DIGEST}"
+        echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> "$GITHUB_OUTPUT" # Output the IMAGE_DIGEST
+        echo "IMAGE_FILE=${IMAGE_FILE}" >> "$GITHUB_OUTPUT" # Output the IMAGE_FILE
+        echo "$IMAGE_FILE" # Print to console for debugging
+      shell: bash
+
