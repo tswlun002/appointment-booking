@@ -33,7 +33,7 @@ runs:
         DATE_TIME=$(date '+%Y.%m.%d.%H.%M')
         SHA8=$(git rev-parse --short HEAD)
         VERSION="${DATE_TIME}-${SHA8}"
-        find ${{ inputs.MODULE_PATH }} -name 'build.gradle.kts' -exec sed -i "s/VARSITYBLOCK-UNSET-VERSION/${VERSION}/g" {} +
+        find ${{ inputs.MODULE_PATH }} -name 'build.gradle.kts' -exec sed -i "s/APPOINTMENT-BOOKING-UNSET-VERSION/${VERSION}/g" {} +
         echo "VERSION=${VERSION}" >> "$GITHUB_OUTPUT"
         echo "VERSION=${VERSION}"
       shell: bash
@@ -53,8 +53,12 @@ runs:
       run: |
         mkdir -p ~/.gradle/caches
         mkdir -p ~/.gradle/wrapper
-
       shell: bash
+
+    - name: Make gradlew executable
+      run: chmod +x ./gradlew
+      shell: bash
+
     - name: Build with Gradle
       id: build
       run: |
