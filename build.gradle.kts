@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "lunga"
-version = "0.0.1-SNAPSHOT"
+version = "APPOINTMENT-BOOKING-UNSET-VERSION"
 description = "appointment-booking"
 
 java {
@@ -40,4 +40,9 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
+    archiveBaseName.set("appointment-booking")
+    mainClass.set("lunga.appointmentbooking.AppointmentBookingApplication")
 }
