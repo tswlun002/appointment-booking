@@ -9,6 +9,8 @@ version = "APPOINTMENT-BOOKING-UNSET-VERSION"
 description = "appointment-booking"
 
 java {
+    sourceCompatibility = JavaVersion.VERSION_25
+
     toolchain {
         languageVersion = JavaLanguageVersion.of(25)
     }
@@ -24,23 +26,64 @@ repositories {
     mavenCentral()
 }
 
+// VERSIONS
+extra["resteasyVersion"] = "6.2.10.Final"
+extra["keycloakVersion"] = "26.0.5"
+
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
-    implementation("org.springframework.boot:spring-boot-starter-security")
+
+    //springboot web
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.liquibase:liquibase-core")
-    compileOnly("org.projectlombok:lombok")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.apache.httpcomponents.client5:httpclient5")
+
+    //security
+    //implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.31")
+
+
+
+    //Database
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     runtimeOnly("org.postgresql:postgresql")
+    implementation("org.liquibase:liquibase-core")
+
+
+    // Keycloak
+    implementation("org.keycloak:keycloak-admin-client:${property("keycloakVersion")}")
+    implementation("org.jboss.resteasy:resteasy-client:${property("resteasyVersion")}")
+    implementation("org.jboss.resteasy:resteasy-jackson2-provider:${property("resteasyVersion")}")
+
+    //Lombok
+    compileOnly("org.projectlombok:lombok")
+    testCompileOnly("org.projectlombok:lombok")
+    testAnnotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+
+    // Env utilities
+    implementation("me.paulschwarz:spring-dotenv:4.0.0")
+    // Validator
+    implementation("commons-validator:commons-validator:1.9.0")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
+    // Mapping
+    implementation("org.mapstruct:mapstruct:1.5.5.Final")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.0")
+
+    // test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation (platform("org.junit:junit-bom:5.10.2"))
+    testImplementation("org.testcontainers:junit-jupiter")
+    testImplementation("org.testcontainers:postgresql")
 }
 
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("appointment-booking")

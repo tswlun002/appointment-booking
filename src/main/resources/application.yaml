@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: appointment-booking
+  # DATABASE CONFIG
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  data:
+    jdbc:
+      dialect: postgresql
+  liquibase:
+    enabled: true
+    change-log: classpath:db/migrations/changelog.sql
+  jackson:
+    parser:
+      allow-unquoted-field-names: true
+# KEYCLOAK CONFIG
+keycloak:
+  realm: ${KEYCLOAK_REAL}
+  domain: ${KEYCLOAK_DOMAIN}
+  adminClientId: ${KEYCLOAK_ADMIN_CLIENT_ID}
+  adminClientSecret: ${KEYCLOAK_ADMIN_CLIENT_SECRETE}
+  scope: ${KEYCLOAK_ADMIN_SCOPE}
+  grant_type: ${KEYCLOAK_ADMIN_GRANT_TYPE}
+  client: ${KEYCLOAK_CLIENT_TYPE}
+  urls:
+    auth: ${KEYCLOAK_AUTH_URL}
+  user_auth_type: ${KEYCLOAK_USER_AUTH_TYPE}
+  password: ${KEYCLOAK_PASSWORD}
+  username: ${KEYCLOAK_USERNAME}
