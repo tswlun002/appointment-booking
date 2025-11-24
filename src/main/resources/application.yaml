@@ -1,6 +1,11 @@
 spring:
   application:
     name: appointment-booking
+  main:
+    allow-bean-definition-overriding: true
+  threads:
+    virtual:
+      enabled: true
   # DATABASE CONFIG
   datasource:
     url: ${DATABASE_URL}
@@ -16,9 +21,21 @@ spring:
   jackson:
     parser:
       allow-unquoted-field-names: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${AUTH_SERVER_TOKEN_URL}
+          issuer-uri: ${ISSUER_URI}
+
+# CORS properties
+allowed_origins:
+  urls: ${CORS_ALLOWED_ORIGIN:*}
+  cache_period: ${CORS_CERTS_CACHE_PERIOD:30}
+
 # KEYCLOAK CONFIG
 keycloak:
-  realm: ${KEYCLOAK_REAL}
+  realm: ${KEYCLOAK_REALM}
   domain: ${KEYCLOAK_DOMAIN}
   adminClientId: ${KEYCLOAK_ADMIN_CLIENT_ID}
   adminClientSecret: ${KEYCLOAK_ADMIN_CLIENT_SECRETE}
@@ -30,3 +47,67 @@ keycloak:
   user_auth_type: ${KEYCLOAK_USER_AUTH_TYPE}
   password: ${KEYCLOAK_PASSWORD}
   username: ${KEYCLOAK_USERNAME}
+
+# OTP CONFIG
+otp:
+  expire:
+    datetime: ${OTP_EXPIRE_DATETIME_IN_MINUTES:5}
+  number:
+    verification:
+      attempts: ${OTP_NUMBER_VERIFICATION_ATTEMPTS:3}
+# Kafka
+kafka:
+  replica: ${KAFKA_REPLICAS:3}
+  listen:
+    auto:
+      start: false
+  error:
+    persistence:
+      enabled: true
+  common-config:
+    bootstrap-servers: ${BROKER_BOOTSTRAP_SERVERS}
+    topic-names: ${EVENT_TOPICS}
+  consumer-config:
+    group-id: users-service-otp
+    none-retryable-exceptions:
+      - org.apache.kafka.common.errors.TimeoutException
+      - org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException
+      - org.apache.kafka.common.errors.NotEnoughReplicasException
+      - java.sql.SQLException
+      - java.sql.SQLTimeoutException
+      - java.sql.SQLClientInfoException
+      - jakarta.ws.rs.InternalServerErrorException
+      - lunga.appointmentbooking.exeption.MailSenderException
+      - org.eclipse.angus.mail.util.MailConnectException
+      - org.eclipse.angus.mail.util.MailConnectException
+      - org.apache.kafka.common.errors.TimeoutException
+      - org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException
+      - org.apache.kafka.common.errors.NotEnoughReplicasException
+      - org.springframework.kafka.support.serializer.DeserializationException
+      - jakarta.mail.MessagingException
+    event-publisher-default-impl:
+      enabled: true
+
+    allowed-packages-subdirectories: ${TRUSTED_PACKAGES_SUBDIRECTORIES}
+
+# Email
+mail:
+  host: ${MAIL_HOST}
+  protocol: "smtp"
+  port: 465
+  username: ${MAIL_USERNAME}
+  password: ${MAIL_PASSWORD}
+
+# END POINT MANAGEMENT
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+  endpoint:
+    shutdown:
+      enabled: true
+  info:
+    env:
+      enabled: true

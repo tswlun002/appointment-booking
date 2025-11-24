@@ -40,15 +40,14 @@ dependencies {
     //security
     //implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
     implementation("org.springframework.boot:spring-boot-starter-security")
-    implementation("com.nimbusds:nimbus-jose-jwt:9.31")
-
-
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
 
     //Database
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.liquibase:liquibase-core")
-
 
     // Keycloak
     implementation("org.keycloak:keycloak-admin-client:${property("keycloakVersion")}")
@@ -60,6 +59,14 @@ dependencies {
     testCompileOnly("org.projectlombok:lombok")
     testAnnotationProcessor("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
+
+    // Kafka
+    implementation("org.springframework.kafka:spring-kafka")
+
+    // Email
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("jakarta.mail:jakarta.mail-api")
+
 
     // Env utilities
     implementation("me.paulschwarz:spring-dotenv:4.0.0")
@@ -78,6 +85,8 @@ dependencies {
     testImplementation (platform("org.junit:junit-bom:5.10.2"))
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.springframework.kafka:spring-kafka-test")
+    testImplementation("org.testcontainers:kafka")
 }
 
 tasks.withType<Test> {

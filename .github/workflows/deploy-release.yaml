@@ -27,7 +27,7 @@ jobs:
           git config --global --add safe.directory "*"
           git fetch origin main
           current_branch=$(git branch --show-current)
-          commits_behind=$(git rev-list --left-right --count origin/main..$current_branch | cut -f1)
+          commits_behind=$(git rev-list --left-right --count origin/main.$current_branch | cut -f1)
           if [ "$commits_behind" -gt 0 ]; then
             echo "$current_branch is behind origin/main by $commits_behind commits"
             echo "Please run the following command locally to rebase:"
