@@ -77,7 +77,7 @@ kafka:
       - java.sql.SQLTimeoutException
       - java.sql.SQLClientInfoException
       - jakarta.ws.rs.InternalServerErrorException
-      - lunga.appointmentbooking.exeption.MailSenderException
+      - capitec.branch.appointment.exeption.MailSenderException
       - org.eclipse.angus.mail.util.MailConnectException
       - org.eclipse.angus.mail.util.MailConnectException
       - org.apache.kafka.common.errors.TimeoutException

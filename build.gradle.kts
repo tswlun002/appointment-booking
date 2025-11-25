@@ -96,5 +96,5 @@ tasks.withType<Test> {
 
 tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("appointment-booking")
-    mainClass.set("lunga.appointmentbooking.AppointmentBookingApplication")
+    mainClass.set("capitec.branch.appointment.AppointmentBookingApplication")
 }

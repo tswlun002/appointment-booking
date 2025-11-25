@@ -48,7 +48,7 @@ kafka:
     deliver-time-out-ms: 36000
   consumer-config:
     none-retryable-exceptions:
-      - lunga.appointmentbooking.exeption.MailSenderException
+      - capitec.branch.appointment.exeption.MailSenderException
       - org.eclipse.angus.mail.util.MailConnectException
       - org.eclipse.angus.mail.util.MailConnectException
       - org.apache.kafka.common.errors.TimeoutException
