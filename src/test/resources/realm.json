@@ -14,11 +14,11 @@
   "smtpServer": {
     "host": "smtp.gmail.com",
     "port": "587",
-    "from": "1998iungatsewu@gmail.com",
+    "from": "1iu@gmail.com",
     "starttls": "true",
     "auth": "true",
-    "user": "1998tsewu@gmail.com",
-    "password": "@2062ulw0t"
+    "user": "8t@gmail.com",
+    "password": "@Ts"
   },
   "requiredActions": [
     {
@@ -105,6 +105,14 @@
           "description": "Allow user to create appointment"
         },
         {
+          "name": "app_client",
+          "description": "Indicate user is a client"
+        },
+        {
+          "name": "app_guest",
+          "description": "Indicate user is a guest"
+        },
+        {
           "name": "app_staff",
           "description": "Allow to manage appointment group"
         },
@@ -152,6 +160,8 @@
         ],
         "users-service-test": [
           "app_user",
+          "app_client",
+          "app_guest",
           "app_staff",
           "app_admin"
 
@@ -187,10 +197,20 @@
   ],
   "groups": [
     {
-      "name": "USERS",
+      "name": "USER_CLIENT",
       "clientRoles": {
         "users-service-test": [
-           "app_user"
+          "app_user",
+          "app_client"
+        ]
+      }
+    },
+    {
+      "name": "USER_GUEST",
+      "clientRoles": {
+        "users-service-test": [
+          "app_user",
+          "app_guest"
         ]
       }
     },

@@ -41,7 +41,7 @@ public class Validator {
     public  static String EMAiL_REGEX= String.format("^([_A-Za-z0-9-+]+\\.?[_A-Za-z0-9-+]+@(%s))$","myuct.ac.za");
      // USER MESS
     public static final String EMAIL_MESS=   "Email must be valid school email.";
-    public static final String PASSWORD_MESS=   "Password must be 8 character with special character, lower case,uppercase and attempts";
+    public static final String PASSWORD_MESS=   "Password must be 8+ character with special character,lower case,uppercase and special character";
     public static final String FIRSTNAME=   "Firstname must be at least 2 letter";
     public static final String LASTNAME=   "Lastname must be at least 2 letter";
     //public  static  final String USERNAME_MESS= String.format("Username must  must be %d characters(letter,underscore and hyphen)", Account.MIN_USERNAME_LENGTH);

@@ -1,9 +1,13 @@
-package capitec.branch.appointment.user.infrastructure.keycloak;
+package capitec.branch.appointment.user.infrastructure;
 
 import capitec.branch.appointment.user.domain.User;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.mapstruct.Mapper;
 
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -11,7 +15,171 @@ import java.util.LinkedList;
 import java.util.Map;
 
 @Slf4j
+@Mapper(componentModel = "spring")
 public class UserMapperReflection {
+
+
+    private final ObjectMapper objectMapper  = new ObjectMapper();
+
+    /**
+     * Maps JSON InputStream to User object using reflection
+     * Ignores password field from JSON response
+     * @param inputStream The JSON input stream
+     * @return User object populated from JSON
+     */
+    public User mapFromInputStream(InputStream inputStream) {
+        if (inputStream == null) {
+            log.warn("Attempted to map null input stream");
+            return null;
+        }
+
+        try {
+            JsonNode jsonNode = objectMapper.readTree(inputStream);
+            return mapFromJsonNode(jsonNode);
+
+        } catch (Exception e) {
+            log.error("Error mapping InputStream to User", e);
+            throw new RuntimeException("Failed to map InputStream to User", e);
+        }
+    }
+
+    /**
+     * Maps JSON string to User object using reflection
+     * Ignores password field from JSON response
+     * @param jsonString The JSON string
+     * @return User object populated from JSON
+     */
+    public User mapFromJson(String jsonString) {
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            log.warn("Attempted to map null or empty JSON string");
+            return null;
+        }
+
+        try {
+            JsonNode jsonNode = objectMapper.readTree(jsonString);
+            return mapFromJsonNode(jsonNode);
+
+        } catch (Exception e) {
+            log.error("Error mapping JSON string to User", e);
+            throw new RuntimeException("Failed to map JSON to User", e);
+        }
+    }
+
+    /**
+     * Core mapping logic from JSON using reflection
+     * Password field is ignored from JSON
+     * @param jsonNode The parsed JSON node
+     * @return User object
+     */
+    private User mapFromJsonNode(JsonNode jsonNode) throws Exception {
+        // Extract required constructor parameters from JSON
+        String email = getJsonFieldValue(jsonNode, "email", String.class);
+        String firstname = getJsonFieldValue(jsonNode, "firstname", String.class);
+        String lastname = getJsonFieldValue(jsonNode, "lastname", String.class);
+
+        // Use temporary password since JSON response doesn't include it
+        String tempPassword = "TempPass123!";
+
+        // Get the User constructor
+        Constructor<User> constructor = User.class.getDeclaredConstructor(
+                String.class, String.class, String.class, String.class
+        );
+        constructor.setAccessible(true);
+
+        // Create User instance
+        User user = constructor.newInstance(email, firstname, lastname, tempPassword);
+
+        // Set password to null using reflection (ignoring from JSON)
+        setPasswordFieldDirectly(user, null);
+
+        // Map remaining fields from JSON
+        mapRemainingFieldsFromJson(jsonNode, user);
+
+        log.debug("Successfully mapped JSON to User: {}", email);
+        return user;
+    }
+
+    /**
+     * Extract field value from JSON node with type conversion
+     */
+    private <T> T getJsonFieldValue(JsonNode jsonNode, String fieldName, Class<T> type) {
+        if (!jsonNode.has(fieldName) || jsonNode.get(fieldName).isNull()) {
+            return null;
+        }
+
+        JsonNode fieldNode = jsonNode.get(fieldName);
+
+        if (type == String.class) {
+            return type.cast(fieldNode.asText());
+        } else if (type == Boolean.class || type == boolean.class) {
+            return type.cast(fieldNode.asBoolean());
+        } else if (type == Integer.class || type == int.class) {
+            return type.cast(fieldNode.asInt());
+        } else if (type == Long.class || type == long.class) {
+            return type.cast(fieldNode.asLong());
+        } else if (type == Double.class || type == double.class) {
+            return type.cast(fieldNode.asDouble());
+        }
+
+        return null;
+    }
+
+    /**
+     * Map remaining fields from JSON to User object
+     * Skips constructor fields and password
+     */
+    private void mapRemainingFieldsFromJson(JsonNode jsonNode, User user) {
+        Map<String, Field> userFields = getAllFields(user.getClass());
+
+        jsonNode.fieldNames().forEachRemaining(jsonFieldName -> {
+            // Skip constructor parameters and password
+            if (jsonFieldName.equals("email") || jsonFieldName.equals("firstname") ||
+                    jsonFieldName.equals("lastname") || jsonFieldName.equals("password")) {
+                return;
+            }
+
+            try {
+                if (userFields.containsKey(jsonFieldName)) {
+                    Field targetField = userFields.get(jsonFieldName);
+                    targetField.setAccessible(true);
+
+                    Object value = getJsonFieldValueByType(jsonNode, jsonFieldName, targetField.getType());
+
+                    if (value != null) {
+                        targetField.set(user, value);
+                        log.debug("Mapped JSON field {} with value: {}", jsonFieldName, value);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Could not map JSON field {}: {}", jsonFieldName, e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * Get field value from JSON based on target field type
+     */
+    private Object getJsonFieldValueByType(JsonNode jsonNode, String fieldName, Class<?> fieldType) {
+        if (!jsonNode.has(fieldName) || jsonNode.get(fieldName).isNull()) {
+            return null;
+        }
+
+        JsonNode fieldNode = jsonNode.get(fieldName);
+
+        if (fieldType == String.class) {
+            return fieldNode.asText();
+        } else if (fieldType == Boolean.class || fieldType == boolean.class) {
+            return fieldNode.asBoolean();
+        } else if (fieldType == Integer.class || fieldType == int.class) {
+            return fieldNode.asInt();
+        } else if (fieldType == Long.class || fieldType == long.class) {
+            return fieldNode.asLong();
+        } else if (fieldType == Double.class || fieldType == double.class) {
+            return fieldNode.asDouble();
+        }
+
+        return null;
+    }
 
     /**
      * Maps UserRepresentation to User using reflection only
@@ -43,9 +211,9 @@ public class UserMapperReflection {
 
             // Now set the actual password directly using reflection to bypass validation
             //if (password = null) {
-                setPasswordFieldDirectly(user, password);
+            setPasswordFieldDirectly(user, password);
             //}
-            setusernameFromAttributes(userRep, user);
+            setUsernameFromAttributes(userRep, user);
             // Map additional fields using reflection
             mapAdditionalFields(userRep, user);
 
@@ -58,7 +226,7 @@ public class UserMapperReflection {
     /**
      * Extract username from attributes Map and set it in User
      */
-    private static void setusernameFromAttributes(UserRepresentation userRep, User user) {
+    private  static  void setUsernameFromAttributes(UserRepresentation userRep, User user) {
         try {
             // Get the attributes field from UserRepresentation
             Field attributesField = findField(userRep.getClass(), "attributes");

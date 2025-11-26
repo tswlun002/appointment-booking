@@ -12,17 +12,33 @@ import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
 import capitec.branch.appointment.otp.domain.OTPService;
 import capitec.branch.appointment.otp.domain.OTPStatus;
 import capitec.branch.appointment.user.domain.User;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.utility.DockerImageName;
+
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 
 class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
@@ -37,7 +53,8 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @Autowired
     private KeycloakService keycloakService;
 
-
+    @Value("${client-domain.baseurl}")
+    private String clientDomainBaseUrl;
 
 
 
@@ -56,7 +73,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
             "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"})
     void testRegisterUser(String email, String firstname, String lastname, String password, String traceId) {
 
-        var userRegister = new NewUserDtO(email, password, firstname, lastname);
+        var userRegister = new NewUserDtO(email, firstname, lastname,password);
 
         var registeredUser = registrationUserCase.registerUser(userRegister, traceId);
 
@@ -70,12 +87,35 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         })).isTrue();
 
     }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = ';', value = {"alicelei@myuct.ac.za;AliceLei;XiaolingFerreira;@KrVgfjl65;9507037886081;78d4517d-d110-4bc4-96b3-ea77f4283cf4",
+            "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;9607037886182;e23f32b9-3dea-41ed-ac8d-fa283dacb424"})
+    void testRegisterCapitecClient(String email, String firstname, String lastname, String password,String idNumber, String traceId) {
+
+        var userRegister = new NewUserDtO(email, password, firstname, lastname, idNumber, true);
+
+        User user = new User(userRegister.email(), userRegister.firstname(), userRegister.lastname(), userRegister.password());
+        wireMockGetUserFromClientDomainById(user, idNumber);
+        var registeredUser = registrationUserCase.registerUser(userRegister, traceId);
+
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
+
+        assertThat(failedRecord.stream().noneMatch(r -> {
+            String value = r.getValue();
+            return r.getTraceId().equals(traceId) &&
+                    value.contains(String.valueOf(registeredUser.getUsername()))
+                    && value.contains(registeredUser.getEmail());
+        })).isTrue();
+
+    }
+
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {"alicelei@myuct.ac.za;AliceLei;XiaolingFerreira;@KrVgfjl65;78d4517d-d110-4bc4-96b3-ea77f4283cf4",
             "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"})
     void testRegisterDuplicateUser(String email, String firstname, String lastname, String password, String traceId) {
 
-        var userRegister = new NewUserDtO(email, password, firstname, lastname);
+        var userRegister = new NewUserDtO(email, firstname, lastname,password);
         registrationUserCase.registerUser(userRegister, traceId);
         assertThatThrownBy(() -> registrationUserCase.registerUser(userRegister, traceId))
                 .isInstanceOf(EntityAlreadyExistException.class)
@@ -87,10 +127,45 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {"dorismia@myuct.ac.za;Doris;Mia;@KrVgfjl65;2b1d5b0d-59e2-47ec-94f1-24505ef2abbd",
             "davidchong@cput.ac.za;David;Chong;1wcB2OsQFV6_;03289819-bcf4-4fef-8747-cfaf4d1e808a"})
-    void testVerifyRegisteredUser(String email, String firstname, String lastname,
+    void testVerifyRegisteredGuestUser(String email, String firstname, String lastname,
                                   String password, String traceId) {
 
-        var registerDTO = new NewUserDtO(email, password, firstname, lastname);
+        var registerDTO = new NewUserDtO(email, firstname, lastname,password);
+        User user = registrationUserCase.registerUser(registerDTO, traceId);
+        var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
+                .findFirst().orElseThrow();
+
+        TokenResponse tokenResponse = registrationUserCase.verifyUser(user.getUsername(), otp.getCode(), traceId);
+
+        assertThat(tokenResponse).isNotNull();
+
+        var verifiedUser = registrationUserCase.getUser(user.getUsername());
+        assertThat(verifiedUser)
+                .hasFieldOrPropertyWithValue("email", email)
+                .hasFieldOrPropertyWithValue("firstname", firstname)
+                .hasFieldOrPropertyWithValue("lastname", lastname)
+                .hasFieldOrPropertyWithValue("verified", true)
+                .hasFieldOrPropertyWithValue("enabled", true);
+
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
+        assertThat(failedRecord.stream().noneMatch(r -> {
+            String value = r.getValue();
+            return r.getTraceId().equals(traceId) &&
+                    value.contains(String.valueOf(user.getUsername()))
+                    && value.contains(user.getEmail());
+        })).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = ';', value = {"dorismia@myuct.ac.za;Doris;Mia;@KrVgfjl65;9707037886182;2b1d5b0d-59e2-47ec-94f1-24505ef2abbd",
+            "davidchong@cput.ac.za;David;Chong;1wcB2OsQFV6_;9607037886182;03289819-bcf4-4fef-8747-cfaf4d1e808a"})
+    void testVerifyRegisteredCapitecClientUser(String email, String firstname, String lastname,
+                                  String password,String idNumber, String traceId) {
+
+        var registerDTO = new NewUserDtO(email, firstname, lastname,password);
+        User userMock = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
+        wireMockGetUserFromClientDomainById(userMock,idNumber );
+
         User user = registrationUserCase.registerUser(registerDTO, traceId);
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
@@ -123,7 +198,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     void testVerifyRegisteredUserUntilOTPRevoked(String email, String firstname, String lastname,
                                                  String password, String traceId) {
 
-        var registerDTO = new NewUserDtO(email, password, firstname, lastname);
+        var registerDTO = new NewUserDtO(email, firstname, lastname,password);
         User user = registrationUserCase.registerUser(registerDTO, traceId);
 
         OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
@@ -157,5 +232,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 r.getUsername().equals(String.valueOf(user.getUsername()))
                 && r.getEmail().equals(user.getEmail()))).isTrue();
     }
+
+
 
 }

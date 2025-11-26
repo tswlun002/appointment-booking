@@ -87,6 +87,9 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.springframework.kafka:spring-kafka-test")
     testImplementation("org.testcontainers:kafka")
+    testImplementation("org.wiremock.integrations.testcontainers:wiremock-testcontainers-module:1.0-alpha-15")
+    // Add the standalone WireMock JAR with the official group ID for the client API
+    testImplementation("org.wiremock:wiremock-standalone:3.13.2") // Or use the latest 3.x version
 }
 
 tasks.withType<Test> {

@@ -9,7 +9,7 @@ import capitec.branch.appointment.user.domain.ResetPasswordService;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UserService;
-import capitec.branch.appointment.user.domain.*;
+import capitec.branch.appointment.user.infrastructure.UserMapperReflection;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.InternalServerErrorException;
@@ -17,6 +17,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.keycloak.admin.client.resource.RoleScopeResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
@@ -42,14 +43,11 @@ public class UserServiceImpl implements UserService, UserRoleService, ResetPassw
     private final String authType;
     private final RolesAndGroupsService rolesAndGroupsService;
     private  final KeycloakService keycloakService;
-   // private final AuthUseCase authenticationService;
 
     public UserServiceImpl(@Value("${keycloak.user_auth_type}") String authType, RolesAndGroupsService rolesAndGroupsService, KeycloakService keycloakService
-                           //AuthUseCase authenticationService
     ) {
         this.authType = authType;
         this.rolesAndGroupsService = rolesAndGroupsService;
-       // this.authenticationService = authenticationService;
         this.keycloakService = keycloakService;
 
     }
@@ -152,7 +150,9 @@ public class UserServiceImpl implements UserService, UserRoleService, ResetPassw
     }
 
     private Optional<UserRepresentation> getUserRepresentationByEmail(UsersResource usersResource,String email) {
-
+       if (StringUtils.isBlank(email)) {
+           return Optional.empty();
+       }
        return keyCloakRequest(()->usersResource.searchByEmail(email,true).stream().findFirst()," get user ",UserRepresentation.class);
     }
 
@@ -215,6 +215,9 @@ public class UserServiceImpl implements UserService, UserRoleService, ResetPassw
 
     private Optional<UserRepresentation> getUserRepresentationByUsername(UsersResource  usersResource,String username) {
 
+        if(StringUtils.isBlank(username)) {
+            return Optional.empty();
+        }
        return keyCloakRequest(()->
 
            usersResource.searchByUsername(username,true).stream().findFirst()

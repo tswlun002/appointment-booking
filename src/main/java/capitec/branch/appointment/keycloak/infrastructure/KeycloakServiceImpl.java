@@ -7,6 +7,7 @@ import capitec.branch.appointment.keycloak.domain.*;
 import capitec.branch.appointment.user.domain.User;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.*;
+import org.keycloak.admin.client.token.TokenManager;
 import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.springframework.beans.factory.annotation.Value;
@@ -200,6 +201,8 @@ public class KeycloakServiceImpl implements KeycloakService {
 
     @Override
     public RealmResource getRealm() {
+
+
         return keycloak.realm(realm);
     }
 
@@ -241,6 +244,11 @@ public class KeycloakServiceImpl implements KeycloakService {
     @Override
     public List<String> getClientRoles(Map<String, List<String>> clientsRoles) {
         return clientsRoles.get(adminClientId);
+    }
+
+    @Override
+    public TokenManager getTokenManager() {
+        return keycloak.tokenManager();
     }
 
 

@@ -97,6 +97,10 @@ mail:
   port: 465
   username: ${MAIL_USERNAME}
   password: ${MAIL_PASSWORD}
+# CLIENT-DOMAIN
+client-domain:
+  baseurl: ${CLIENT_DOMAIN_BASE_URL:http://localhost:8083}
+
 
 # END POINT MANAGEMENT
 management:

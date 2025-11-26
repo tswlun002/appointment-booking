@@ -67,7 +67,7 @@ class UserControllerTest extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {"Muhammed;Islam;muhammed@cput.ac.za;@Muhammed2025"})
     public  void deleteUserRequest(String firstname, String lastName,String email, String password) throws IOException {
-        NewUserDtO newUserDtO = new NewUserDtO( email, password,firstname, lastName);
+        NewUserDtO newUserDtO = new NewUserDtO(email, firstname, lastName,password);
         restClientForController.post()
                 .uri("/auth/register")
                 .headers(h -> h.add("Trace-Id", UUID.randomUUID().toString()))

@@ -1,37 +1,45 @@
 package capitec.branch.appointment.user.infrastructure.keycloak;
 
+import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.exeption.EntityAlreadyExistException;
+import capitec.branch.appointment.keycloak.domain.KeycloakService;
+import capitec.branch.appointment.role.domain.Role;
+import capitec.branch.appointment.role.domain.RoleService;
+import capitec.branch.appointment.user.domain.USER_TYPES;
+import capitec.branch.appointment.user.domain.User;
 import jakarta.ws.rs.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import capitec.branch.appointment.AppointmentBookingApplicationTests;
-import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.keycloak.admin.client.resource.RoleResource;
+import org.keycloak.admin.client.resource.RolesResource;
+import org.keycloak.admin.client.resource.UserResource;
+import org.keycloak.admin.client.resource.UsersResource;
+import org.keycloak.representations.idm.AbstractUserRepresentation;
+import org.keycloak.representations.idm.GroupRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
+
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import static capitec.branch.appointment.utils.KeycloakUtils.keyCloakRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
-import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.role.domain.Role;
-import capitec.branch.appointment.role.domain.RoleService;
-import capitec.branch.appointment.user.domain.USER_TYPES;
-import capitec.branch.appointment.user.domain.User;
-import org.keycloak.admin.client.resource.UserResource;
-import org.keycloak.admin.client.resource.RolesResource;
-import org.keycloak.admin.client.resource.UsersResource;
-import org.keycloak.admin.client.resource.RoleResource;
-import org.keycloak.representations.idm.RoleRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
-import org.keycloak.representations.idm.AbstractUserRepresentation;
-import org.keycloak.representations.idm.GroupRepresentation;
-import static capitec.branch.appointment.utils.KeycloakUtils.keyCloakRequest;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @Slf4j
 public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
@@ -276,7 +284,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     }
 
     @ParameterizedTest
-    @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033;USERS","barbaraandrade1@gmail.com;Barbara;Andrade;@NkLlun00033;ADMIN"}, delimiter = ';')
+    @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033;USER_GUEST", "barbaraandrade1@gmail.com;Barbara;Andrade;@NkLlun00033;ADMIN"}, delimiter = ';')
     public void addUserToGroup(String email, String firstName, String lastName, String password, USER_TYPES roleType) {
 
         var user = new User(email, firstName, lastName, password);

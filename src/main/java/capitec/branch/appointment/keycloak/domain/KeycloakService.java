@@ -2,6 +2,7 @@ package capitec.branch.appointment.keycloak.domain;
 
 
 import org.keycloak.admin.client.resource.*;
+import org.keycloak.admin.client.token.TokenManager;
 import org.keycloak.representations.AccessTokenResponse;
 import org.keycloak.representations.idm.ClientRepresentation;
 
@@ -29,6 +30,8 @@ public interface KeycloakService {
     GroupsResource getGroupsResource();
 
     List<String> getClientRoles(Map<String, List<String>> clientsRoles);
+
+    TokenManager getTokenManager();
 
 
 }

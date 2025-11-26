@@ -1,13 +1,21 @@
 package capitec.branch.appointment;
 
+import capitec.branch.appointment.user.app.NewUserDtO;
+import capitec.branch.appointment.user.domain.User;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.testcontainers.containers.*;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -18,6 +26,8 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import static org.awaitility.Awaitility.await;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @Slf4j
 @SpringBootTest(properties = "spring.profiles.active=test", webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -44,6 +54,8 @@ public class AppointmentBookingApplicationTests {
 
     protected static RestClient RESTCLIENT;
     protected static String URL;
+
+
 
     static {
 
@@ -127,6 +139,12 @@ public class AppointmentBookingApplicationTests {
                 .withStartupTimeout(Duration.ofMinutes(1));
     }
 
+    public  static GenericContainer<?> wiremockServer = new GenericContainer<>(
+            DockerImageName.parse("wiremock/wiremock:latest"))
+            .withExposedPorts(8080); // WireMock's default port
+
+
+
 
     @DynamicPropertySource
     public static void addProperties(DynamicPropertyRegistry registry) {
@@ -149,7 +167,7 @@ public class AppointmentBookingApplicationTests {
             RESTCLIENT = RestClient.create(URL);
             registry.add("keycloak.urls.auth", () -> URL);
             registry.add("default_role_types", () -> "APP_USERS,APP_ADMINS");
-            registry.add("default_roles.users", () -> "app_user");
+            registry.add("default_roles.users", () -> "app_user,app_client,app_guest");
             registry.add("default_roles.admin", () -> "app_admin");
 
             // KAFKA
@@ -176,11 +194,45 @@ public class AppointmentBookingApplicationTests {
             registry.add("allowed_origins.urls",()->"*");
             registry.add("allowed_origins.cache_period",()->"30");
 
+            //Client domain
+            wiremockServer.start();
+            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockServer.isRunning());
+            registry.add("client-domain.baseurl", () ->
+                    String.format("http://%s:%d",
+                            wiremockServer.getHost(),
+                            wiremockServer.getFirstMappedPort()));
+
+
 
         } catch (Exception e) {
             log.error("Error while adding properties", e);
             throw e;
         }
+    }
+
+    public static   void wireMockGetUserFromClientDomainById(User user,String idNumber) {
+        var  wireMock = new WireMock(wiremockServer.getHost(), wiremockServer.getFirstMappedPort());
+
+        // 1. Define the mock response (the stub)
+
+        String expectedBody = String.format("""
+                        {
+                          "username": "%s",
+                          "firstname": "%s",
+                          "lastname": "%s",
+                          "email": "%s",
+                          "verified": "%s",
+                          "enabled": "%s"
+                        }
+                        """, user.getUsername(), user.getFirstname()
+                , user.getLastname(), user.getEmail(), true, true);
+
+        wireMock.register(WireMock.get(WireMock.urlPathEqualTo("/v1/clients"))
+                .withQueryParam("IDNumber",WireMock.equalTo(idNumber))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(expectedBody)));
     }
 
 

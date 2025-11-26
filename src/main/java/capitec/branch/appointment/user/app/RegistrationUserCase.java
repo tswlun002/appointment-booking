@@ -2,15 +2,14 @@ package capitec.branch.appointment.user.app;
 
 
 import capitec.branch.appointment.authentication.domain.AuthUseCase;
+import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.exeption.TokenExpiredException;
 import capitec.branch.appointment.otp.app.ValidateOTPService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
-import capitec.branch.appointment.user.domain.USER_TYPES;
-import capitec.branch.appointment.user.domain.User;
-import capitec.branch.appointment.user.domain.UserRoleService;
-import capitec.branch.appointment.user.domain.UserService;
+import capitec.branch.appointment.user.domain.*;
 import capitec.branch.appointment.utils.UseCase;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,8 +17,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.util.Optional;
-import capitec.branch.appointment.authentication.domain.TokenResponse;
 
 @Slf4j
 @UseCase
@@ -33,18 +32,29 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
     private final FetchRoleByNameService fetchRoleByNameService;
     private final ValidateOTPService validateOTPService;
     private  final AuthUseCase  authUseCase;
+    private final ClientDomain clientDomain;
 
-    public User registerUser(NewUserDtO registerDTO, String traceId) {
+    public User registerUser(@Valid NewUserDtO registerDTO, String traceId) {
 
         User user;
 
-        do {
 
-            user = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
+        if (registerDTO.isCapitecClient()) {
 
-        } while (userService.checkIfUserExists(user.getUsername()));
+            user = clientDomain.findByUsername(registerDTO.idNumber()).orElseThrow(() -> {
+                log.error("User is not found with idNumber {}, traceId:{}", registerDTO.idNumber(), traceId);
+                return new NotFoundException("User not found");
+            });
+        }
+        else {
+            do {
+                user = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
+            } while (userService.checkIfUserExists(user.getUsername()));
+        }
 
-        userService.getUserByEmail(registerDTO.email()).ifPresent(u -> {
+
+
+        userService.getUserByEmail(user.getEmail()).ifPresent(u -> {
 
             log.error("User already exists with email:{}, traceId:{}", u.getEmail(), traceId);
             throw new EntityAlreadyExistException("User already exists");
@@ -64,10 +74,7 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
         return user;
     }
 
-
-    public TokenResponse verifyUser(String username, String otp, String traceId) {
-
-
+    public TokenResponse verifyUser(String username, String otp, boolean isCapitecClient, String traceId) {
         log.info("Verifying user, traceId:{}", traceId);
 
         var user = userService.getUserByUsername(username).orElseThrow(() -> {
@@ -85,13 +92,13 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
         } catch (TokenExpiredException e) {
             ///  To BE UPDATED TO UserCreatedEventExpired so that it gives us insight how many OTP expired and
             /// user tries after how long the token expired. And it can help to look into the speed of events and emails are delivered to user
-            log.error("OTP expired, traceId:{}", traceId,e);
+            log.error("OTP expired, traceId:{}", traceId, e);
             applicationEventPublisher.publishEvent(new UserCreatedEvent(username, user.getEmail(), user.getFirstname() + " " + user.getLastname(), traceId));
             throw new ResponseStatusException(HttpStatus.FORBIDDEN.value(), e.getMessage() + ",OTP expired, new OTP was sent to your email", e);
 
         } catch (ResponseStatusException e) {
             //user tried many times that exceed maximum verify/validate retry, disable user
-            log.error("Invalid OTP, traceId:{}", traceId,e);
+            log.error("Invalid OTP, traceId:{}", traceId, e);
             if (e.getStatusCode().equals(HttpStatus.LOCKED)) {
 
                 log.error("OTP is locked so disable user, traceId:{}", traceId);
@@ -100,17 +107,17 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
             throw e;
 
         }
-        if(!validate) {
+        if (!validate) {
 
             log.error("Failed, OTP is invalid, traceId:{}", traceId);
-            throw  new ResponseStatusException(HttpStatus.FORBIDDEN, "Failed, OTP is invalid");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Failed, OTP is invalid");
         }
 
         validate = userService.verifyUser(username);
 
         if (validate) {
 
-            assignDefaultRoles(username, traceId);
+            assignDefaultRoles(username, isCapitecClient, traceId);
 
             String fullName = user.getFirstname() + " " + user.getLastname();
             applicationEventPublisher.publishEvent(new UserVerifiedEvent(user.getUsername(), user.getEmail(), fullName, otp, traceId));
@@ -128,18 +135,22 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
             }
 
             return tokenResponse;
-        }
-        else{
+        } else {
 
             log.warn("Failed to verify user username, traceId:{}", traceId);
-            return  null;
+            return null;
         }
 
     }
 
-    private  void assignDefaultRoles(String username, String traceId) {
+    public TokenResponse verifyUser(String username, String otp, String traceId) {
+        return verifyUser(username, otp, false, traceId);
+    }
 
-        Optional<String> groupId = fetchRoleByNameService.getGroupId(USER_TYPES.USERS.name(), true);
+    private void assignDefaultRoles(String username, boolean isCapitecClient, String traceId) {
+
+        String groupName = isCapitecClient ? USER_TYPES.USER_CLIENT.name() : USER_TYPES.USER_GUEST.name();
+        Optional<String> groupId = fetchRoleByNameService.getGroupId(groupName, true);
 
         if (groupId.isPresent()) {
 

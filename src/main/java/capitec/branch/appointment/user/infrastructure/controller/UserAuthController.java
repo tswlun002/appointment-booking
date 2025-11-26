@@ -35,11 +35,11 @@ public class UserAuthController {
 
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody @Valid RegisterDTO registerDTO, @RequestHeader("Trace-Id") String traceId) {
+    public ResponseEntity<?> registerUser(@RequestBody @Valid NewUserDtO newUserDtO, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Registering user traceId:{}", traceId);
 
-      registrationUserCase.registerUser(new NewUserDtO(registerDTO.email(), registerDTO.password(), registerDTO.firstname(), registerDTO.lastname()),traceId);
+      registrationUserCase.registerUser(newUserDtO,traceId);
 
         return new ResponseEntity<>("Verification code, please confirm it to complete registration", HttpStatus.CREATED);
 

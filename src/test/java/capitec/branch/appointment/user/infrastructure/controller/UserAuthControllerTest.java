@@ -67,8 +67,26 @@ class UserAuthControllerTest extends AppointmentBookingApplicationTests {
     }
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {"Muhammed;Islam;muhammed@myuct.ac.za;@Muhammed2025"})
-    public  void registerUser(String firstname, String lastName,String email, String password) {
-        NewUserDtO newUserDtO = new NewUserDtO( email, password,firstname, lastName);
+    public  void registerUserGuestUser(String firstname, String lastName,String email, String password) {
+        NewUserDtO newUserDtO = new NewUserDtO(email, firstname, lastName,password);
+        ResponseEntity<String> exchange = restClientForController.post()
+                .uri("/auth/register")
+                .headers(h -> h.add("Trace-Id", UUID.randomUUID().toString()))
+                .body(newUserDtO)
+                .exchange((_, res) ->
+                        new ResponseEntity<>(Objects.requireNonNull(res.bodyTo(String.class)),res.getStatusCode())
+                );
+        assertThat(exchange.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+    }
+    @ParameterizedTest
+    @CsvSource(delimiter = ';', value = {"Muhammed;Islam;muhammed@myuct.ac.za;@Muhammed2025;9607037886182"})
+    public  void registerCapitecClientUser(String firstname, String lastName,String email, String password, String idNumber) {
+        NewUserDtO newUserDtO = new NewUserDtO(idNumber, true);
+
+       var userMock = new User(email,firstname, lastName,password);
+
+        wireMockGetUserFromClientDomainById(userMock,idNumber );
+
         ResponseEntity<String> exchange = restClientForController.post()
                 .uri("/auth/register")
                 .headers(h -> h.add("Trace-Id", UUID.randomUUID().toString()))
@@ -82,7 +100,7 @@ class UserAuthControllerTest extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {"Muhammed;Islam;muhammed@cput.ac.za;@Muhammed2025"})
     public  void verifyUser(String firstname, String lastName,String email, String password) throws IOException {
-        NewUserDtO newUserDtO = new NewUserDtO( email, password,firstname, lastName);
+        NewUserDtO newUserDtO = new NewUserDtO(email, firstname, lastName,password);
         restClientForController.post()
                 .uri("/auth/register")
                 .headers(h -> h.add("Trace-Id", UUID.randomUUID().toString()))
@@ -122,7 +140,7 @@ class UserAuthControllerTest extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {"Muhammed;Islam;muhammed@cput.ac.za;@Muhammed2025"})
     public  void verifyUserWithInvalidOTPUntilDisable(String firstname, String lastName,String email, String password) {
-        NewUserDtO newUserDtO = new NewUserDtO( email, password,firstname, lastName);
+        NewUserDtO newUserDtO = new NewUserDtO(email, firstname, lastName,password);
         restClientForController.post()
                 .uri("/auth/register")
                 .headers(h -> h.add("Trace-Id", UUID.randomUUID().toString()))

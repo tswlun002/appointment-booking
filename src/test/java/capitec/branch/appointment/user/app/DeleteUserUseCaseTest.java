@@ -37,7 +37,7 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
                     "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"
             })
     void deleteExistingUserRequest(String email, String firstname, String lastname, String password, String traceId) {
-        var userRegister = new NewUserDtO(email, password, firstname, lastname);
+        var userRegister = new NewUserDtO(email, firstname, lastname,password);
         var user = registrationUserCase.registerUser(userRegister, traceId);
         boolean isDeleted = deleteUserUseCase.deleteUserRequest(user.getUsername(), password, traceId);
         assertThat(isDeleted).isTrue();
@@ -50,7 +50,7 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
                     "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"
             })
     void deleteExistingUser(String email, String firstname, String lastname, String password, String traceId) {
-        var userRegister = new NewUserDtO(email, password, firstname, lastname);
+        var userRegister = new NewUserDtO(email, firstname, lastname,password);
         var user = registrationUserCase.registerUser(userRegister, traceId);
         OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
