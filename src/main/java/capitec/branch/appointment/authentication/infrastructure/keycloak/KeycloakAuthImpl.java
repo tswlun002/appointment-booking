@@ -38,7 +38,7 @@ public class KeycloakAuthImpl implements AuthService {
     public boolean verifyCurrentPassword(String username, String password, String traceId) {
 
 
-        return keycloakService.verifyUserPassword( username,password);
+        return keycloakService.verifyUserPassword( username,password, traceId);
     }
 
     @Override

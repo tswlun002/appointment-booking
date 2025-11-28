@@ -20,6 +20,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -66,17 +67,28 @@ public class AppointmentBookingApplicationTests {
                 "DB_URL", "jdbc:postgresql://" + SQL_NETWORK_ALIAS + "/" + SQLContainer.getDatabaseName(),
                 "DB_SCHEMA", SQLContainer.getDatabaseName(),
                 "DB_PASSWORD", SQLContainer.getPassword(), "DB_USERNAME", SQLContainer.getUsername(),
-                "KC_HEALTH_ENABLED", "true")
+                "KC_LOG_LEVEL", "INFO")
         );
 
         keycloakEnv.put("KEYCLOAK_IMPORT", "/opt/keycloak/data/import/realm.json");
         keycloakEnv.put("JAVA_OPTS", "-Dkeycloak.profile.feature.token_exchange=enabled -Dkeycloak.profile.feature.admin_fine_grained_authz=enabled");
         keycloakEnv.put("KC_FEATURES", "token-exchange");
-        Path jarPath = Paths.get(System.getProperty("user.dir"))
+
+
+
+
+        Path valiadteCredJarPath = Paths.get(System.getProperty("user.dir"))
                 .getParent()
                 .resolve("appointment-booking/validate-credential-module/build/libs/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar");
 
-        log.info("SPI JAR PATH: {}", jarPath);
+
+        Path jarPathUsernameGenerator = Paths.get(System.getProperty("user.dir"))
+                .getParent()
+                .resolve("appointment-booking/generate-username-ui-register-module/build/libs/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar");
+
+        log.info("SPI JAR PATH: {}", valiadteCredJarPath);
+        log.info("SPI JAR PATH: {}", jarPathUsernameGenerator);
+
         keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.1.2")
                 .withEnv(keycloakEnv)
                 .dependsOn(SQLContainer)
@@ -90,7 +102,8 @@ public class AppointmentBookingApplicationTests {
                 .withExposedPorts(8080)
                 .withNetworkAliases("keycloak_test")
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
-                .withCopyFileToContainer(MountableFile.forHostPath(jarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
+                .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
+                .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCommand("start-dev --import-realm --verbose ");
 
 

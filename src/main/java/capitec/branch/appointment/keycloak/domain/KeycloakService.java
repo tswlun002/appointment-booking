@@ -15,7 +15,7 @@ public interface KeycloakService {
 
     void revokeToken(AuthBodyType authBody);
 
-    boolean verifyUserPassword(String username, String password);
+    boolean verifyUserPassword(String username, String password, String traceId);
 
     RealmResource getRealm();
 

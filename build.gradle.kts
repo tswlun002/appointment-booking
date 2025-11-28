@@ -1,3 +1,4 @@
+
 plugins {
     java
     id("org.springframework.boot") version "3.5.7"
@@ -91,7 +92,20 @@ dependencies {
     // Add the standalone WireMock JAR with the official group ID for the client API
     testImplementation("org.wiremock:wiremock-standalone:3.13.2") // Or use the latest 3.x version
 }
+evaluationDependsOnChildren()
 
+
+// 1. Ensure 'build' depends on submodules (as you already have)
+tasks.named("build") {
+    dependsOn(project(":validate-credential-module").tasks.named("build"))
+    dependsOn(project(":generate-username-ui-register-module").tasks.named("build"))
+}
+
+// 2. 💡 CRITICAL: Ensure 'test' also depends on submodules
+tasks.named("test") {
+    dependsOn(project(":validate-credential-module").tasks.named("build"))
+    dependsOn(project(":generate-username-ui-register-module").tasks.named("build"))
+}
 tasks.withType<Test> {
     useJUnitPlatform()
 }
@@ -101,3 +115,5 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("appointment-booking")
     mainClass.set("capitec.branch.appointment.AppointmentBookingApplication")
 }
+
+

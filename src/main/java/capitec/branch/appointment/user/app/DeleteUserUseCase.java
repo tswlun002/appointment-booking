@@ -28,7 +28,7 @@ public class DeleteUserUseCase {
             return new NotFoundException("User not found.");
         });
 
-        boolean isVerified = userService.verifyUserCurrentPassword(username, password);
+        boolean isVerified = userService.verifyUserCurrentPassword(username, password, traceId);
 
         if (isVerified) {
 

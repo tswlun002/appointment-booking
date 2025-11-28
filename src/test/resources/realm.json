@@ -11,6 +11,20 @@
   "ssoSessionIdleTimeout": 604800,
   "ssoSessionMaxLifespan": 1209600,
   "refreshTokenMaxReuse": 0,
+  "eventsEnabled": true,
+  "adminEventsEnabled": true,
+  "registrationAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "eventsListeners": [
+    "jboss-logging",
+    "custom-username-generator-listener"
+  ],
+  "enabledEventTypes": [
+    "REGISTER",
+    "LOGIN",
+    "UPDATE_PROFILE",
+    "DELETE_ACCOUNT"
+  ],
   "smtpServer": {
     "host": "smtp.gmail.com",
     "port": "587",

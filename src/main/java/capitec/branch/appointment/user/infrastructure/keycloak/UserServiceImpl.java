@@ -173,9 +173,9 @@ public class UserServiceImpl implements UserService, UserRoleService, ResetPassw
     }
 
     @Override
-    public boolean verifyUserCurrentPassword(String  username, String password) {
+    public boolean verifyUserCurrentPassword(String  username, String password, String traceId) {
         UserRepresentation userRepresentation = getUserRepresentationByUsername(keycloakService.getUsersResources(),username).orElseThrow();
-        return   keycloakService.verifyUserPassword(userRepresentation.getUsername(),password);
+        return   keycloakService.verifyUserPassword(userRepresentation.getUsername(),password, traceId);
     }
 
     @Override

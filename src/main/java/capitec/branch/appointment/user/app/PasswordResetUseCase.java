@@ -51,7 +51,7 @@ public class PasswordResetUseCase {
             throw new NotFoundException("User is not found");
         });
 
-        boolean isVerified = userService.verifyUserCurrentPassword(username, password);
+        boolean isVerified = userService.verifyUserCurrentPassword(username, password,traceId);
 
         if (isVerified) {
             log.info("Password change requested event issued, traceId: {}", traceId);

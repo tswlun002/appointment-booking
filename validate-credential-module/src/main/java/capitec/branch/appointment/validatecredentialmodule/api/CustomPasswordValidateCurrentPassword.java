@@ -44,15 +44,15 @@ public class CustomPasswordValidateCurrentPassword implements RealmResourceProvi
         // is secure and aligns with Keycloak's expected authentication flow.
 
         if (user == null) {
-            log.warn("User {} not found, traceId:{}", username, traceId);
+            log.warn("User:{} not found, traceId:{}", username, traceId);
             return Response.status(Response.Status.UNAUTHORIZED).entity(Collections.singletonMap("error", "Invalid credentials")).build();
         }
 
         if ( user.credentialManager().isValid(UserCredentialModel.password(password))) {
-            log.info("User {} is valid, traceId:{}", username, traceId);
+            log.info("User:{} is valid, traceId:{}", username, traceId);
             return Response.ok(Collections.singletonMap("message", "Password verified")).build();
         } else {
-            log.warn("User {} password is not valid, traceId:{}", username, traceId);
+            log.warn("User:{} password is not valid, traceId:{}", username, traceId);
             return Response.status(Response.Status.UNAUTHORIZED).entity(Collections.singletonMap("error", "Invalid password")).build();
         }
 

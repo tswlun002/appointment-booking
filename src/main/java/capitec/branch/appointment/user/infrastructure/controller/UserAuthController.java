@@ -30,6 +30,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequiredArgsConstructor
 @Validated
 public class UserAuthController {
+
     private  final RegistrationUserCase registrationUserCase;
     private final PasswordResetUseCase passwordResetUseCase;
 
@@ -104,6 +105,12 @@ public class UserAuthController {
         log.info("Updating password for user: {} traceId:{}", passwordResetDTO.email(), traceId);
         passwordResetUseCase.passwordReset(passwordResetDTO, traceId);
         return new ResponseEntity<>("Password updated  successfully", HttpStatus.OK);
+    }
+
+    @GetMapping("/generate/username")
+    public ResponseEntity<?> generateNewUserId(@RequestHeader("Trace-Id") String traceId) {
+        log.info("Generating user id:{}", traceId);
+        return new ResponseEntity<>(registrationUserCase.generateUserId(traceId), HttpStatus.OK);
     }
 
 }

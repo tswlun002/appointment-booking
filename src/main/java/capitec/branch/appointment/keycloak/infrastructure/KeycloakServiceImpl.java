@@ -20,7 +20,6 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.util.MultiValueMapAdapter;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.*;
 
 import static capitec.branch.appointment.utils.KeycloakUtils.keyCloakRequest;
@@ -49,7 +48,7 @@ public class KeycloakServiceImpl implements KeycloakService {
 
 
     @Override
-    public boolean verifyUserPassword(String username, String password) {
+    public boolean verifyUserPassword(String username, String password, String traceId) {
 
         var url = String.format(VERIFY_USER_CREDENTIALS_URL, realm);
 
@@ -60,6 +59,7 @@ public class KeycloakServiceImpl implements KeycloakService {
                                 .headers(h -> {
                                     h.add(HttpHeaders.AUTHORIZATION, "Bearer " + keycloak.tokenManager().getAccessToken().getToken());
                                     h.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+                                    h.add("Trace-Id", traceId);
                                 })
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .exchange((clientRequest, clientResponse) -> {
@@ -99,7 +99,7 @@ public class KeycloakServiceImpl implements KeycloakService {
                                 })
                                 .accept(MediaType.ALL)
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .exchange((clientRequest, clientResponse) -> {
+                                .exchange((_, clientResponse) -> {
                                     if (clientResponse.getStatusCode().is2xxSuccessful()) {
                                         log.info("Successfully login");
                                         return Optional.of(Objects.requireNonNull(clientResponse.bodyTo(AccessTokenResponse.class)));

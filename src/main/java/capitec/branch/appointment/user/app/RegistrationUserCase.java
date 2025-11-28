@@ -17,7 +17,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.Optional;
 
 @Slf4j
@@ -53,11 +52,11 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
         }
 
 
-
+        //Check if email is taken
         userService.getUserByEmail(user.getEmail()).ifPresent(u -> {
 
             log.error("User already exists with email:{}, traceId:{}", u.getEmail(), traceId);
-            throw new EntityAlreadyExistException("User already exists");
+            throw new EntityAlreadyExistException("User already exists with email");
         });
 
         user = userService.registerUser(user);
@@ -184,6 +183,16 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
                     return new NotFoundException("User not found");
                 }
         );
+    }
+
+    public  String generateUserId(String traceId) {
+        log.debug("generateUserId traceId:{}", traceId);
+        String id ;
+        do {
+            id = new UsernameGenerator().getId();
+        } while (userService.checkIfUserExists(id));
+
+        return id;
     }
 
     @Override

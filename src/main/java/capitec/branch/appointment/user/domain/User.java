@@ -10,6 +10,7 @@ import capitec.branch.appointment.utils.Name;
 import capitec.branch.appointment.utils.Password;
 import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;
+import org.apache.james.mime4j.dom.datetime.DateTime;
 import org.hibernate.validator.internal.engine.ConstraintViolationImpl;
 import java.util.Collections;
 import java.util.Map;
@@ -37,6 +38,7 @@ public class User {
     private String password;
     private Boolean verified;
     private Boolean enabled;
+    private DateTime createdAt;
 
     public User(String email, String firstname, String lastname, String password) {
         log.debug("Create user :{}", email);

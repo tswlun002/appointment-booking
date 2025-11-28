@@ -8,7 +8,7 @@ import java.util.Optional;
 public interface UserService extends   FetchUser {
     User registerUser(User user);
     boolean verifyUser(String username);
-    boolean verifyUserCurrentPassword(String username, String password);
+    boolean verifyUserCurrentPassword(String username, String password, String traceId);
     Optional<User> getUserByUsername(String username);
     default Optional<UserProfile> fetchUser(String username){
        return getUserByUsername(username).map(user -> new UserProfile(user.getUsername(), user.getEmail(), user.getFirstname()+ " " + user.getLastname()));
