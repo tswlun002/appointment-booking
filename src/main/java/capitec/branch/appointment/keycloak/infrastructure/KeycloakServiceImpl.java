@@ -129,7 +129,7 @@ public class KeycloakServiceImpl implements KeycloakService {
                                 })
                                 .accept(MediaType.ALL)
                                 .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                                .exchange((clientRequest, clientResponse) -> {
+                                .exchange((_, clientResponse) -> {
                                     if (clientResponse.getStatusCode().is2xxSuccessful()) {
                                         log.info("Successfully logout");
                                         return Optional.of(Objects.requireNonNull(clientResponse.bodyTo(String.class)));

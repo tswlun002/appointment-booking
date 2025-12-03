@@ -7,11 +7,12 @@ import org.springframework.data.jdbc.repository.query.Modifying;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
-
+import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
+@Repository
 public interface OTPRepository extends CrudRepository<OTPEntity, Long> {
 
 
@@ -82,13 +83,4 @@ public interface OTPRepository extends CrudRepository<OTPEntity, Long> {
 
 
 
-  /*  @Query("""
-    SELECT  LOCALTIMESTAMP as time_now, otp.expire_date,
-            (LOCALTIMESTAMP>= otp.expire_date) as is_expired
-    FROM otp 
-    WHERE otp. username = :username
-    """)
-    List<otp> isOTPExpired(@Param("username") String username);*/
 }
-
-//record otp(Object time_now, Object expire_date, Object is_expired) {}

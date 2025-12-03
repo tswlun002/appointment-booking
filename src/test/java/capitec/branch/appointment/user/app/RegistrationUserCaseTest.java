@@ -12,26 +12,14 @@ import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
 import capitec.branch.appointment.otp.domain.OTPService;
 import capitec.branch.appointment.otp.domain.OTPStatus;
 import capitec.branch.appointment.user.domain.User;
-import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.http.MediaType;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
 
@@ -96,7 +84,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         var userRegister = new NewUserDtO(email, password, firstname, lastname, idNumber, true);
 
         User user = new User(userRegister.email(), userRegister.firstname(), userRegister.lastname(), userRegister.password());
-        wireMockGetUserFromClientDomainById(user, idNumber);
+        wireMockGetHolidayByYearAndCountryCode(user, idNumber);
         var registeredUser = registrationUserCase.registerUser(userRegister, traceId);
 
         var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
@@ -164,7 +152,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         var registerDTO = new NewUserDtO(email, firstname, lastname,password);
         User userMock = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
-        wireMockGetUserFromClientDomainById(userMock,idNumber );
+        wireMockGetHolidayByYearAndCountryCode(userMock,idNumber );
 
         User user = registrationUserCase.registerUser(registerDTO, traceId);
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))

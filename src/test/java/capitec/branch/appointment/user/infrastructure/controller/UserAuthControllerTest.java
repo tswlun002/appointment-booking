@@ -85,7 +85,7 @@ class UserAuthControllerTest extends AppointmentBookingApplicationTests {
 
        var userMock = new User(email,firstname, lastName,password);
 
-        wireMockGetUserFromClientDomainById(userMock,idNumber );
+        wireMockGetHolidayByYearAndCountryCode(userMock,idNumber );
 
         ResponseEntity<String> exchange = restClientForController.post()
                 .uri("/auth/register")
