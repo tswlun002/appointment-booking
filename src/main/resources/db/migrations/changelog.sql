@@ -2,6 +2,27 @@
 
 -- changeset lungatsewu:-1
 -- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables  where table_name='slot';
+-- comment: /* Create table SLOT only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE  slot(
+    id SERIAL NOT NULL ,
+    day DATE NOT NULL ,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL ,
+    number INTEGER NOT NULL ,
+    is_booked BOOLEAN NOT NULL,
+    created_at TIMESTAMP  DEFAULT  LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    version INTEGER DEFAULT  1,
+    CONSTRAINT pk_slot PRIMARY KEY (id),
+    CONSTRAINT  unique_day_start_time_end_time UNIQUE (day, start_time,end_time)
+);
+CREATE INDEX idx_day_is_booked ON slot(day,is_booked);
+
+-- ROLLBACK DROP TABLE slot
+
+-- changeset lungatsewu:-2
+-- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables  where table_name='otp';
 -- comment: /* Create table OTP only if it does not exist. ZERO means the schema does not exist*/
 CREATE TABLE otp (
@@ -20,7 +41,7 @@ CREATE INDEX idx_username_code_status ON otp(username,code,status);
 CREATE INDEX idx_username_status ON otp(username,status);
 -- ROLLBACK DROP TABLE otp
 
--- changeset lungatsewu:1736901183105-2
+-- changeset lungatsewu:1736901183105-3
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='otp';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'otp' AND column_name = 'username';
@@ -29,7 +50,7 @@ ALTER TABLE otp ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES use
 -- ROLLBACK ALTER TABLE otp DROP CONSTRAINT unique_username;
 
 
--- changeset lungatsewu:-3
+-- changeset lungatsewu:-4
 --preconditions onFail:MARK_RAN onError:HALT
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'user_dead_letter_event' AND table_schema = current_schema()
 CREATE TABLE user_dead_letter_event (
@@ -65,7 +86,7 @@ CREATE INDEX idx_user_dead_letter_event_time_stamp ON user_dead_letter_event(pub
 --rollback DROP TABLE user_dead_letter_event;
 
 
--- changeset lungatsewu:-4
+-- changeset lungatsewu:-5
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='user_dead_letter_event';
 CREATE OR REPLACE FUNCTION update_last_modified_date()
@@ -76,12 +97,20 @@ RETURN NEW;
 END
 $$ LANGUAGE plpgsql;
 
--- changeset lungatsewu:-5
+-- changeset lungatsewu:-6
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='user_dead_letter_event';
--- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date' AND event_object_table='user_dead_letter_event';
-CREATE TRIGGER set_last_modified_date
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_event' AND event_object_table='user_dead_letter_event';
+CREATE TRIGGER set_last_modified_date_event
     BEFORE UPDATE ON user_dead_letter_event
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified_date();
 
+-- changeset lungatsewu:-7
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='slot';
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='slot';
+CREATE TRIGGER set_last_modified_date_slot
+    BEFORE UPDATE ON slot
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified_date();

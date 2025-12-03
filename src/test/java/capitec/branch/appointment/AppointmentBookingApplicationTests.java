@@ -1,26 +1,19 @@
 package capitec.branch.appointment;
 
-import capitec.branch.appointment.user.app.NewUserDtO;
 import capitec.branch.appointment.user.domain.User;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 import org.testcontainers.containers.*;
 import org.testcontainers.containers.wait.strategy.Wait;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -152,10 +145,12 @@ public class AppointmentBookingApplicationTests {
                 .withStartupTimeout(Duration.ofMinutes(1));
     }
 
-    public  static GenericContainer<?> wiremockServer = new GenericContainer<>(
+    public  static GenericContainer<?> wiremockClientDomainServer = new GenericContainer<>(
             DockerImageName.parse("wiremock/wiremock:latest"))
             .withExposedPorts(8080); // WireMock's default port
-
+    public  static GenericContainer<?> wiremockNagerServer = new GenericContainer<>(
+            DockerImageName.parse("wiremock/wiremock:latest"))
+            .withExposedPorts(8080); // WireMock's default port
 
 
 
@@ -208,12 +203,20 @@ public class AppointmentBookingApplicationTests {
             registry.add("allowed_origins.cache_period",()->"30");
 
             //Client domain
-            wiremockServer.start();
-            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockServer.isRunning());
+            wiremockClientDomainServer.start();
+            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockClientDomainServer.isRunning());
             registry.add("client-domain.baseurl", () ->
                     String.format("http://%s:%d",
-                            wiremockServer.getHost(),
-                            wiremockServer.getFirstMappedPort()));
+                            wiremockClientDomainServer.getHost(),
+                            wiremockClientDomainServer.getFirstMappedPort()));
+
+            // Mock Nager server
+            wiremockNagerServer.start();
+            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockNagerServer.isRunning());
+            registry.add("holidays-client.baseurl", () ->
+                    String.format("http://%s:%d",
+                            wiremockClientDomainServer.getHost(),
+                            wiremockClientDomainServer.getFirstMappedPort()));
 
 
 
@@ -223,8 +226,8 @@ public class AppointmentBookingApplicationTests {
         }
     }
 
-    public static   void wireMockGetUserFromClientDomainById(User user,String idNumber) {
-        var  wireMock = new WireMock(wiremockServer.getHost(), wiremockServer.getFirstMappedPort());
+    public static   void wireMockGetHolidayByYearAndCountryCode(User user, String idNumber) {
+        var  wireMock = new WireMock(wiremockClientDomainServer.getHost(), wiremockClientDomainServer.getFirstMappedPort());
 
         // 1. Define the mock response (the stub)
 
@@ -242,6 +245,178 @@ public class AppointmentBookingApplicationTests {
 
         wireMock.register(WireMock.get(WireMock.urlPathEqualTo("/v1/clients"))
                 .withQueryParam("IDNumber",WireMock.equalTo(idNumber))
+                .willReturn(WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader("Content-Type", "application/json")
+                        .withBody(expectedBody)));
+    }
+
+    public static   void wireMockGetHolidayByYearAndCountryCode(String year, String countryCode) {
+
+        String uri = String.format("/api/v3/PublicHolidays/%s/%s", year, countryCode);
+        var  wireMock = new WireMock(wiremockClientDomainServer.getHost(), wiremockClientDomainServer.getFirstMappedPort());
+        String expectedBody = """
+                        [
+                            {
+                                "date": "2025-01-01",
+                                "localName": "New Year's Day",
+                                "name": "New Year's Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-03-21",
+                                "localName": "Human Rights Day",
+                                "name": "Human Rights Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-04-18",
+                                "localName": "Good Friday",
+                                "name": "Good Friday",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-04-21",
+                                "localName": "Family Day",
+                                "name": "Family Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-04-28",
+                                "localName": "Freedom Day",
+                                "name": "Freedom Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-05-01",
+                                "localName": "Workers' Day",
+                                "name": "Workers' Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-06-16",
+                                "localName": "Youth Day",
+                                "name": "Youth Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-08-09",
+                                "localName": "National Women's Day",
+                                "name": "National Women's Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-09-24",
+                                "localName": "Heritage Day",
+                                "name": "Heritage Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-12-16",
+                                "localName": "Day of Reconciliation",
+                                "name": "Day of Reconciliation",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-12-25",
+                                "localName": "Christmas Day",
+                                "name": "Christmas Day",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            },
+                            {
+                                "date": "2025-12-26",
+                                "localName": "St. Stephen's Day",
+                                "name": "Day of Goodwill",
+                                "countryCode": "ZA",
+                                "fixed": false,
+                                "global": true,
+                                "counties": null,
+                                "launchYear": null,
+                                "types": [
+                                    "Public"
+                                ]
+                            }
+                        ]
+                        """;
+
+        wireMock.register(WireMock.get(WireMock.urlPathEqualTo(uri))
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
