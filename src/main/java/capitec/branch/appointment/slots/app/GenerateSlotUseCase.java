@@ -1,7 +1,8 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.slots.domain.DayType;
-import capitec.branch.appointment.slots.domain.Holiday;
+import capitec.branch.appointment.day.domain.HolidayClient;
+import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.day.domain.Holiday;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,8 @@ import org.springframework.validation.annotation.Validated;
 import java.time.*;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static capitec.branch.appointment.day.domain.Day.isWeekend;
 
 
 @UseCase
@@ -150,11 +153,7 @@ public class GenerateSlotUseCase {
     }
 
 
-    public static boolean isWeekend(DayOfWeek date) {
 
-        return date== DayOfWeek.SATURDAY ||
-                date == DayOfWeek.SUNDAY;
-    }
     public  boolean isHoliday(LocalDate date) {
         Set<Holiday> holidays = holidayClient.getHolidays(COUNTRY_CODE, CURRENT_YEAR);
 

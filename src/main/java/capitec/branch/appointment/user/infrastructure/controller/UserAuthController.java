@@ -109,7 +109,7 @@ public class UserAuthController {
 
     @GetMapping("/generate/username")
     public ResponseEntity<?> generateNewUserId(@RequestHeader("Trace-Id") String traceId) {
-        log.info("Generating user id:{}", traceId);
+        log.info("Generating user username:{}", traceId);
         return new ResponseEntity<>(registrationUserCase.generateUserId(traceId), HttpStatus.OK);
     }
 

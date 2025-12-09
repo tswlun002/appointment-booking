@@ -1,7 +1,7 @@
-package capitec.branch.appointment.slots.infrastructure.holiday;
+package capitec.branch.appointment.day.infrastructure.holiday;
 
-import capitec.branch.appointment.slots.domain.Holiday;
-import capitec.branch.appointment.slots.app.HolidayClient;
+import capitec.branch.appointment.day.domain.Holiday;
+import capitec.branch.appointment.day.domain.HolidayClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;

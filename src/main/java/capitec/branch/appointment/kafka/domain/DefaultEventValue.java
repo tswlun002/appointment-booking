@@ -21,7 +21,7 @@ public  abstract class DefaultEventValue implements EventValue, Serializable {
         private final String topic;
         @NotBlank(message = "Event must have purpose(values)")
         private final String value;
-        @NotBlank(message = "Trace id is required for event")
+        @NotBlank(message = "Trace username is required for event")
         private final String traceId;
         private final String eventId;
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyy-MM-dd'T'HH:mm:ss")

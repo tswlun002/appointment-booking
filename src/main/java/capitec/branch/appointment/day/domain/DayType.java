@@ -1,4 +1,4 @@
-package capitec.branch.appointment.slots.domain;
+package capitec.branch.appointment.day.domain;
 
 public enum DayType {
 

@@ -41,9 +41,6 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @Autowired
     private KeycloakService keycloakService;
 
-    @Value("${client-domain.baseurl}")
-    private String clientDomainBaseUrl;
-
 
 
     @AfterEach

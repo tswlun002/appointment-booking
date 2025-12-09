@@ -5,11 +5,11 @@ import capitec.branch.appointment.slots.domain.Slot;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+import static capitec.branch.appointment.day.domain.Day.isWeekend;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -40,7 +40,7 @@ class GenerateSlotUseCaseTest extends AppointmentBookingApplicationTests {
        }
 
        List<LocalDate> weekDays = weeklySlots.keySet().stream()
-               .filter(d -> !(generateSlotUseCase.isHoliday(d) || GenerateSlotUseCase.isWeekend(d.getDayOfWeek())))
+               .filter(d -> !(generateSlotUseCase.isHoliday(d) || isWeekend(d.getDayOfWeek())))
                .toList();
 
        for (LocalDate day : weekDays) {
@@ -49,7 +49,7 @@ class GenerateSlotUseCaseTest extends AppointmentBookingApplicationTests {
            assertThat(weekDaySlots.size()).isEqualTo(9);
        }
        List<LocalDate> weekEnd= weeklySlots.keySet().stream()
-               .filter(d -> GenerateSlotUseCase.isWeekend(d.getDayOfWeek()))
+               .filter(d -> isWeekend(d.getDayOfWeek()))
                .toList();
 
        for (var day : weekEnd ) {

@@ -12,7 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
 @Table("otp")
-public record OTPEntity(
+record OTPEntity(
         @Id Long id,
          String code,
         @Column("created_date")

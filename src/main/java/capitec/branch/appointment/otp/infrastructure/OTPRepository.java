@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Repository
-public interface OTPRepository extends CrudRepository<OTPEntity, Long> {
+interface OTPRepository extends CrudRepository<OTPEntity, Long> {
 
 
     @Modifying
