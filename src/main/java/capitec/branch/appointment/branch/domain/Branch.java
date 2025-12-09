@@ -2,10 +2,11 @@ package capitec.branch.appointment.branch.domain;
 
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
-import capitec.branch.appointment.staff.domain.Staff;
+import capitec.branch.appointment.exeption.InvalidAppointmentConfigurationException;
 import capitec.branch.appointment.day.domain.DayType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
@@ -19,8 +20,8 @@ public class Branch {
     private  LocalTime openTime;
     @NotNull
     private  LocalTime closingTime;
-    private Map<DayType, BranchAppointmentInfo> branchAppointmentInfo;
-    private Map<LocalDate,Set<Staff>> weeklyStaff;
+    private List<BranchAppointmentInfo> branchAppointmentInfo;
+    private Map<LocalDate,Set<StaffRef>> weeklyStaff;
     @NotNull
     private Address address;
 
@@ -37,6 +38,13 @@ public class Branch {
         assert  address != null;
 
     }
+    public void validateAppointmentInfoConsistency(@NotNull BranchAppointmentInfo info) {
+        if (info.slotDuration().toMinutes()<= Duration.between(openTime, closingTime).toMinutes()) {
+            throw new InvalidAppointmentConfigurationException(
+                    "Appointment slots must be within branch operating hours"
+            );
+        }
+    }
 
     public void setAddress(@NotNull Address address) {
 
@@ -44,7 +52,8 @@ public class Branch {
         assert  address != null;
     }
 
-    public void setBranchAppointmentInfo(@NotNull Map<DayType, BranchAppointmentInfo> branchAppointmentInfo) {
+    public void setBranchAppointmentInfo(@NotNull List<BranchAppointmentInfo> branchAppointmentInfo) {
+        branchAppointmentInfo.forEach(this::validateAppointmentInfoConsistency);
         this.branchAppointmentInfo = branchAppointmentInfo;
     }
     public  Address getAddress() {
@@ -59,17 +68,26 @@ public class Branch {
     public LocalTime getClosingTime() {
         return closingTime;
     }
-    public Map<DayType, BranchAppointmentInfo> getBranchAppointmentInfo() {
-        return branchAppointmentInfo;
+    public List<BranchAppointmentInfo> getBranchAppointmentInfo() {
+        return branchAppointmentInfo == null
+                ? Collections.emptyList()
+                : Collections.unmodifiableList(branchAppointmentInfo);
     }
-    public Map<LocalDate,Set<Staff>> getWeeklyStaff() {
-        return weeklyStaff;
+    public Map<LocalDate,Set<StaffRef>> getWeeklyStaff() {
+        if (weeklyStaff == null) {
+            return Collections.emptyMap();
+        }
+        Map<LocalDate, Set<StaffRef>> copy = new HashMap<>();
+        weeklyStaff.forEach((date, refs) ->
+                copy.put(date, Set.copyOf(refs))
+        );
+        return Collections.unmodifiableMap(copy);
     }
-    public  void setWeeklyStaff( Map<LocalDate,Set<Staff>> weeklyStaff) {
+    public  void setWeeklyStaff( Map<LocalDate,Set<StaffRef>> weeklyStaff) {
         this.weeklyStaff = weeklyStaff;
     }
 
-    public void addStaff(@NotNull LocalDate day,@NotNull Set<Staff> staff) {
+    public void addStaff(@NotNull LocalDate day,@NotNull Set<StaffRef> staff) {
         if (this.weeklyStaff == null) {
             this.weeklyStaff = new HashMap<>();
 
@@ -77,21 +95,21 @@ public class Branch {
             return;
         }
 
-        Set<Staff> dailyStaff = this.weeklyStaff.get(day);
+        Set<StaffRef> dailyStaff = this.weeklyStaff.computeIfAbsent(day, k -> new HashSet<>());
         dailyStaff.addAll(staff);
 
         this.weeklyStaff.put(day,dailyStaff);
     }
-    public void addStaff(@NotNull LocalDate day,@NotNull Staff staff) {
+    public void addStaff(@NotNull LocalDate day,@NotNull StaffRef staff) {
         if (this.weeklyStaff == null) {
             this.weeklyStaff = new HashMap<>();
-            Set<Staff> newStaff = new HashSet<>();
+            Set<StaffRef> newStaff = new HashSet<>();
             newStaff.add(staff);
             this.weeklyStaff.put(day, newStaff);
             return;
         }
 
-        Set<Staff> dailyStaff = this.weeklyStaff.get(day);
+        Set<StaffRef> dailyStaff = this.weeklyStaff.get(day);
 
         if(dailyStaff==null){
             dailyStaff = new HashSet<>();
@@ -106,13 +124,13 @@ public class Branch {
     }
 
 
-    public void removeStaff(@NotNull LocalDate day,@NotNull Staff staff) {
+    public void removeStaff(@NotNull LocalDate day,@NotNull StaffRef staff) {
 
         if (this.weeklyStaff == null) {
             throw  new IllegalArgumentException("Cannot remove a staff that has no weekly staff");
         }
 
-        Set<Staff> dailyStaff = this.weeklyStaff.get(day);
+        Set<StaffRef> dailyStaff = this.weeklyStaff.get(day);
 
         if(dailyStaff==null || dailyStaff.isEmpty()){
 
@@ -131,10 +149,13 @@ public class Branch {
 
     public  void updateAppointmentInfo(@NotNull  DayType dayType , @NotNull BranchAppointmentInfo branchAppointmentInfo) {
         if(this.branchAppointmentInfo == null) {
-            this.branchAppointmentInfo = new HashMap<>();
+            this.branchAppointmentInfo = new ArrayList<>();
         }
 
-        this.branchAppointmentInfo.put(dayType, branchAppointmentInfo);
+        validateAppointmentInfoConsistency(branchAppointmentInfo);
+
+        this.branchAppointmentInfo.removeIf(info -> info.dayType().equals(dayType));
+        this.branchAppointmentInfo.add(branchAppointmentInfo);
     }
 
     @Override

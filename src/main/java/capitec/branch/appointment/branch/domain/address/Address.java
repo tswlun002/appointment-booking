@@ -8,7 +8,7 @@ public record Address(
         @NotBlank
         String streetName,
         @NotBlank
-        String suburbs,
+        String suburb,
         @NotBlank
         String city,
         @NotBlank
@@ -20,14 +20,14 @@ public record Address(
    public  Address (
                          String streetNumber,
                          String streetName,
-                         String suburbs,
+                         String suburb,
                          String city,
                          String province,
                          Integer postalCode,
                          String country) {
        this.streetNumber = streetNumber;
         this.streetName = streetName;
-        this.suburbs = suburbs;
+        this.suburb = suburb;
         this.city = city;
         this.province = province;
         this.postalCode = postalCode;
@@ -35,7 +35,7 @@ public record Address(
 
         assert  streetNumber != null;
         assert streetName != null;
-        assert suburbs != null;
+        assert suburb != null;
         assert province != null;
         assert postalCode != null;
 

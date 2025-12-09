@@ -23,7 +23,7 @@ public class StaffUseCase implements AvailableStaff {
     private final StaffService staffService;
 
 
-    boolean addStaff(@Valid StaffDTO staffDTO) {
+  public   boolean addStaff(@Valid StaffDTO staffDTO) {
         var isAdded = false;
 
         try {

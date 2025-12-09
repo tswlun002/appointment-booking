@@ -1,11 +1,12 @@
 package capitec.branch.appointment.branch.infrastructure;
 
-import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
 import capitec.branch.appointment.day.domain.DayType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,7 +22,7 @@ import java.util.Optional;
 public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService {
 
     private final BranchRepository branchRepository;
-    private final BranchMapper  branchMapper;
+    private final BranchMapper branchMapper;
 
     @Override
     @Transactional
@@ -29,11 +30,11 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
         BranchEntity entity = branchMapper.toEntity(branch);
 
-        try{
+        try {
 
-             log.debug("Adding branch: {}", branch);
+            log.debug("Adding branch: {}", branch);
 
-             branchRepository.save(entity);
+            branchRepository.save(entity);
 
         } catch (Exception e) {
 
@@ -64,14 +65,23 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     @Override
     public boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType, @Valid Branch branch) {
 
-       var branchAppointmentInfo = branch.getBranchAppointmentInfo().get(dayType);
-         var isAdded = false;
-        try{
+        var branchAppointmentInfo = branch.getBranchAppointmentInfo()
+                .stream()
+                .filter(info -> info.dayType().equals(dayType))
+                .findFirst()
+                .orElseThrow(() -> {
+                            log.error("No appointment info found for day type: {}", dayType.name());
+                            return new NotFoundException("No appointment info found for day type: " + dayType.name());
+                });
 
-          var added =  branchRepository.addBranchAppointmentConfigInfo(branch.getBranchId(), (int) branchAppointmentInfo.slotDuration().toMinutes(),
-                  branchAppointmentInfo.utilizationFactor(),branchAppointmentInfo.dayType().name());
+        var isAdded = false;
 
-          isAdded= added==1;
+        try {
+
+            var added = branchRepository.addBranchAppointmentConfigInfo(branch.getBranchId(), (int) branchAppointmentInfo.slotDuration().toMinutes(),
+                    branchAppointmentInfo.utilizationFactor(), branchAppointmentInfo.dayType().name());
+
+            isAdded = added == 1;
 
         } catch (Exception e) {
 

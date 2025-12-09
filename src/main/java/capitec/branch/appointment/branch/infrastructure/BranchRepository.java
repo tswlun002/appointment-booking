@@ -12,21 +12,15 @@ import java.util.Optional;
 
 @Repository
 interface BranchRepository extends CrudRepository<BranchEntity, Long> {
-    @Transactional
     @Modifying
+    @Transactional
     @Query("""
-            
-            -- WITH inserted_info AS (
-                 INSERT INTO branch_appointment_info(branch_id,branch_key,slot_duration,utilization_factor,day_type)
-                 VALUES(:branch_id,:dayType,:slotDuration,:utilizationFactor,:dayType)
-                -- RETURNING branch_id
-            --)
-             -- We select the branch_id from the inserted row to guarantee atomicity and success
-             /*SELECT * FROM branch AS U 
-                 LEFT JOIN branch_appointment_info AS ba  ON ba.branch_id=u.branch_id
-                 INNER JOIN address AS a ON a.branch_id=u.branch_id
-                 LEFT JOIN staff_schedule AS ss ON ss.branch_id=u.branch_id
-            WHERE U.branch_id IN (SELECT branch_id FROM inserted_info)   */
+            INSERT INTO branch_appointment_info (branch_id, branch_key, slot_duration, utilization_factor, day_type)
+            VALUES (:branchId, :dayType, :slotDuration, :utilizationFactor, :dayType)
+            ON CONFLICT (branch_id, day_type) 
+            DO UPDATE SET 
+                slot_duration = EXCLUDED.slot_duration,
+                utilization_factor = EXCLUDED.utilization_factor
             """)
     int addBranchAppointmentConfigInfo(@Param("branchId") String branchId, @Param("slotDuration") int slotDuration,
                                        @Param("utilizationFactor") double utilizationFactor, @Param("dayType") String dayType);
@@ -34,9 +28,9 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
 
     @Query(value = """
                         SELECT * FROM branch AS U 
-                            LEFT JOIN branch_appointment_info AS ba  ON ba.branch_id=u.branch_id
                             INNER JOIN address AS a ON a.branch_id=u.branch_id
-                            LEFT JOIN staff_schedule AS ss ON ss.branch_id=u.branch_id
+                            LEFT JOIN branch_appointment_info AS ba  ON ba.branch_id=u.branch_id
+                            LEFT JOIN branch_staff_assignment AS ss ON ss.branch_id=u.branch_id
                        WHERE U.branch_id=:branchId 
             """)
     Optional<BranchEntity> getBranchById(@Param("branchId") String branchId);
