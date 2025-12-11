@@ -2,6 +2,7 @@ package capitec.branch.appointment.branch.infrastructure;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
+
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
 import capitec.branch.appointment.day.domain.DayType;
 import jakarta.validation.Valid;
@@ -10,23 +11,24 @@ import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Validated
-public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService {
+public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService/*StaffSchedule*/ {
 
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
 
     @Override
-    @Transactional
-    public void add(@Valid Branch branch) {
+    public Branch add(@Valid Branch branch) {
 
         BranchEntity entity = branchMapper.toEntity(branch);
 
@@ -34,13 +36,14 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
             log.debug("Adding branch: {}", branch);
 
-            branchRepository.save(entity);
+           entity= branchRepository.save(entity);
 
         } catch (Exception e) {
 
             log.error("Unable to save branch.", e);
             throw e;
         }
+        return branchMapper.toDomain(entity);
 
     }
 
@@ -50,20 +53,41 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
         Optional<Branch> branch;
         try {
 
-            Optional<BranchEntity> branchById = branchRepository.getBranchById(branchId);
+            Optional<BranchEntity> branchById = branchRepository.getByBranchId(branchId);
             branch = branchById.map(branchMapper::toDomain);
 
         } catch (Exception e) {
 
-            log.error("Unable to get branch.", e);
+            log.error("Unable to get branch:{}",branchId, e);
             throw e;
         }
         return branch;
     }
 
-    @Transactional
     @Override
-    public boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType, @Valid Branch branch) {
+    public boolean delete(String branchId) {
+        var isDeleted = false;
+
+        try {
+
+            isDeleted =branchRepository.deletBranch(branchId)==1;
+
+        } catch (Exception e) {
+            log.error("Unable to delete branch:{}",branchId, e);
+            throw e;
+        }
+        return isDeleted;
+    }
+
+    @Override
+    public Collection<Branch> getAllBranch() {
+        Collection<BranchEntity> branchEntities= branchRepository.getAllBranch();
+        return branchEntities.stream().map(branchMapper::toDomain).collect(Collectors.toSet());
+    }
+
+
+    @Override
+    public boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType,  @Valid Branch branch) {
 
         var branchAppointmentInfo = branch.getBranchAppointmentInfo()
                 .stream()
@@ -79,15 +103,27 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
         try {
 
             var added = branchRepository.addBranchAppointmentConfigInfo(branch.getBranchId(), (int) branchAppointmentInfo.slotDuration().toMinutes(),
-                    branchAppointmentInfo.utilizationFactor(), branchAppointmentInfo.dayType().name());
+                    branchAppointmentInfo.utilizationFactor(),branchAppointmentInfo.staffCount(), branchAppointmentInfo.dayType().name());
 
             isAdded = added == 1;
 
         } catch (Exception e) {
 
-            log.error("Unable to save branch.", e);
+            log.error("Unable to add branch:{} appointment config information.",branch.getBranchId(), e);
             throw e;
         }
         return isAdded;
     }
+
+ /*   @Override
+    public boolean addWorkingStaff(String branchId, Set<StaffRef> staff) {
+
+      var isAdded = false;
+        try {
+            isAdded=branchRepository.addWorkingStaff(branchId,staff);
+        } catch (Exception e) {
+            log.error("Unable to add branch:{} working staff", branchId,e);
+        }
+        return isAdded;
+    }*/
 }

@@ -7,6 +7,7 @@ import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmen
 import capitec.branch.appointment.day.domain.DayType;
 import org.mapstruct.*;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +23,6 @@ public interface BranchMapper {
     @Mapping(target = "closingTime", source = "closingTime")
     @Mapping(target = "address", source = "address")
     @Mapping(target = "branchAppointmentInfo", source = "branchAppointmentInfo")
-    @Mapping(target = "weeklyStaff", source = "dailyStaff")
     Branch toDomain(BranchEntity entity);
 
     /**
@@ -31,12 +31,16 @@ public interface BranchMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
-    @Mapping(target = "branchAppointmentInfo", source = "branchAppointmentInfo")
-    @Mapping(target = "dailyStaff", source = "weeklyStaff")
+    @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapAppointmentInfoToMap(domain))")
+    //@Mapping(target = "dailyStaff", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapWeeklyStaffToSet(domain))")
     BranchEntity toEntity(Branch domain);
 
     // Custom mapping: List<BranchAppointmentInfo> -> Map<DayType, BranchAppointmentInfoEntity>
-    default Map<DayType, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(List<BranchAppointmentInfo> infos) {
+    static   Map<DayType, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
+        if(branch == null) {
+            return null;
+        }
+        List<BranchAppointmentInfo> infos = branch.getBranchAppointmentInfo();
         if (infos == null || infos.isEmpty()) {
             return null;
         }
@@ -44,7 +48,8 @@ public interface BranchMapper {
                 .collect(Collectors.toMap(
                         BranchAppointmentInfo::dayType,
                         info -> new BranchAppointmentInfoEntity(
-                                info.slotDuration(),
+                                branch.getBranchId(),
+                                Math.toIntExact(info.slotDuration().toMinutes()),
                                 info.utilizationFactor(),
                                 info.staffCount(),
                                 info.dayType().name()
@@ -59,7 +64,7 @@ public interface BranchMapper {
         }
         return map.entrySet().stream()
                 .map(entry -> new BranchAppointmentInfo(
-                        entry.getValue().slotDuration(),
+                        Duration.ofMinutes(entry.getValue().slotDuration()),
                         entry.getValue().utilizationFactor(),
                         entry.getValue().staffCount(),
                         entry.getKey()
@@ -68,20 +73,26 @@ public interface BranchMapper {
     }
 
     // Custom mapping: Map<LocalDate, Set<StaffRef>> -> Set<BranchStaffAssignmentEntity>
-    default Set<BranchStaffAssignmentEntity> mapWeeklyStaffToSet(Map<LocalDate, Set<StaffRef>> weeklyStaff) {
+/*    static Set<BranchStaffAssignmentEntity> mapWeeklyStaffToSet(Branch branch) {
+        if (branch == null) {
+            return Collections.emptySet();
+        }
+        Map<LocalDate, Set<StaffRef>> weeklyStaff = branch.getWeeklyStaff();
         if (weeklyStaff == null || weeklyStaff.isEmpty()) {
             return null;
         }
         return weeklyStaff.entrySet().stream()
                 .flatMap(entry -> entry.getValue().stream()
                         .map(staffRef -> new BranchStaffAssignmentEntity(
+                                branch.getBranchId(),
                                 staffRef.username(),
                                 entry.getKey(),
                                 staffRef.status()
+
                         ))
                 )
                 .collect(Collectors.toSet());
-    }
+    }*/
 
     // Custom mapping: Set<BranchStaffAssignmentEntity> -> Map<LocalDate, Set<StaffRef>>
     default Map<LocalDate, Set<StaffRef>> mapDailyStaffToMap(Set<BranchStaffAssignmentEntity> dailyStaff) {

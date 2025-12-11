@@ -21,8 +21,6 @@ public class Branch {
     @NotNull
     private  LocalTime closingTime;
     private List<BranchAppointmentInfo> branchAppointmentInfo;
-    private Map<LocalDate,Set<StaffRef>> weeklyStaff;
-    @NotNull
     private Address address;
 
     public Branch(String branchId, LocalTime openTime, LocalTime closingTime,Address address) {
@@ -39,7 +37,7 @@ public class Branch {
 
     }
     public void validateAppointmentInfoConsistency(@NotNull BranchAppointmentInfo info) {
-        if (info.slotDuration().toMinutes()<= Duration.between(openTime, closingTime).toMinutes()) {
+        if (info.slotDuration().toMinutes()>Duration.between(openTime, closingTime).toMinutes()) {
             throw new InvalidAppointmentConfigurationException(
                     "Appointment slots must be within branch operating hours"
             );
@@ -54,7 +52,7 @@ public class Branch {
 
     public void setBranchAppointmentInfo(@NotNull List<BranchAppointmentInfo> branchAppointmentInfo) {
         branchAppointmentInfo.forEach(this::validateAppointmentInfoConsistency);
-        this.branchAppointmentInfo = branchAppointmentInfo;
+        this.branchAppointmentInfo = new ArrayList<>(branchAppointmentInfo);
     }
     public  Address getAddress() {
         return address;
@@ -73,7 +71,7 @@ public class Branch {
                 ? Collections.emptyList()
                 : Collections.unmodifiableList(branchAppointmentInfo);
     }
-    public Map<LocalDate,Set<StaffRef>> getWeeklyStaff() {
+/*    public Map<LocalDate,Set<StaffRef>> getWeeklyStaff() {
         if (weeklyStaff == null) {
             return Collections.emptyMap();
         }
@@ -84,7 +82,7 @@ public class Branch {
         return Collections.unmodifiableMap(copy);
     }
     public  void setWeeklyStaff( Map<LocalDate,Set<StaffRef>> weeklyStaff) {
-        this.weeklyStaff = weeklyStaff;
+        this.weeklyStaff = new HashMap<>(weeklyStaff);
     }
 
     public void addStaff(@NotNull LocalDate day,@NotNull Set<StaffRef> staff) {
@@ -143,7 +141,7 @@ public class Branch {
         dailyStaff.remove(staff);
 
         this.weeklyStaff.put(day,dailyStaff);
-    }
+    }*/
 
 
 
@@ -172,11 +170,10 @@ public class Branch {
     @Override
     public String toString() {
         return "Branch{" +
-                "branchId='" + branchId + '\'' +
+                "username='" + branchId + '\'' +
                 ", openTime=" + openTime +
                 ", closingTime=" + closingTime +
                 ", branchAppointmentInfo=" + branchAppointmentInfo +
-                ", staff=" + weeklyStaff +
                 ", address=" + address +
                 '}';
     }

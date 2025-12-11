@@ -1,14 +1,14 @@
 package capitec.branch.appointment.branch.infrastructure;
 
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 @Table("address")
 record AddressEntity(
-        @NotBlank
-        @Column("branch_id")
-        String branchId,
+        @Id
+        Long branchId,
         @NotBlank
         @Column("street_number")
         String streetNumber,

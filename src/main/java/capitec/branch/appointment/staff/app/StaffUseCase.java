@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @UseCase
@@ -40,7 +40,7 @@ public class StaffUseCase implements AvailableStaff {
         return isAdded;
     }
 
-    Staff updateStaff(String username , StaffStatus status) {
+    public Staff updateStaff(String username , StaffStatus status) {
 
         Optional<Staff> isUpdated;
         try {
@@ -76,6 +76,11 @@ public class StaffUseCase implements AvailableStaff {
     @Override
     public int staffCount(String branchId) {
         return  getStaffByBranchIdAndStatus(branchId, StaffStatus.WORKING).size();
+    }
+
+    @Override
+    public Set<String> getStaff(String branchId, StaffStatus status) {
+        return  getStaffByBranchIdAndStatus(branchId,status).stream().map(Staff::username).collect(Collectors.toSet());
     }
 
 }

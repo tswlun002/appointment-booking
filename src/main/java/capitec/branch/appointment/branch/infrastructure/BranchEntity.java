@@ -20,12 +20,12 @@ import java.util.Set;
         String branchId,
         @Column("open_time")
         LocalTime openTime,
-        @Column("closing_time")
+        @Column("close_time")
         LocalTime closingTime,
         @MappedCollection(idColumn = "branch_id", keyColumn = "day_type")
         Map<DayType, BranchAppointmentInfoEntity> branchAppointmentInfo,
-        @MappedCollection(idColumn = "branch_id")
-        Set<BranchStaffAssignmentEntity>dailyStaff,
+//        @MappedCollection(idColumn = "branch_id")
+//        Set<BranchStaffAssignmentEntity>dailyStaff,
         @MappedCollection(idColumn = "branch_id")
         AddressEntity address,
         @Column("created_at")

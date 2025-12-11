@@ -3,8 +3,10 @@ package capitec.branch.appointment.branch.domain.appointmentinfo;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.day.domain.DayType;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 public interface BranchAppointmentInfoService {
 
-    boolean addBranchAppointmentConfigInfo(DayType dayType, Branch branch);
+    boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType, @Valid Branch branch);
 }

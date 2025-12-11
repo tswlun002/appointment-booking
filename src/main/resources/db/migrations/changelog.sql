@@ -26,12 +26,13 @@ CREATE TABLE branch_appointment_info
     id                 SERIAL PRIMARY KEY,
     created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    branch_id          VARCHAR(36)      NOT NULL REFERENCES branch (branch_id),
+    branch_id  SERIAL NOT NULL REFERENCES branch(id) ON DELETE CASCADE,
+    branch_business_id  VARCHAR(36) NOT NULL,
     branch_key         VARCHAR(16)      NOT NULL,
     slot_duration      INTEGER          NOT NULL,
     utilization_factor DOUBLE PRECISION NOT NULL,
+    staff_count        INTEGER          NOT NULL,
     day_type           VARCHAR(16)      NOT NULL,
-    CONSTRAINT unique_branch_id UNIQUE (branch_id),
     CONSTRAINT unique_branch_day UNIQUE (branch_id, day_type)
 
 );
@@ -47,10 +48,10 @@ CREATE TABLE staff
     id                 SERIAL PRIMARY KEY,
     created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    username           VARCHAR(32) NOT NULL UNIQUE,
+    username           VARCHAR(32) NOT NULL,
     branch_id          VARCHAR(36) NOT NULL, --REFERENCES branch (branch_id),
     status             VARCHAR(16),
-    CONSTRAINT unique_username UNIQUE (username),
+    CONSTRAINT unique_username UNIQUE (username)
 );
 CREATE INDEX idx_branch_id_username_status ON staff (branch_id, username, status);
 -- ROLLBAK DROP TABLE staff
@@ -61,14 +62,14 @@ CREATE INDEX idx_branch_id_username_status ON staff (branch_id, username, status
 -- comment: /* Create table branch_staff_assignment only if it does not exist. ZERO means the schema does not exist*/
 CREATE TABLE branch_staff_assignment
 (
-    branch_id  VARCHAR(36) NOT NULL,
+    branch_id  SERIAL NOT NULL REFERENCES branch(id) ON DELETE CASCADE,
+    branch_business_id  VARCHAR(36) NOT NULL,
+    staff_id   SERIAL NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
     username   VARCHAR(32) NOT NULL,
     day        DATE        NOT NULL,
     status     VARCHAR(16) NOT NULL, -- Historical snapshot
     created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    PRIMARY KEY (branch_id, username, day),
-    CONSTRAINT fk_assignment_branch FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE CASCADE,
-    CONSTRAINT fk_assignment_staff FOREIGN KEY (username) REFERENCES staff (username) ON DELETE CASCADE
+    PRIMARY KEY (branch_id, username, day)
 );
 -- Index for querying "who was working on date X?"
 CREATE INDEX idx_branch_date_status ON branch_staff_assignment (branch_id, day, username);
@@ -83,12 +84,12 @@ CREATE INDEX idx_staff_date ON branch_staff_assignment (username, day);
 -- comment: /* Create table ADDRESS only if it does not exist. ZERO means the schema does not exist*/
 CREATE TABLE address
 (
-    branch_id          VARCHAR(36) PRIMARY KEY REFERENCES branch (branch_id),
+    branch_id          SERIAL PRIMARY KEY REFERENCES branch (id) ON DELETE CASCADE,
     created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
     street_number      VARCHAR(16),
     street_name        VARCHAR(32),
-    suburb            VARCHAR(32),
+    suburb             VARCHAR(32),
     city               VARCHAR(32),
     province           VARCHAR(16),
     postal_code        VARCHAR(16),
@@ -220,7 +221,7 @@ CREATE TRIGGER set_last_modified_date_slot
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified_date();
 
--- changeset lungatsewu:-12
+-- changeset lungatsewu:-13
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='branch';
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='branch';
