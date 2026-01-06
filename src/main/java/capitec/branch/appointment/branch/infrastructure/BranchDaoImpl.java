@@ -5,11 +5,13 @@ import capitec.branch.appointment.branch.domain.BranchService;
 
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
 import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -41,6 +43,10 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
         } catch (Exception e) {
 
             log.error("Unable to save branch.", e);
+            if(e instanceof DuplicateKeyException ||( e.getCause() !=null && e.getCause() instanceof DuplicateKeyException )) {
+
+                throw new EntityAlreadyExistException(e.getMessage());
+            }
             throw e;
         }
         return branchMapper.toDomain(entity);

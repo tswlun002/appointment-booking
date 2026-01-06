@@ -1,8 +1,9 @@
 package capitec.branch.appointment.staffschedular.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.branch.app.AddBranchUseCase;
 import capitec.branch.appointment.branch.app.BranchDTO;
-import capitec.branch.appointment.branch.app.BranchUseCase;
+import capitec.branch.appointment.branch.app.DeleteBranchUseCase;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
@@ -28,7 +29,8 @@ abstract class StaffSchedulerTestBase extends AppointmentBookingApplicationTests
 
     public final static String ADMIN_USERNAME = "admin";
     
-    @Autowired protected BranchUseCase branchUseCase;
+    @Autowired private DeleteBranchUseCase branchUseCase;   //
+    @Autowired private AddBranchUseCase addBranchUseCase;
     @Autowired protected KeycloakService keycloakService;
     @Autowired protected FetchRoleByNameService fetchRoleByNameService;
     @Autowired protected UserRoleService userRoleService;
@@ -84,13 +86,13 @@ abstract class StaffSchedulerTestBase extends AppointmentBookingApplicationTests
             String[] branchInfo = branch.split(";");
             Address address = new Address(branchInfo[3], branchInfo[4], branchInfo[5], branchInfo[6], branchInfo[7], Integer.parseInt(branchInfo[8]), branchInfo[9]);
             BranchDTO branchDTO = new BranchDTO(branchInfo[0], LocalTime.parse(branchInfo[1]), LocalTime.parse(branchInfo[2]), address);
-            branches.add(branchUseCase.addBranch(branchDTO));
+            branches.add(addBranchUseCase.execute(branchDTO));
         }
     }
 
     protected void deleteBranches() {
         for (Branch branch : branches) {
-            branchUseCase.deleteBranch(branch.getBranchId());
+            branchUseCase.execute(branch.getBranchId());
         }
     }
     
