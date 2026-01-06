@@ -1,27 +1,27 @@
 package capitec.branch.appointment.slots.infrastructure.dao;
 
-import capitec.branch.appointment.slots.app.SlotStorage;
+import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.Slot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Validated
 @Slf4j
-public class SlotDaoImpl implements SlotStorage {
+public class SlotDaoImpl implements SlotService {
 
     private final SloRepository sloRepository;
     private final SlotMapper slotMapper;
 
     @Override
+    @Transactional
     public void save( List<Slot> slots) {
 
         if(slots == null || slots.isEmpty()) {
@@ -38,7 +38,7 @@ public class SlotDaoImpl implements SlotStorage {
         } catch (Exception e) {
 
             log.error("Could not save slot into DB", e);
-            throw new RuntimeException(e);
+            throw e;
         }
     }
 
@@ -55,6 +55,22 @@ public class SlotDaoImpl implements SlotStorage {
     @Override
     public List<Slot> next7DaySlots(LocalDate date, Boolean status) {
         return  sloRepository.next7DaySlots(date, status);
+    }
+
+    @Override
+    @Transactional
+    public boolean cleanUpSlot(int number) {
+
+        try {
+            
+           return sloRepository.deleteSlotEntitiesByNumber(number)==1;
+
+        }
+        catch (Exception e) {
+
+            log.error("Could not delete slot into DB", e);
+            throw e;
+        }
     }
 
 }
