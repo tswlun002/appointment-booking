@@ -2,14 +2,15 @@ package capitec.branch.appointment.staff.domain;
 
 import jakarta.validation.Valid;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Optional;
 import java.util.Set;
 
 public interface StaffService {
-
+    @Transactional
     boolean addStaff(@Valid Staff staff);
-    Optional<Staff> updateStaff(String username, StaffStatus status);
+    Optional<Staff> updateStaffWorkStatus(String username, StaffStatus status);
     Set<Staff> getStaffByBranchAndStatus(String branchId, StaffStatus status);
-
-
+    boolean deleteStaff(String username);
 }

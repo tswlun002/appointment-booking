@@ -16,7 +16,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Set;
 
 @UseCase
 @Slf4j
@@ -91,7 +90,7 @@ public class BranchUseCase {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error");
         }
     }
-    boolean deleteBranch(String branchId) {
+   public boolean deleteBranch(String branchId) {
         boolean deleted;
         try {
             log.debug("Deleting branch with id {}", branchId);

@@ -1,7 +1,6 @@
 package capitec.branch.appointment.branch.infrastructure;
 
 
-import capitec.branch.appointment.branch.domain.StaffRef;
 import org.springframework.data.jdbc.repository.query.Modifying;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -11,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
 import java.util.Optional;
-import java.util.Set;
 
 @Repository
 interface BranchRepository extends CrudRepository<BranchEntity, Long> {

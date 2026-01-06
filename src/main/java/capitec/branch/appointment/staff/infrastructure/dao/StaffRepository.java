@@ -1,5 +1,6 @@
 package capitec.branch.appointment.staff.infrastructure.dao;
 
+import org.springframework.data.jdbc.repository.query.Modifying;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
@@ -24,4 +25,9 @@ interface StaffRepository extends CrudRepository<StaffEntity, Long> {
             WHERE s.branch_id=:branchId AND s.status=:status
     """)
     Set<StaffEntity> getStaffByBranchIdAndStatus(@Param("branchId") String branchId, @Param("status") String status);
+     @Modifying
+    @Query("""
+            DELETE FROM  staff AS s WHERE s.username=:username
+          """)
+    int deleteStaffByUsername(@Param("username") String username);
 }

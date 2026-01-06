@@ -1,12 +1,15 @@
 package capitec.branch.appointment.staff.infrastructure.dao;
 
+import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.staff.domain.StaffService;
 import capitec.branch.appointment.staff.domain.Staff;
 import capitec.branch.appointment.staff.domain.StaffStatus;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Optional;
@@ -21,7 +24,7 @@ class StaffServiceDao implements StaffService {
 
     private final StaffRepository staffRepository;
     private final StaffMapper staffMapper;
-
+    @Transactional
     @Override
     public boolean addStaff(@Valid Staff staff) {
         var isAdded  = false;
@@ -35,9 +38,13 @@ class StaffServiceDao implements StaffService {
             staffRepository.save(entity);
             isAdded = true;
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
 
-            log.error( "Error adding staff to database. {}", e );
+            log.error( "Error adding staff to database.\n", e );
+            if(e instanceof DuplicateKeyException ||( e.getCause() != null && e.getCause() instanceof DuplicateKeyException)) {
+                throw  new EntityAlreadyExistException(e.getMessage());
+            }
             throw e;
         }
 
@@ -45,7 +52,7 @@ class StaffServiceDao implements StaffService {
     }
 
     @Override
-    public Optional<Staff> updateStaff(String username, StaffStatus status) {
+    public Optional<Staff> updateStaffWorkStatus(String username, StaffStatus status) {
 
         Optional<StaffEntity> updated;
         try {
@@ -76,6 +83,21 @@ class StaffServiceDao implements StaffService {
         }
 
         return staffEntities.stream().map(staffMapper::toDomain).collect(Collectors.toSet());
+    }
+
+    @Override
+    public boolean deleteStaff(String username) {
+
+        try {
+
+            log.debug("Deleting staff: {}", username);
+
+           return staffRepository.deleteStaffByUsername(username)==1;
+
+        }catch (Exception e) {
+            log.error( "Error deleting staff from database.",e );
+            throw e;
+        }
     }
 }
 

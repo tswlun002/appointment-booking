@@ -1,14 +1,12 @@
 package capitec.branch.appointment.branch.infrastructure;
 
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.StaffRef;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.day.domain.DayType;
 import org.mapstruct.*;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -70,46 +68,6 @@ public interface BranchMapper {
                         entry.getKey()
                 ))
                 .toList();
-    }
-
-    // Custom mapping: Map<LocalDate, Set<StaffRef>> -> Set<BranchStaffAssignmentEntity>
-/*    static Set<BranchStaffAssignmentEntity> mapWeeklyStaffToSet(Branch branch) {
-        if (branch == null) {
-            return Collections.emptySet();
-        }
-        Map<LocalDate, Set<StaffRef>> weeklyStaff = branch.getWeeklyStaff();
-        if (weeklyStaff == null || weeklyStaff.isEmpty()) {
-            return null;
-        }
-        return weeklyStaff.entrySet().stream()
-                .flatMap(entry -> entry.getValue().stream()
-                        .map(staffRef -> new BranchStaffAssignmentEntity(
-                                branch.getBranchId(),
-                                staffRef.username(),
-                                entry.getKey(),
-                                staffRef.status()
-
-                        ))
-                )
-                .collect(Collectors.toSet());
-    }*/
-
-    // Custom mapping: Set<BranchStaffAssignmentEntity> -> Map<LocalDate, Set<StaffRef>>
-    default Map<LocalDate, Set<StaffRef>> mapDailyStaffToMap(Set<BranchStaffAssignmentEntity> dailyStaff) {
-        if (dailyStaff == null || dailyStaff.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        return dailyStaff.stream()
-                .collect(Collectors.groupingBy(
-                        BranchStaffAssignmentEntity::day,
-                        Collectors.mapping(
-                                assignment -> new StaffRef(
-                                        assignment.username(),
-                                        assignment.status()
-                                ),
-                                Collectors.toSet()
-                        )
-                ));
     }
 
     // Address mappings

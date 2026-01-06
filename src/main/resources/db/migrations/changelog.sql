@@ -62,19 +62,15 @@ CREATE INDEX idx_branch_id_username_status ON staff (branch_id, username, status
 -- comment: /* Create table branch_staff_assignment only if it does not exist. ZERO means the schema does not exist*/
 CREATE TABLE branch_staff_assignment
 (
-    branch_id  SERIAL NOT NULL REFERENCES branch(id) ON DELETE CASCADE,
-    branch_business_id  VARCHAR(36) NOT NULL,
-    staff_id   SERIAL NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    id        SERIAL PRIMARY KEY,
+    branch_id VARCHAR(36) NOT NULL,
     username   VARCHAR(32) NOT NULL,
     day        DATE        NOT NULL,
-    status     VARCHAR(16) NOT NULL, -- Historical snapshot
     created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    PRIMARY KEY (branch_id, username, day)
+    CONSTRAINT  unique_branch_id_username_day UNIQUE(branch_id, username, day)
 );
 -- Index for querying "who was working on date X?"
 CREATE INDEX idx_branch_date_status ON branch_staff_assignment (branch_id, day, username);
--- Index for querying "what dates was staff X assigned?"
-CREATE INDEX idx_staff_date ON branch_staff_assignment (username, day);
 -- ROLLBAK DROP TABLE branch_staff_assignment
 
 

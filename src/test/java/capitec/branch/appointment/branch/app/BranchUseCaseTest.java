@@ -3,35 +3,17 @@ package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.StaffRef;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.day.domain.DayType;
-import capitec.branch.appointment.keycloak.domain.KeycloakService;
-import capitec.branch.appointment.role.domain.FetchRoleByNameService;
-import capitec.branch.appointment.staff.app.StaffDTO;
-import capitec.branch.appointment.staff.app.StaffUseCase;
-import capitec.branch.appointment.staff.domain.Staff;
-import capitec.branch.appointment.staff.domain.StaffStatus;
-import capitec.branch.appointment.user.domain.UserRoleService;
-import capitec.branch.appointment.user.domain.UsernameGenerator;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.keycloak.admin.client.resource.UsersResource;
-import org.keycloak.representations.idm.CredentialRepresentation;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Predicate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,30 +21,6 @@ class BranchUseCaseTest  extends AppointmentBookingApplicationTests {
 
     @Autowired
     private BranchUseCase branchUseCase;
-    public final static String username = "admin";
-    @Autowired
-    private KeycloakService keycloakService;
-    @Autowired
-    private FetchRoleByNameService fetchRoleByNameService;
-    @Autowired
-    private UserRoleService userRoleService;
-    @Autowired
-    private StaffUseCase staffUseCase;
-
-
-
-   private Predicate<String> excludeAdmin = username->!BranchUseCaseTest.username.equals(username);
-    private List<String> staff;
-    @BeforeEach
-    public void setup() {
-
-        setUpStaff();
-        UsersResource usersResource = keycloakService.getRealm().users();
-        staff = usersResource.list().stream().map(UserRepresentation::getUsername)
-                .filter(excludeAdmin).toList();
-
-
-    }
     @AfterEach
     public void tearDown() {
 
@@ -70,15 +28,6 @@ class BranchUseCaseTest  extends AppointmentBookingApplicationTests {
                 .stream()
                 .map(Branch::getBranchId)
                 .forEach(branchUseCase::deleteBranch);
-
-        UsersResource usersResource = keycloakService.getRealm().users();
-        List<String> staffIds = usersResource.list().stream()
-                .filter(u->excludeAdmin.test(u.getUsername()))
-                .map(UserRepresentation::getId).toList();
-
-        for(var id : staffIds){
-            usersResource.delete(id);
-        }
     }
 
 
@@ -147,15 +96,15 @@ class BranchUseCaseTest  extends AppointmentBookingApplicationTests {
                                 String city, String province, Integer postalCode, String country,
                                 Integer duration, Double utilizationFactor,int staffCount, DayType dayType) {
 
-        for (var staff : staff) {
-            StaffDTO staffDTO = new StaffDTO(staff, branchId);
-            boolean added = staffUseCase.addStaff(staffDTO);
-           added = added && staffUseCase.updateStaff(staff, StaffStatus.WORKING)!=null;
-
-            if(!added){
-               throw new RuntimeException("Failed to add staff for testing to add working staff");
-            }
-        }
+//        for (var staff : staff) {
+//            StaffDTO staffDTO = new StaffDTO(staff, branchId);
+//            boolean added = staffUseCase.addStaff(staffDTO);
+//           added = added && staffUseCase.updateStaff(staff, StaffStatus.WORKING)!=null;
+//
+//            if(!added){
+//               throw new RuntimeException("Failed to add staff for testing to add working staff");
+//            }
+//        }
 
         Address address = new Address(streetNumber, streetName, suburbs, city, province, postalCode, country);
         BranchDTO branchDTO = new BranchDTO(branchId, openTime, closingTime, address);
@@ -172,44 +121,6 @@ class BranchUseCaseTest  extends AppointmentBookingApplicationTests {
         assertThat(dayTypeConfigAdded).isTrue();
     }
 
-
-
-
-    public  void setUpStaff() {
-
-        UsersResource usersResource = keycloakService.getRealm().users();
-        String[] users  = new String[] {
-                "manju@gmail.com;Manju;Miranda;@KrVgfjl62",
-                "ram@gmail.com;Evgeniy;Ram;@KrVgfjl6t",
-                "yu@gmail.com;Yu;Ning;@KrVgfjl65",
-                "dorismia@myuct.ac.za;Doris;Mia;@KrVgfjl65",
-                "davidchong@cput.ac.za;David;Chong;1wcB2OsQFV6_"
-        };
-
-        for(String user : users) {
-
-            String[] userProp = user.split(";");
-            UserRepresentation userRepresentation = new UserRepresentation();
-            String username= new UsernameGenerator().getId();
-            userRepresentation.setUsername(username);
-            userRepresentation.setEmail(userProp[0]);
-            userRepresentation.setFirstName(userProp[1]);
-            userRepresentation.setLastName(userProp[2]);
-            userRepresentation.setEnabled(true);
-            userRepresentation.setEmailVerified(true);
-            CredentialRepresentation credentialRepresentation = new CredentialRepresentation();
-            credentialRepresentation.setType("password");
-            credentialRepresentation.setValue(userProp[3]);
-            userRepresentation.setCredentials(List.of(credentialRepresentation));
-            usersResource.create(userRepresentation);
-
-            String adminId = fetchRoleByNameService.getGroupId("ADMIN", true).orElseThrow();
-            userRoleService.addUserToGroup(username, adminId);
-
-        }
-
-
-    }
 
 
 }
