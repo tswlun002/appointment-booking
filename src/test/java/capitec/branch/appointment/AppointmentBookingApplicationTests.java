@@ -221,7 +221,7 @@ public class AppointmentBookingApplicationTests {
 
 
         } catch (Exception e) {
-            log.error("Error while adding properties", e);
+            log.error("Error while adding branchConfigs", e);
             throw e;
         }
     }

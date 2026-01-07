@@ -11,7 +11,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 class CalculateAvailableCapacityService {
 
-    private final MapSlotProperties mapSlotProperties;
+    private final BranchSlotConfigs branchSlotConfigs;
 
     /**
      * Calculates the available slot capacity for a given DayType based on staff count,
@@ -19,8 +19,8 @@ class CalculateAvailableCapacityService {
      */
     public int execute(String branchId,DayType dayType) {
 
-        Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = mapSlotProperties
-                .branchSlotProperties()
+        Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs
+                .branchConfigs()
                 .get(branchId);
 
         if (dayTypeSlotPropertiesMap==null||dayTypeSlotPropertiesMap.isEmpty()) {

@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 public class GenerateSlotsUseCase {
 
     private final int SLOTS_DISTRIBUTION_FACTOR = 2;
-    private final MapSlotProperties mapSlotProperties;
+    private final BranchSlotConfigs branchSlotConfigs;
     private final SlotService slotStorage;
     private final CheckHolidayQuery checkHolidayQuery;
     private final CalculateAvailableCapacityService calculateAvailableCapacityService;
@@ -33,11 +33,11 @@ public class GenerateSlotsUseCase {
      */
     public void createNext7DaySlots() {
 
-        Set<String> strings = mapSlotProperties
-                .branchSlotProperties()
+        Set<String> strings = branchSlotConfigs
+                .branchConfigs()
                 .keySet()
                 .stream().
-                filter(s->!s.equals(MapSlotProperties.DEFAULT_CONFIG_KEY))
+                filter(s->!s.equals(BranchSlotConfigs.DEFAULT_CONFIG_KEY))
                 .collect(Collectors.toSet());
 
         for (String branch : strings) {
@@ -66,14 +66,14 @@ public class GenerateSlotsUseCase {
             DayType dayType = checkHolidayQuery.execute(day) ? DayType.HOLIDAY : 
                               Day.isWeekend(day.getDayOfWeek()) ? DayType.WEEKEND : DayType.WEEK_DAYS;
 
-            var slotProperties = mapSlotProperties
-                    .branchSlotProperties()
+            var slotProperties = branchSlotConfigs
+                    .branchConfigs()
                     .get(branchId)
                     .get(dayType);
             
-            // Check if properties exist for this day type
+            // Check if branchConfigs exist for this day type
             if (slotProperties == null) {
-                log.warn("No slot properties configured for DayType: {}. Skipping slot generation for {}.", dayType, day);
+                log.warn("No slot branchConfigs configured for DayType: {}. Skipping slot generation for {}.", dayType, day);
                 day = day.plusDays(1);
                 continue; 
             }

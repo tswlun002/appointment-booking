@@ -29,7 +29,7 @@ spring:
           jwk-set-uri: ${AUTH_SERVER_TOKEN_URL}
           issuer-uri: ${ISSUER_URI}
 
-# CORS properties
+# CORS branchConfigs
 allowed_origins:
   urls: ${CORS_ALLOWED_ORIGIN:*}
   cache_period: ${CORS_CERTS_CACHE_PERIOD:30}
@@ -120,8 +120,8 @@ server:
   port: 8083
 
 # SLOTS CONFIGS
-slot-properties:
-  branch-slot-properties:
+branch-slot:
+  branch-configs:
     default:
       WEEK_DAYS:
         slot-duration: ${WEEK_DAY_SLOT_DURATION:30M}
@@ -144,7 +144,7 @@ slot-properties:
         open-time: ${HOLIDAY_OPEN_TIME:09:00}
         closing-time: ${HOLIDAY_CLOSING_TIME:13:00}
         day-type: HOLIDAY
-  branch-ids:
+  branch-use-default-configs:
     - BR004
     - BR005
 

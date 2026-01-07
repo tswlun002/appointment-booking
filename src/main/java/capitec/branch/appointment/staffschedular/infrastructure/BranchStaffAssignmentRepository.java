@@ -17,11 +17,11 @@ interface BranchStaffAssignmentRepository extends CrudRepository<BranchStaffAssi
     @Modifying
     @Query("""
             INSERT INTO branch_staff_assignment (branch_id, username, day)
-            SELECT * FROM UNNEST(:branchIds, :usernames, :days) 
+            SELECT * FROM UNNEST(:branchUseDefaultConfigs, :usernames, :days) 
             ON CONFLICT  DO NOTHING
             """)
     int bulkInsertOrIgnore(
-            @Param("branchIds") String[] branchIds,
+            @Param("branchUseDefaultConfigs") String[] branchUseDefaultConfigs,
             @Param("usernames") String[]usernames,
             @Param("days") LocalDate[] days
     );
@@ -31,12 +31,12 @@ interface BranchStaffAssignmentRepository extends CrudRepository<BranchStaffAssi
             return 0;
         }
 
-        String[] branchIds = entities.stream().map(BranchStaffAssignmentEntity::branchId).toArray(String[]::new);
+        String[] branchUseDefaultConfigs = entities.stream().map(BranchStaffAssignmentEntity::branchId).toArray(String[]::new);
         String[]  usernames = entities.stream().map(BranchStaffAssignmentEntity::username).toArray(String[]::new);
         LocalDate[] days = entities.stream().map(BranchStaffAssignmentEntity::day).toArray(LocalDate[]::new);
 
         return bulkInsertOrIgnore(
-                branchIds,
+                branchUseDefaultConfigs,
                 usernames,
                 days
         );
