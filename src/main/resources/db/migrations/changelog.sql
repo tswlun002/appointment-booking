@@ -100,18 +100,24 @@ CREATE TABLE address
 -- comment: /* Create table SLOT only if it does not exist. ZERO means the schema does not exist*/
 CREATE TABLE slot
 (
-    id                 SERIAL PRIMARY KEY,
-    day                DATE    NOT NULL,
-    start_time         TIME    NOT NULL,
-    end_time           TIME    NOT NULL,
-    number             INTEGER NOT NULL,
-    is_booked          BOOLEAN NOT NULL,
-    created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    version            INTEGER   DEFAULT 1,
-    CONSTRAINT unique_day_start_time_end_time UNIQUE (day, start_time, end_time)
+    id                 VARCHAR(36) PRIMARY KEY,
+    day                DATE        NOT NULL,
+    start_time         TIME        NOT NULL,
+    end_time           TIME        NOT NULL,
+    number             INTEGER     NOT NULL,
+    branch_id          VARCHAR(36) NOT NULL,
+    status             VARCHAR(16) NOT NULL DEFAULT 'AVAILABLE',
+    created_at         TIMESTAMP   DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP   DEFAULT LOCALTIMESTAMP,
+    version            INTEGER     DEFAULT 1,
+    CONSTRAINT positive_number CHECK (number >= 0),
+    CONSTRAINT start_before_end CHECK (start_time < end_time),
+    CONSTRAINT unique_slot_per_branch_day UNIQUE (branch_id, day, start_time, end_time)
 );
-CREATE INDEX idx_day_is_booked ON slot (day, is_booked);
+
+CREATE INDEX idx_branch_day ON slot (branch_id, day);
+
+CREATE INDEX idx_day_status ON slot (day, status);
 -- ROLLBACK DROP TABLE slot
 
 -- changeset lungatsewu:-7

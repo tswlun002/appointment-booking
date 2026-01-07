@@ -1,5 +1,6 @@
 package capitec.branch.appointment.event.infrastructure.dao;
 
+import capitec.branch.appointment.utils.IdStore;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.relational.core.mapping.event.BeforeConvertCallback;
 import org.springframework.stereotype.Component;

@@ -5,6 +5,7 @@ import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 
 import java.time.LocalTime;
+import java.util.Map;
 
 @UseCase
 @RequiredArgsConstructor
@@ -16,8 +17,21 @@ class CalculateAvailableCapacityService {
      * Calculates the available slot capacity for a given DayType based on staff count,
      * working hours, slot duration, and utilization factor.
      */
-    public int execute(DayType dayType) {
-        SlotProperties slotProperties = mapSlotProperties.slotProperties().get(dayType);
+    public int execute(String branchId,DayType dayType) {
+
+        Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = mapSlotProperties
+                .branchSlotProperties()
+                .get(branchId);
+
+        if (dayTypeSlotPropertiesMap==null||dayTypeSlotPropertiesMap.isEmpty()) {
+            return 0;
+        }
+        SlotProperties slotProperties = dayTypeSlotPropertiesMap
+                .get(dayType);
+
+        if (slotProperties==null) {
+            return 0;
+        }
         
         // 1. Calculate working duration in minutes
         LocalTime openTime = slotProperties.openTime();

@@ -1,7 +1,6 @@
 package capitec.branch.appointment.slots.app;
 
 import capitec.branch.appointment.slots.domain.Slot;
-import capitec.branch.appointment.slots.domain.SlotService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
 
 class GetSlotQueriesTest extends SlotTestBase {
 
@@ -21,21 +19,16 @@ class GetSlotQueriesTest extends SlotTestBase {
     @Autowired
     private GetNext7DaySlotsQuery getNext7DaySlotsQuery;
 
-    
-    // Note: Since SlotStorage is often a repository/DAO, 
-    // it's best to mock it here if we want to isolate the Use Case logic (mapping, grouping).
-    // For simplicity in this example, we rely on the injected SlotStorage being a real repository.
-
     private final LocalDate TODAY = LocalDate.now();
     private final LocalDate TOMORROW = TODAY.plusDays(1);
     private final LocalDate DAY_AFTER = TODAY.plusDays(2);
     
     // Example Slots for arrangement
-    private final Slot slot1 = new Slot(TODAY, LocalTime.of(9, 0), LocalTime.of(9, 30), 0);
-    private final Slot slot2 = new Slot(TODAY, LocalTime.of(9, 30), LocalTime.of(10, 0), 1);
-    private final Slot slot3 = new Slot(TOMORROW, LocalTime.of(9, 0), LocalTime.of(9, 30), 0);
-    private final Slot slot4 = new Slot(TOMORROW, LocalTime.of(9, 30), LocalTime.of(10, 0), 1);
-    private final Slot slot5 = new Slot(DAY_AFTER, LocalTime.of(8, 0), LocalTime.of(8, 30), 0);
+    private final Slot slot1 = new Slot(TODAY, LocalTime.of(9, 0), LocalTime.of(9, 30), 0, branchId);
+    private final Slot slot2 = new Slot(TODAY, LocalTime.of(9, 30), LocalTime.of(10, 0), 1, branchId);
+    private final Slot slot3 = new Slot(TOMORROW, LocalTime.of(9, 0), LocalTime.of(9, 30), 0, branchId);
+    private final Slot slot4 = new Slot(TOMORROW, LocalTime.of(9, 30), LocalTime.of(10, 0), 1, branchId);
+    private final Slot slot5 = new Slot(DAY_AFTER, LocalTime.of(8, 0), LocalTime.of(8, 30), 0, branchId);
     
     
     @BeforeEach
@@ -47,7 +40,7 @@ class GetSlotQueriesTest extends SlotTestBase {
         
         // As this is a test split, we'll assume the SlotStorage is capable of providing this data
         // when called by the queries.
-        slotStorage.save(List.of(slot1, slot2, slot3, slot4, slot5));
+        slotService.save(List.of(slot1, slot2, slot3, slot4, slot5));
 
     }
 
@@ -57,7 +50,7 @@ class GetSlotQueriesTest extends SlotTestBase {
         // ARRANGE: (Assuming SlotStorage is set up to return slot1 and slot2 for TODAY)
         
         // ACT
-        List<Slot> dailySlots = getDailySlotsQuery.execute(TODAY);
+        List<Slot> dailySlots = getDailySlotsQuery.execute(branchId,TODAY);
         
         // ASSERT
         assertThat(dailySlots).as("Should retrieve exactly 2 slots for today").hasSize(2);
@@ -69,7 +62,7 @@ class GetSlotQueriesTest extends SlotTestBase {
         // ARRANGE: (Assuming SlotStorage is set up to return all 5 slots for the next 7 days)
         
         // ACT
-        Map<LocalDate, List<Slot>> weeklySlotsMap = getNext7DaySlotsQuery.execute(TODAY);
+        Map<LocalDate, List<Slot>> weeklySlotsMap = getNext7DaySlotsQuery.execute(branchId,TODAY);
         
         // ASSERT
         assertThat(weeklySlotsMap).as("Map should contain three unique days").hasSize(3);

@@ -21,7 +21,7 @@ public class GetDailySlotsQuery {
      * @param day The date to query.
      * @return A list of slots for the given day.
      */
-    public List<Slot> execute(LocalDate day) {
-        return slotService.dailySlot(day);
+    public List<Slot> execute(String branchId,LocalDate day) {
+        return slotService.getDailySlot(branchId,day);
     }
 }

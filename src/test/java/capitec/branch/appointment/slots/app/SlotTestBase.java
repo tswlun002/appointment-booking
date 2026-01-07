@@ -14,21 +14,18 @@ import java.util.List;
  */
 abstract class SlotTestBase extends AppointmentBookingApplicationTests {
 
-    // Inject all required services/use cases for testing and cleanup
     @Autowired
-    protected SlotService slotStorage;
-    
-    // We mock the HolidayClient in the base test if we don't want real API calls, 
-    // but the original test suggests using WireMock, so we'll leave it out here 
-    // but note it's important for isolation.
+    protected SlotService slotService;
+    protected final String branchId = "BR001";
+
 
     @AfterEach
     public void cleanupSlots() {
 
-        List<Slot> slots = slotStorage.next7DaySlots(LocalDate.now());
+        List<Slot> slots = slotService.getNext7DaySlots(branchId,LocalDate.now());
 
         for (Slot slot : slots) {
-            slotStorage.cleanUpSlot(slot.getNumber());
+            slotService.cleanUpSlot(slot.getId());
         }
     }
 }

@@ -4,16 +4,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public interface SlotService {
     @Transactional
     void save(List<Slot> slot);
 
-    List<Slot> dailySlot(LocalDate day);
+    List<Slot> getDailySlot(String branchId,LocalDate day);
 
-    List<Slot>next7DaySlots(LocalDate date);
+    List<Slot> getNext7DaySlots(String branchId,LocalDate date);
 
-     List<Slot> next7DaySlots(LocalDate date, Boolean status);
+     List<Slot> getNext7DaySlots(String branchId,LocalDate date, SlotStatus status);
      @Transactional
-    boolean cleanUpSlot(int number);
+    boolean cleanUpSlot(UUID id);
 }

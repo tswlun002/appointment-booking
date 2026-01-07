@@ -1,8 +1,8 @@
-package capitec.branch.appointment.event.infrastructure;
+package capitec.branch.appointment.event.infrastructure.dao;
 
 
 
-import capitec.branch.appointment.event.infrastructure.dao.UserErrorEventValueEntity;
+import capitec.branch.appointment.event.infrastructure.UserEventStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

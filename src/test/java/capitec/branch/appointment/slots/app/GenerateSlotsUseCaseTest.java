@@ -34,19 +34,14 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
    @Test
     public void testCreateNext7DaySlots_GeneratesCorrectCountsPerDayType() {
 
-        // ARRANGE: Ensure WireMock is set up for the holiday client call
-        // Assuming your AppointmentBookingApplicationTests provides the wireMockGetHolidayByYearAndCountryCode method
-        // to mock the holiday API response for 2025.
-        // NOTE: The test uses 2025, but LocalDateTime.now().getYear() in CheckHolidayQuery 
-        // will use 2026. This setup must be aligned for the test to pass reliably.
-        wireMockGetHolidayByYearAndCountryCode("2026", "ZA"); // Use current year (2026) for consistency
+        wireMockGetHolidayByYearAndCountryCode("2025", "ZA");
 
         // ACT
        generateSlotsUseCase.createNext7DaySlots();
 
        // VERIFY
        // Use the new GetNext7DaySlotsQuery to retrieve the persisted slots
-       Map<LocalDate, List<Slot>> weeklySlots = getNext7DaySlotsQuery.execute(LocalDate.now());
+       Map<LocalDate, List<Slot>> weeklySlots = getNext7DaySlotsQuery.execute(branchId,LocalDate.now());
        
        assertThat(weeklySlots).as("Weekly slots map should not be empty").isNotEmpty();
        assertThat(weeklySlots.size()).as("Should generate slots for exactly 7 days").isEqualTo(7);

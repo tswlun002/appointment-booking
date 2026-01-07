@@ -9,7 +9,7 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.LocalDateTime;
 @Table("user_dead_letter_event")
-public record UserErrorEventValueEntity(
+record UserErrorEventValueEntity(
     @Id
     @Column("event_id")
     String eventId,

@@ -1,13 +1,13 @@
 package capitec.branch.appointment.event.infrastructure.dao;
 
 
+import capitec.branch.appointment.utils.IdStore;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import capitec.branch.appointment.event.domain.RecordStatus;
 import capitec.branch.appointment.event.domain.UserDeadLetterService;
-import capitec.branch.appointment.event.infrastructure.UserErrorEventMapper;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;

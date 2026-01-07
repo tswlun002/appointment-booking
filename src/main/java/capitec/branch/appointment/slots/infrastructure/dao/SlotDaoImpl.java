@@ -1,7 +1,9 @@
 package capitec.branch.appointment.slots.infrastructure.dao;
 
+import capitec.branch.appointment.utils.IdStore;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.Slot;
+import capitec.branch.appointment.slots.domain.SlotStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -10,6 +12,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class SlotDaoImpl implements SlotService {
 
     private final SloRepository sloRepository;
     private final SlotMapper slotMapper;
+    private final IdStore idStore;
 
     @Override
     @Transactional
@@ -33,6 +37,7 @@ public class SlotDaoImpl implements SlotService {
 
             var slotsEntities = slots.stream().map(slotMapper::toEntity).toList();
 
+            idStore.setIdList(slotsEntities.stream().map(SlotEntity::id).toList());
             sloRepository.saveAll(slotsEntities);
 
         } catch (Exception e) {
@@ -43,27 +48,33 @@ public class SlotDaoImpl implements SlotService {
     }
 
     @Override
-    public List<Slot> dailySlot(LocalDate day) {
-        return sloRepository.dailySlot(day);
+    public List<Slot> getDailySlot(String branchId,LocalDate day) {
+        return sloRepository.dailySlot(branchId,day)
+                .stream().map(slotMapper::toDomain)
+                .toList();
     }
 
     @Override
-    public List<Slot> next7DaySlots(LocalDate date) {
-         return next7DaySlots(date,null);
+    public List<Slot> getNext7DaySlots(String branchId,LocalDate date) {
+         return getNext7DaySlots(branchId,date,null);
     }
 
     @Override
-    public List<Slot> next7DaySlots(LocalDate date, Boolean status) {
-        return  sloRepository.next7DaySlots(date, status);
+    public List<Slot> getNext7DaySlots(String branchId,LocalDate date, SlotStatus status) {
+        String status1 = status == null ? null : status.name();
+        return  sloRepository.next7DaySlots(branchId,date, status1)
+                .stream()
+                .map(slotMapper::toDomain)
+                .toList();
     }
 
     @Override
     @Transactional
-    public boolean cleanUpSlot(int number) {
+    public boolean cleanUpSlot(UUID id) {
 
         try {
-            
-           return sloRepository.deleteSlotEntitiesByNumber(number)==1;
+
+           return sloRepository.deleteSlotEntitiesBySlotId(id.toString())==1;
 
         }
         catch (Exception e) {

@@ -13,11 +13,8 @@ import org.springframework.validation.annotation.Validated;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @UseCase
@@ -35,18 +32,29 @@ public class GenerateSlotsUseCase {
      * Command to generate and save time slots for the next 7 days.
      */
     public void createNext7DaySlots() {
-        Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(LocalDate.now(), 7);
-        List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
-        slotStorage.save(list);
+
+        Set<String> strings = mapSlotProperties
+                .branchSlotProperties()
+                .keySet()
+                .stream().
+                filter(s->!s.equals(MapSlotProperties.DEFAULT_CONFIG_KEY))
+                .collect(Collectors.toSet());
+
+        for (String branch : strings) {
+            Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,LocalDate.now(), 7);
+            List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
+            slotStorage.save(list);
+        }
     }
 
     /**
      * Generate Time Slots for a given date range.
+     * @param branchId The id of the branch of slot to generate
      * @param startDate The starting date.
      * @param days The number of days to generate slots for.
      * @return A map of generated slots grouped by date.
      */
-    private Map<LocalDate, List<Slot>> generateTimeSlotsForRange(LocalDate startDate, int days) {
+    private Map<LocalDate, List<Slot>> generateTimeSlotsForRange(String branchId,LocalDate startDate, int days) {
 
         final Map<LocalDate, List<Slot>> weeklySlots = new HashMap<>();
         
@@ -58,7 +66,10 @@ public class GenerateSlotsUseCase {
             DayType dayType = checkHolidayQuery.execute(day) ? DayType.HOLIDAY : 
                               Day.isWeekend(day.getDayOfWeek()) ? DayType.WEEKEND : DayType.WEEK_DAYS;
 
-            SlotProperties slotProperties = mapSlotProperties.slotProperties().get(dayType);
+            var slotProperties = mapSlotProperties
+                    .branchSlotProperties()
+                    .get(branchId)
+                    .get(dayType);
             
             // Check if properties exist for this day type
             if (slotProperties == null) {
@@ -68,7 +79,7 @@ public class GenerateSlotsUseCase {
             }
 
             Duration slotDuration = slotProperties.slotDuration();
-            int availableCapacity = calculateAvailableCapacityService.execute(dayType);
+            int availableCapacity = calculateAvailableCapacityService.execute(branchId,dayType);
             LocalTime closingTime = slotProperties.closingTime();
             LocalTime openTime = slotProperties.openTime();
             
@@ -81,7 +92,7 @@ public class GenerateSlotsUseCase {
 
                     LocalTime slotClosingTime = openTime.plus(slotDuration);
                     
-                    Slot slot = new Slot(day, openTime, slotClosingTime, slotGenerated);
+                    Slot slot = new Slot(day, openTime, slotClosingTime, slotGenerated,branchId);
                     slots.add(slot);
                     slotGenerated++;
                 }

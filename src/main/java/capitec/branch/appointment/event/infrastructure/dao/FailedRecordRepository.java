@@ -10,7 +10,7 @@ import java.util.Optional;
 import java.util.Set;
 
 @Repository
-public interface FailedRecordRepository extends CrudRepository<UserErrorEventValueEntity, String> {
+interface FailedRecordRepository extends CrudRepository<UserErrorEventValueEntity, String> {
     @Query("""
             SELECT u.event_id, u.key, u.value, u.topic, u.partition, u.event_offset, u.headers, 
                 u.is_retryable, u.retry_count, u.exception, u.exception_class, u.cause_class, 
