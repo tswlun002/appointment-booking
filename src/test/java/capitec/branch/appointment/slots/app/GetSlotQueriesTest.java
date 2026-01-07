@@ -1,6 +1,7 @@
 package capitec.branch.appointment.slots.app;
 
 import capitec.branch.appointment.slots.domain.Slot;
+import capitec.branch.appointment.slots.domain.SlotStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +19,6 @@ class GetSlotQueriesTest extends SlotTestBase {
     private GetDailySlotsQuery getDailySlotsQuery;
     @Autowired
     private GetNext7DaySlotsQuery getNext7DaySlotsQuery;
-
     private final LocalDate TODAY = LocalDate.now();
     private final LocalDate TOMORROW = TODAY.plusDays(1);
     private final LocalDate DAY_AFTER = TODAY.plusDays(2);
@@ -33,13 +33,6 @@ class GetSlotQueriesTest extends SlotTestBase {
     
     @BeforeEach
     void setupTestData() {
-        // In a real integration test, you'd insert these via the repository/storage.
-        // Since we don't have the explicit insert code, we will assume the storage
-        // has a way to hold/provide this data for the test run.
-        // For a true unit test, we'd mock the SlotStorage.
-        
-        // As this is a test split, we'll assume the SlotStorage is capable of providing this data
-        // when called by the queries.
         slotService.save(List.of(slot1, slot2, slot3, slot4, slot5));
 
     }
@@ -48,8 +41,7 @@ class GetSlotQueriesTest extends SlotTestBase {
     @Test
     void testGetDailySlotsQuery_RetrievesSlotsForSpecificDay() {
         // ARRANGE: (Assuming SlotStorage is set up to return slot1 and slot2 for TODAY)
-        
-        // ACT
+
         List<Slot> dailySlots = getDailySlotsQuery.execute(branchId,TODAY);
         
         // ASSERT
@@ -60,8 +52,7 @@ class GetSlotQueriesTest extends SlotTestBase {
     @Test
     void testGetNext7DaySlotsQuery_RetrievesAndGroupsByDay() {
         // ARRANGE: (Assuming SlotStorage is set up to return all 5 slots for the next 7 days)
-        
-        // ACT
+
         Map<LocalDate, List<Slot>> weeklySlotsMap = getNext7DaySlotsQuery.execute(branchId,TODAY);
         
         // ASSERT
@@ -72,19 +63,15 @@ class GetSlotQueriesTest extends SlotTestBase {
         assertThat(weeklySlotsMap.get(TOMORROW)).as("Slots for TOMORROW should be correct").hasSize(2).containsExactlyInAnyOrder(slot3, slot4);
     }
     
- /*   @Test
+    @Test
     void testGetNext7DaySlotsQuery_WithStatusFilter() {
-        // ARRANGE: Assume slot1 and slot3 are marked as AVAILABLE (status=false)
 
-        // ACT
-        Map<LocalDate, List<Slot>> filteredSlotsMap = getNext7DaySlotsQuery.execute(TODAY, false);
+        Map<LocalDate, List<Slot>> filteredSlotsMap = getNext7DaySlotsQuery.execute(branchId,TODAY, SlotStatus.AVAILABLE);
 
         // ASSERT
-        // This test requires SlotStorage to be fully functional or mocked to show the filter works.
-        // Assuming the repository returns only slot1 and slot3 when status=true
-        assertThat(filteredSlotsMap).as("Map should contain two days with available slots").hasSize(2);
-        assertThat(filteredSlotsMap.get(TODAY)).as("TODAY should have 1 available slot").hasSize(1).contains(slot1);
-        assertThat(filteredSlotsMap.get(TOMORROW)).as("TOMORROW should have 1 available slot").hasSize(1).contains(slot3);
-        assertThat(filteredSlotsMap).doesNotContainKey(DAY_AFTER);
-    }*/
+        assertThat(filteredSlotsMap).as("Map should contain 3 days with available slots").hasSize(3);
+        assertThat(filteredSlotsMap.get(TODAY)).as("TODAY should have 2 available slot").hasSize(2).contains(slot1);
+        assertThat(filteredSlotsMap.get(TOMORROW)).as("TOMORROW should have 2 available slot").hasSize(2).contains(slot3);
+        assertThat(filteredSlotsMap.get(DAY_AFTER)).as("DAY_AFTER should have 1 available slot").hasSize(1).contains(slot5);
+    }
 }

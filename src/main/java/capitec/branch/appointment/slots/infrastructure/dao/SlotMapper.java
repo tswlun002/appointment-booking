@@ -22,23 +22,27 @@ interface SlotMapper {
         try {
             UUID id = UUID.fromString(entity.id());
 
-            // 1. Get the private field named 'id'
-            Field idField = Slot.class.getDeclaredField("id");
+            Field idField = Slot.class.getDeclaredField(Slot.ID_FIELD_NAME);
+            Field statusField = Slot.class.getDeclaredField(Slot.STATUS_FIELD_NAME);
+            Field versionField = Slot.class.getDeclaredField(Slot.VERSION_FIELD_NAME);
 
-            // 2. Override access restrictions
             idField.setAccessible(true);
+            statusField.setAccessible(true);
+            versionField.setAccessible(true);
 
-            // 3. Set the final field value on the instantiated object
-            // This is the operation that bypasses immutability
             Slot slot = new Slot(entity.day(), entity.startTime(), entity.endTime(), entity.number(), entity.branchId());
+
             idField.set(slot, id);
+            statusField.set(slot,SlotStatus.valueOf(entity.status()));
+            versionField.set(slot,entity.version());
+
             return slot;
 
         } catch (NoSuchFieldException e) {
-            log.error("Slot class does not contain an 'id' field for reflection.", e);
-            throw new RuntimeException("Mapping error: Cannot find ID field for reflection.", e);
+            log.error("Slot class does not contain an  field for reflection.", e);
+            throw new RuntimeException("Mapping error: Cannot find  field for reflection.", e);
         } catch (IllegalAccessException e) {
-            log.error("Failed to set ID field via reflection.", e);
+            log.error("Failed to set field via reflection.", e);
             throw new RuntimeException("Mapping error: Access denied during reflection set.", e);
         }
 
@@ -49,7 +53,6 @@ interface SlotMapper {
     @Mapping(target = "status", source = "status", qualifiedByName = "mapSlotStatusToString")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
-    @Mapping(target = "version", ignore = true)
     SlotEntity toEntity(Slot domain);
 
 
@@ -87,36 +90,5 @@ interface SlotMapper {
     default String mapSlotStatusToString(SlotStatus status) {
         if (status == null) return null;
         return status.name();
-    }
-    @Named("setIdByReflection")
-    default UUID setIdByReflection(String idString, @org.mapstruct.MappingTarget Slot slot) {
-        if (idString == null) {
-            return null;
-        }
-
-        try {
-            UUID id = UUID.fromString(idString);
-
-            // 1. Get the private field named 'id'
-            Field idField = Slot.class.getDeclaredField("id");
-
-            // 2. Override access restrictions
-            idField.setAccessible(true);
-
-            // 3. Set the final field value on the instantiated object
-            // This is the operation that bypasses immutability
-            idField.set(slot, id);
-
-        } catch (NoSuchFieldException e) {
-            log.error("Slot class does not contain an 'id' field for reflection.", e);
-            throw new RuntimeException("Mapping error: Cannot find ID field for reflection.", e);
-        } catch (IllegalAccessException e) {
-            log.error("Failed to set ID field via reflection.", e);
-            throw new RuntimeException("Mapping error: Access denied during reflection set.", e);
-        }
-
-        // Return value is ignored by MapStruct when used with @MappingTarget,
-        // but required for the signature.
-        return null;
     }
 }

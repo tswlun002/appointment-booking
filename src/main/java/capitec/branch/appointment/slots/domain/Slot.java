@@ -6,11 +6,17 @@ import jakarta.validation.constraints.PositiveOrZero;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Objects;
 import java.util.UUID;
 
 public class Slot {
+
+    public static String ID_FIELD_NAME = "id";
+    public static String STATUS_FIELD_NAME = "status";
+    public static String VERSION_FIELD_NAME = "version";
+
     @NotNull
     private final UUID id;
     @NotNull(message = "Day cannot be null")
@@ -31,6 +37,7 @@ public class Slot {
 
     @NotNull(message = "Status cannot be null")
     private SlotStatus status;
+    private int version;
 
     public Slot(LocalDate day, LocalTime startTime, LocalTime endTime, Integer number, String branchId) {
         this.id =  UUID.randomUUID();
@@ -40,37 +47,62 @@ public class Slot {
         this.number = number;
         this.branchId = branchId;
         this.status = SlotStatus.AVAILABLE;
+        this.version = 0;
         if (!startTime.isBefore(endTime)) {
             throw new IllegalArgumentException("Slot start time (" + startTime + ") must be strictly before the end time (" + endTime + ").");
         }
     }
 
-    public void book(){
-        if(status != SlotStatus.AVAILABLE){
-            throw new IllegalStateException("Slot is not available for booking.");
+    public void book(LocalDateTime currentTime){
+        validateSlotTimeNotPassed(currentTime);
+        if(status == SlotStatus.BLOCKED){
+            throw new IllegalStateException("Cannot book a blocked slot.");
+        }
+        if(status == SlotStatus.BOOKED){
+            throw new IllegalStateException("Slot is already booked.");
         }
         this.status = SlotStatus.BOOKED;
+       // increaseVersion();
     }
-    public  boolean isAvailable(){
-        return status == SlotStatus.AVAILABLE;
-    }
-    public void release(){
+    public void release(LocalDateTime currentTime){
+        validateSlotTimeNotPassed(currentTime);
         if(status == SlotStatus.AVAILABLE){
-            return;
+            throw new IllegalStateException("Slot is already available.");
         }
         this.status = SlotStatus.AVAILABLE;
+        //increaseVersion();
 
+    }
+    public void  expire(){
+        if(status == SlotStatus.AVAILABLE || status == SlotStatus.BLOCKED){
+            this.status = SlotStatus.EXPIRED;
+            //increaseVersion();
+        }
+    }
+    public void block(LocalDateTime currentTime){
+        validateSlotTimeNotPassed(currentTime);
+        if(status == SlotStatus.BLOCKED){
+            throw new IllegalStateException("Cannot block a blocked slot.");
+        }
+        this.status = SlotStatus.BLOCKED;
+        //increaseVersion();
+    }
+
+    private void validateSlotTimeNotPassed(LocalDateTime currentTime){
+        LocalDateTime localDateTime = LocalDateTime.of(day, startTime);
+        if(currentTime.isBefore(localDateTime)){
+            throw new IllegalStateException("Cannot modify a slot that has already started.");
+        }
+    }
+
+    private   void increaseVersion(){
+        this.version++;
     }
 
 
     public UUID getId() {
         return id;
     }
-
-    public void setStatus(@NotNull SlotStatus status) {
-        this.status = status;
-    }
-
     public LocalDate getDay() {
         return day;
     }
@@ -97,6 +129,9 @@ public class Slot {
     public String getBranchId() {
         return branchId;
     }
+    public int getVersion() {
+        return version;
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -117,8 +152,9 @@ public class Slot {
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
                 ", number=" + number +
-                ", branchId='" + branchId + '\'' +
+                ", branchId='" + branchId +
                 ", status=" + status +
+                ", version=" + version +
                 '}';
     }
 }

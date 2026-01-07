@@ -36,7 +36,6 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
 
         wireMockGetHolidayByYearAndCountryCode("2025", "ZA");
 
-        // ACT
        generateSlotsUseCase.createNext7DaySlots();
 
        // VERIFY
@@ -46,12 +45,10 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
        assertThat(weeklySlots).as("Weekly slots map should not be empty").isNotEmpty();
        assertThat(weeklySlots.size()).as("Should generate slots for exactly 7 days").isEqualTo(7);
 
-       // Verification Logic (remains mostly the same, using the new query)
-
        // 1. Verify Holidays (Slots should be empty)
        List<LocalDate> holidays = weeklySlots.keySet()
                .stream()
-               .filter(checkHolidayQuery::execute) // Use the dedicated query
+               .filter(checkHolidayQuery::execute)
                .toList();
 
        for (LocalDate day : holidays) {

@@ -1,17 +1,20 @@
 package capitec.branch.appointment.slots.infrastructure.dao;
 
+import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.utils.IdStore;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -40,7 +43,12 @@ public class SlotDaoImpl implements SlotService {
             idStore.setIdList(slotsEntities.stream().map(SlotEntity::id).toList());
             sloRepository.saveAll(slotsEntities);
 
-        } catch (Exception e) {
+        }
+        catch (OptimisticLockingFailureException ex){
+            log.error("Optimistic locking failure trying to save slots.\n",ex);
+            throw new EntityAlreadyExistException(ex.getMessage());
+        }
+        catch (Exception e) {
 
             log.error("Could not save slot into DB", e);
             throw e;
@@ -48,8 +56,8 @@ public class SlotDaoImpl implements SlotService {
     }
 
     @Override
-    public List<Slot> getDailySlot(String branchId,LocalDate day) {
-        return sloRepository.dailySlot(branchId,day)
+    public List<Slot> getDailySlot(String branchId,LocalDate fromDate) {
+        return sloRepository.dailySlot(branchId,fromDate)
                 .stream().map(slotMapper::toDomain)
                 .toList();
     }
@@ -60,9 +68,9 @@ public class SlotDaoImpl implements SlotService {
     }
 
     @Override
-    public List<Slot> getNext7DaySlots(String branchId,LocalDate date, SlotStatus status) {
+    public List<Slot> getNext7DaySlots(String branchId,LocalDate fromDate, SlotStatus status) {
         String status1 = status == null ? null : status.name();
-        return  sloRepository.next7DaySlots(branchId,date, status1)
+        return  sloRepository.next7DaySlots(branchId,fromDate, status1)
                 .stream()
                 .map(slotMapper::toDomain)
                 .toList();
@@ -82,6 +90,13 @@ public class SlotDaoImpl implements SlotService {
             log.error("Could not delete slot into DB", e);
             throw e;
         }
+    }
+
+    @Override
+    public Optional<Slot> getSlot(UUID slotId) {
+
+        return sloRepository.findById(slotId.toString())
+                .map(slotMapper::toDomain);
     }
 
 }
