@@ -100,7 +100,7 @@ CREATE TABLE address
 -- comment: /* Create table SLOT only if it does not exist. ZERO means the schema does not exist*/
 CREATE TABLE slot
 (
-    id                 VARCHAR(36) PRIMARY KEY,
+    id                 UUID PRIMARY KEY NOT NULL,
     day                DATE        NOT NULL,
     start_time         TIME        NOT NULL,
     end_time           TIME        NOT NULL,
@@ -111,9 +111,12 @@ CREATE TABLE slot
     created_at         TIMESTAMP   DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP   DEFAULT LOCALTIMESTAMP,
     version            INTEGER     DEFAULT 1,
-    CONSTRAINT positive_number CHECK (number >= 0),
+    CONSTRAINT positive_booking_count CHECK (booking_count >= 0),
+    CONSTRAINT positive_max_booking_capacity CHECK (max_booking_capacity >= 0),
+    CONSTRAINT positive_version CHECK (version >= 1),
+    CONSTRAINT booking_capacity_check CHECK (booking_count <= max_booking_capacity),
     CONSTRAINT start_before_end CHECK (start_time < end_time),
-    CONSTRAINT unique_slot_per_branch_day_number UNIQUE (branch_id, day, start_time, end_time,number)
+    CONSTRAINT unique_slot_per_branch_day UNIQUE (branch_id, day, start_time, end_time)
 );
 CREATE INDEX idx_branch_day ON slot (branch_id, day);
 CREATE INDEX idx_day_status ON slot (day, status);

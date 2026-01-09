@@ -63,14 +63,14 @@ class SlotTest {
         void shouldThrowExceptionWhenMaxCapacityIsZero() {
             assertThatThrownBy(() -> new Slot(TOMORROW, START_TIME, END_TIME, 0, BRANCH_ID))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Max capacity must be positive");
+                    .hasMessageContaining("Max booking capacity must be greater than zero.");
         }
 
         @Test
         void shouldThrowExceptionWhenMaxCapacityIsNegative() {
             assertThatThrownBy(() -> new Slot(TOMORROW, START_TIME, END_TIME, -1, BRANCH_ID))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Max capacity must be positive");
+                    .hasMessageContaining("Max booking capacity must be greater than zero.");
         }
     }
 
@@ -92,7 +92,7 @@ class SlotTest {
             slot.book(beforeSlotTime);
 
             assertThat(slot.getBookingCount()).isEqualTo(MAX_CAPACITY);
-            assertThat(slot.getStatus()).isEqualTo(SlotStatus.BOOKED);
+            assertThat(slot.getStatus()).isEqualTo(SlotStatus.FULLY_BOOKED);
         }
 
         @Test
@@ -152,7 +152,7 @@ class SlotTest {
             slot.book(beforeSlotTime);
             slot.book(beforeSlotTime);
             slot.book(beforeSlotTime);
-            assertThat(slot.getStatus()).isEqualTo(SlotStatus.BOOKED);
+            assertThat(slot.getStatus()).isEqualTo(SlotStatus.FULLY_BOOKED);
 
             slot.release(beforeSlotTime);
 
@@ -262,7 +262,7 @@ class SlotTest {
 
             slot.unblock(beforeSlotTime);
 
-            assertThat(slot.getStatus()).isEqualTo(SlotStatus.BOOKED);
+            assertThat(slot.getStatus()).isEqualTo(SlotStatus.FULLY_BOOKED);
             assertThat(slot.getBookingCount()).isEqualTo(MAX_CAPACITY);
         }
 
@@ -321,7 +321,7 @@ class SlotTest {
 
             slot.expire();
 
-            assertThat(slot.getStatus()).isEqualTo(SlotStatus.BOOKED);
+            assertThat(slot.getStatus()).isEqualTo(SlotStatus.FULLY_BOOKED);
         }
     }
 

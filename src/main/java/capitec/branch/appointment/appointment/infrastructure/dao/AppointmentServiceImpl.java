@@ -4,7 +4,7 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.exeption.SlotIsAlreadyBookedException;
+import capitec.branch.appointment.exeption.SlotFullyBookedException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -43,7 +43,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         } catch (OptimisticLockingFailureException e) {
 
             log.error("Failed to save appointment db.\n", e);
-            throw new SlotIsAlreadyBookedException(e.getMessage(),e);
+            throw new SlotFullyBookedException(e.getMessage(),e);
         } catch (Exception e) {
 
             log.error("Failed to save appointment to DB.\n", e);

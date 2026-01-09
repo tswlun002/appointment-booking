@@ -9,9 +9,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-interface SloRepository extends CrudRepository<SlotEntity, String> {
+interface SloRepository extends CrudRepository<SlotEntity, UUID> {
     @Query(value="""
             SELECT
             id, day, start_time, end_time,
@@ -35,6 +36,6 @@ interface SloRepository extends CrudRepository<SlotEntity, String> {
     @Query("""
             DELETE  FROM  slot AS s WHERE  s.id=:id  
             """)
-    int deleteSlotEntitiesBySlotId(@Param("id") String id);
+    int deleteSlotEntitiesBySlotId(@Param("id") UUID id);
 
 }

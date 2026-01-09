@@ -11,7 +11,7 @@ import java.util.UUID;
 
 @Table("slot")
 public record SlotEntity(
-        @Id String id,
+        @Id UUID id,
         LocalDate day,
         @Column("start_time") LocalTime startTime,
         @Column("end_time") LocalTime endTime,
@@ -32,11 +32,11 @@ public record SlotEntity(
 
     public SlotEntity(UUID id, LocalDate day, LocalTime startTime, LocalTime endTime,
                       Integer maxBookingCapacity,Integer bookingCount, String branchId, String status) {
-        this(id.toString(), day, startTime, endTime, maxBookingCapacity,bookingCount, branchId, status, null, null, 0);
+        this(id, day, startTime, endTime, maxBookingCapacity,bookingCount, branchId, status, null, null, 0);
     }
 
     public SlotEntity(UUID id, SlotEntity entity) {
-        this(id.toString(), entity.day, entity.startTime, entity.endTime,
+        this(id, entity.day, entity.startTime, entity.endTime,
                 entity.maxBookingCapacity,entity.bookingCount, entity.branchId, entity.status,
                 entity.createdAt, entity.updatedAt, entity.version);
     }

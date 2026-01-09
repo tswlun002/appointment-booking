@@ -92,7 +92,7 @@ public class GenerateSlotsUseCase {
 
                     LocalTime slotClosingTime = openTime.plus(slotDuration);
                     
-                    Slot slot = new Slot(day, openTime, slotClosingTime, slotGenerated,branchId);
+                    Slot slot = new Slot(day, openTime, slotClosingTime, slotProperties.maxBookingCapacity(),branchId);
                     slots.add(slot);
                     slotGenerated++;
                 }

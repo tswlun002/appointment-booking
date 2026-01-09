@@ -5,7 +5,7 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.branch.app.GetBranchQuery;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.exeption.SlotIsAlreadyBookedException;
+import capitec.branch.appointment.exeption.SlotFullyBookedException;
 import capitec.branch.appointment.slots.app.GetSlotQuery;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
@@ -43,7 +43,7 @@ public class BookAppointmentUseCase {
             appointment= appointmentService.book(appointment);
 
         }
-        catch (SlotIsAlreadyBookedException e){
+        catch (SlotFullyBookedException e){
 
             log.error("Slot is already booked: {}", appointment, e);
 

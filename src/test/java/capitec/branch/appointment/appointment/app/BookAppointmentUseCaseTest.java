@@ -5,9 +5,7 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.branch.app.GetBranchQuery;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.exeption.SlotIsAlreadyBookedException;
 import capitec.branch.appointment.slots.app.GetSlotQuery;
-import capitec.branch.appointment.slots.app.SlotStatusTransitionAction;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
@@ -19,10 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.*;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -147,7 +141,7 @@ class BookAppointmentUseCaseIntegrationTest extends AppointmentTestBase {
         // We still need to mock the service's exception behavior to test the UseCase's error handling.
 
         @Test
-        @DisplayName("Should throw CONFLICT (409) when SlotIsAlreadyBookedException occurs")
+        @DisplayName("Should throw CONFLICT (409) when SlotFullyBookedException occurs")
         void shouldThrowConflictWhenSlotIsAlreadyBooked() throws Exception {
             // Arrange: Ensure slot is AVAILABLE and save it to establish version=0
             // (This is handled by your @BeforeEach, but we'll confirm the initial version)

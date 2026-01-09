@@ -16,63 +16,25 @@ interface SlotMapper {
 
 
      Logger log = LoggerFactory.getLogger(SlotMapper.class);
-
-   default Slot toDomain(SlotEntity entity){
-
-        try {
-            UUID id = UUID.fromString(entity.id());
-
-            Field idField = Slot.class.getDeclaredField(Slot.ID_FIELD_NAME);
-            Field statusField = Slot.class.getDeclaredField(Slot.STATUS_FIELD_NAME);
-            Field versionField = Slot.class.getDeclaredField(Slot.VERSION_FIELD_NAME);
-
-            idField.setAccessible(true);
-            statusField.setAccessible(true);
-            versionField.setAccessible(true);
-
-            Slot slot = new Slot(entity.day(), entity.startTime(), entity.endTime(), entity.bookingCount(), entity.branchId());
-
-            idField.set(slot, id);
-            statusField.set(slot,SlotStatus.valueOf(entity.status()));
-            versionField.set(slot,entity.version());
-
-            return slot;
-
-        } catch (NoSuchFieldException e) {
-            log.error("Slot class does not contain an  field for reflection.", e);
-            throw new RuntimeException("Mapping error: Cannot find  field for reflection.", e);
-        } catch (IllegalAccessException e) {
-            log.error("Failed to set field via reflection.", e);
-            throw new RuntimeException("Mapping error: Access denied during reflection set.", e);
-        }
-
+    default Slot toDomain(SlotEntity entity){
+        return  Slot.reconstituteFromPersistence(
+                entity.id(),
+                entity.day(),
+                entity.startTime(),
+                entity.endTime(),
+                entity.maxBookingCapacity(),
+                entity.bookingCount(),
+                entity.branchId(),
+                entity.status()==null?null:SlotStatus.valueOf(entity.status()),
+                entity.version()
+                );
     }
 
 
-    @Mapping(target = "id", source = "id", qualifiedByName = "mapUUIDToString")
     @Mapping(target = "status", source = "status", qualifiedByName = "mapSlotStatusToString")
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     SlotEntity toEntity(Slot domain);
-
-
-    /**
-     * Maps the String ID from the entity to the UUID ID in the domain.
-     */
-    @Named("mapStringToUUID")
-    default UUID mapStringToUUID(String id) {
-        if (id == null) return null;
-        return UUID.fromString(id);
-    }
-
-    /**
-     * Maps the UUID ID from the domain to the String ID in the entity.
-     */
-    @Named("mapUUIDToString")
-    default String mapUUIDToString(UUID id) {
-        if (id == null) return null;
-        return id.toString();
-    }
 
     /**
      * Maps the String status from the entity to the SlotStatus enum in the domain.

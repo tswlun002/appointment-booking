@@ -13,7 +13,7 @@ public record SlotProperties(
         int staffCount,
         double utilizationFactor,
         DayType dayType,
-        int numberOfServedClientPerSlot
+        int maxBookingCapacity
 ) {
 }
 

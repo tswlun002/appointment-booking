@@ -130,7 +130,7 @@ branch-slot:
         open-time: ${WEEK_DAY_OPEN_TIME:08:30}
         closing-time: ${WEEK_DAY_CLOSING_TIME:17:30}
         day-type: WEEK_DAYS
-        number-of-served-client-per-slot: 2
+        max-booking-capacity: 2
       WEEKEND:
         slot-duration: ${WEEKEND_SLOT_DURATION:30M}
         staff-count: ${WEEKEND_STAFF_COUNT:3}
@@ -138,7 +138,7 @@ branch-slot:
         open-time: ${WEEKEND_OPEN_TIME:09:00}
         closing-time: ${WEEKEND_CLOSING_TIME:15:00}
         day-type: WEEKEND
-        number-of-served-client-per-slot: 1
+        max-booking-capacity: 1
       HOLIDAY:
         slot-duration: ${HOLIDAY_SLOT_DURATION:30M}
         staff-count: ${HOLIDAY_STAFF_COUNT:3}
@@ -146,7 +146,7 @@ branch-slot:
         open-time: ${HOLIDAY_OPEN_TIME:09:00}
         closing-time: ${HOLIDAY_CLOSING_TIME:13:00}
         day-type: HOLIDAY
-        number-of-served-client-per-slot: 1
+        max-booking-capacity: 1
   branch-use-default-configs:
     - BR004
     - BR005

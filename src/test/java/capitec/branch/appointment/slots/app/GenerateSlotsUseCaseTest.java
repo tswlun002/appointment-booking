@@ -1,10 +1,13 @@
 package capitec.branch.appointment.slots.app;
 
 import capitec.branch.appointment.day.app.CheckHolidayQuery;
+import capitec.branch.appointment.day.domain.DayType;
 import capitec.branch.appointment.slots.domain.Slot;
+import capitec.branch.appointment.slots.domain.SlotStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +29,9 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
     @Autowired
     private CheckHolidayQuery checkHolidayQuery;
 
+    @Autowired
+    private BranchSlotConfigs branchSlotConfigs;
+
 
     /**
      * Integration test verifying the entire 7-day slot generation pipeline,
@@ -44,6 +50,36 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
        
        assertThat(weeklySlots).as("Weekly slots map should not be empty").isNotEmpty();
        assertThat(weeklySlots.size()).as("Should generate slots for exactly 7 days").isEqualTo(7);
+
+       // 0. Verify Slot fields
+       List<Slot> list = weeklySlots.values()
+               .stream()
+               .flatMap(List::stream).toList();
+
+       for (Slot slot : list) {
+
+           assertThat(slot.getDay()).isNotNull();
+
+           boolean isHoliday = checkHolidayQuery.execute(slot.getDay());
+           boolean isWeekend = isWeekend(slot.getDay().getDayOfWeek());
+           Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs.branchConfigs().get(branchId);
+
+           SlotProperties slotProperties = (isHoliday) ?
+                   dayTypeSlotPropertiesMap.get(DayType.HOLIDAY) :
+                   isWeekend ?
+                   dayTypeSlotPropertiesMap.get(DayType.WEEKEND):
+                   dayTypeSlotPropertiesMap.get(DayType.WEEK_DAYS);
+
+           assertThat(slot.getVersion()).isEqualTo(1);
+           assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+           assertThat(slot.getBookingCount()).isEqualTo(0);
+           assertThat(slot.getMaxBookingCapacity()).isEqualTo(slotProperties.maxBookingCapacity());
+           assertThat(slot.getStartTime()).isBefore(slot.getEndTime());
+           assertThat(slot.getDay()).isNotNull().isBeforeOrEqualTo(LocalDate.now().plusDays(7));
+           assertThat(slot.getDuration())
+                   .isEqualTo(Duration.between(slot.getStartTime(), slot.getEndTime()))
+                   .isEqualTo(slotProperties.slotDuration());
+       }
 
        // 1. Verify Holidays (Slots should be empty)
        List<LocalDate> holidays = weeklySlots.keySet()

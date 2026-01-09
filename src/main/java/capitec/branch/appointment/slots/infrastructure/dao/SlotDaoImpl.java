@@ -1,6 +1,7 @@
 package capitec.branch.appointment.slots.infrastructure.dao;
 
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
+import capitec.branch.appointment.exeption.OptimisticLockConflictException;
 import capitec.branch.appointment.utils.IdStore;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.Slot;
@@ -40,13 +41,13 @@ public class SlotDaoImpl implements SlotService {
 
             var slotsEntities = slots.stream().map(slotMapper::toEntity).toList();
 
-            idStore.setIdList(slotsEntities.stream().map(SlotEntity::id).toList());
+            idStore.setIdList(slotsEntities.stream().map(s->s.id().toString()).toList());
             sloRepository.saveAll(slotsEntities);
 
         }
         catch (OptimisticLockingFailureException ex){
             log.error("Optimistic locking failure trying to save slots.\n",ex);
-            throw new EntityAlreadyExistException(ex.getMessage());
+            throw new OptimisticLockConflictException(ex.getMessage(),ex);
         }
         catch (Exception e) {
 
@@ -82,7 +83,7 @@ public class SlotDaoImpl implements SlotService {
 
         try {
 
-           return sloRepository.deleteSlotEntitiesBySlotId(id.toString())==1;
+           return sloRepository.deleteSlotEntitiesBySlotId(id)==1;
 
         }
         catch (Exception e) {
@@ -95,7 +96,7 @@ public class SlotDaoImpl implements SlotService {
     @Override
     public Optional<Slot> getSlot(UUID slotId) {
 
-        return sloRepository.findById(slotId.toString())
+        return sloRepository.findById(slotId)
                 .map(slotMapper::toDomain);
     }
 
