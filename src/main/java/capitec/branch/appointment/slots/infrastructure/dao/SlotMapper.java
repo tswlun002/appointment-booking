@@ -30,7 +30,7 @@ interface SlotMapper {
             statusField.setAccessible(true);
             versionField.setAccessible(true);
 
-            Slot slot = new Slot(entity.day(), entity.startTime(), entity.endTime(), entity.number(), entity.branchId());
+            Slot slot = new Slot(entity.day(), entity.startTime(), entity.endTime(), entity.bookingCount(), entity.branchId());
 
             idField.set(slot, id);
             statusField.set(slot,SlotStatus.valueOf(entity.status()));

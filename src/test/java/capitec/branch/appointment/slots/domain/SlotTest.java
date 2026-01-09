@@ -38,7 +38,7 @@ class SlotTest {
             assertThat(slot.getDay()).isEqualTo(TOMORROW);
             assertThat(slot.getStartTime()).isEqualTo(START_TIME);
             assertThat(slot.getEndTime()).isEqualTo(END_TIME);
-            assertThat(slot.getMaxCapacity()).isEqualTo(MAX_CAPACITY);
+            assertThat(slot.getMaxBookingCapacity()).isEqualTo(MAX_CAPACITY);
             assertThat(slot.getBookingCount()).isZero();
             assertThat(slot.getBranchId()).isEqualTo(BRANCH_ID);
             assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);

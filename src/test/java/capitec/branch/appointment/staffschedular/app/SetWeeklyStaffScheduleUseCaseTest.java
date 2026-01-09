@@ -55,7 +55,7 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
         // Get the list of staff assigned to today
         Set<String> assignedUsernames = assignment.getWeeklyStaff().get(now).stream().map(StaffRef::username).collect(Collectors.toSet());
         
-        // Verify the number of staff saved matches the number assigned
+        // Verify the bookingCount of staff saved matches the bookingCount assigned
         assertThat(assignedUsernames).hasSize(numStaffPerBranch);
         
         // Verify the correct staff members were assigned
@@ -89,7 +89,7 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
 //        BranchStaffAssignment assignment = originalStaffScheduleService.get(branchId, today).orElseThrow();
 //        Set<String> assignedUsernames = assignment.getWeeklyStaff().get(today).stream().map(StaffRef::username).collect(Collectors.toSet());
 //
-//        // Verify the number of staff saved matches the new assignment (2 staff)
+//        // Verify the bookingCount of staff saved matches the new assignment (2 staff)
 //        assertThat(assignedUsernames).hasSize(2);
 //
 //        // Verify the correct NEW staff members were assigned

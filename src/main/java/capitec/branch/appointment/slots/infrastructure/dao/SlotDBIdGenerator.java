@@ -15,7 +15,7 @@ class SlotDBIdGenerator implements BeforeConvertCallback<SlotEntity> {
     public SlotEntity onBeforeConvert(SlotEntity entity) {
 
         if(entity.id() == null){
-           return new SlotEntity(UUID.fromString(idStore.getIdList().get(entity.number()-1)),entity);
+           return new SlotEntity(UUID.fromString(idStore.getIdList().get(entity.bookingCount()-1)),entity);
         }
         return entity;
 

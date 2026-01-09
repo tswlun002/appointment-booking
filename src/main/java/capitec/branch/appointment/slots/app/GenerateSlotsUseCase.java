@@ -51,7 +51,7 @@ public class GenerateSlotsUseCase {
      * Generate Time Slots for a given date range.
      * @param branchId The id of the branch of slot to generate
      * @param startDate The starting date.
-     * @param days The number of days to generate slots for.
+     * @param days The bookingCount of days to generate slots for.
      * @return A map of generated slots grouped by date.
      */
     private Map<LocalDate, List<Slot>> generateTimeSlotsForRange(String branchId,LocalDate startDate, int days) {

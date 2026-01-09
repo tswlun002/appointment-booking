@@ -31,7 +31,7 @@ public class Slot {
 
     @NotNull(message = "Max capacity cannot be null")
     @Positive(message = "Max capacity must be positive")
-    private final Integer maxCapacity;
+    private final Integer maxBookingCapacity;
 
     @NotNull(message = "Booking count cannot be null")
     @PositiveOrZero(message = "Booking count must be zero or positive")
@@ -45,12 +45,12 @@ public class Slot {
 
     private int version;
 
-    public Slot(LocalDate day, LocalTime startTime, LocalTime endTime, Integer maxCapacity, String branchId) {
+    public Slot(LocalDate day, LocalTime startTime, LocalTime endTime, Integer maxBookingCapacity, String branchId) {
         this.id = UUID.randomUUID();
         this.day = day;
         this.startTime = startTime;
         this.endTime = endTime;
-        this.maxCapacity = maxCapacity;
+        this.maxBookingCapacity = maxBookingCapacity;
         this.bookingCount = 0;
         this.branchId = branchId;
         this.status = SlotStatus.AVAILABLE;
@@ -59,7 +59,7 @@ public class Slot {
         if (!startTime.isBefore(endTime)) {
             throw new IllegalArgumentException("Slot start time (" + startTime + ") must be strictly before the end time (" + endTime + ").");
         }
-        if (maxCapacity <= 0) {
+        if (maxBookingCapacity <= 0) {
             throw new IllegalArgumentException("Max capacity must be positive.");
         }
     }
@@ -72,13 +72,15 @@ public class Slot {
         if (status == SlotStatus.EXPIRED) {
             throw new IllegalStateException("Cannot book an expired slot.");
         }
-        if (bookingCount >= maxCapacity) {
+        if (bookingCount >= maxBookingCapacity) {
             throw new IllegalStateException("Slot is fully booked.");
         }
 
         this.bookingCount++;
-        if (bookingCount.equals(maxCapacity)) {
+        if (bookingCount.equals(maxBookingCapacity)) {
             this.status = SlotStatus.BOOKED;
+            //this.version++;  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
+
         }
     }
 
@@ -89,8 +91,10 @@ public class Slot {
         }
 
         this.bookingCount--;
-        if (status == SlotStatus.BOOKED && bookingCount < maxCapacity) {
+        if (status == SlotStatus.BOOKED && bookingCount < maxBookingCapacity) {
             this.status = SlotStatus.AVAILABLE;
+            //this.version++;  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
+
         }
         // If BLOCKED, remain BLOCKED per business rule
     }
@@ -98,6 +102,8 @@ public class Slot {
     public void expire() {
         if (status == SlotStatus.AVAILABLE || status == SlotStatus.BLOCKED) {
             this.status = SlotStatus.EXPIRED;
+            //this.version++;  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
+
         }
     }
 
@@ -110,6 +116,8 @@ public class Slot {
             throw new IllegalStateException("Cannot block an expired slot.");
         }
         this.status = SlotStatus.BLOCKED;
+        //this.version++;  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
+
     }
 
     public void unblock(LocalDateTime currentTime) {
@@ -117,11 +125,12 @@ public class Slot {
         if (status != SlotStatus.BLOCKED) {
             throw new IllegalStateException("Slot is not blocked.");
         }
-        this.status = bookingCount < maxCapacity ? SlotStatus.AVAILABLE : SlotStatus.BOOKED;
+        this.status = bookingCount < maxBookingCapacity ? SlotStatus.AVAILABLE : SlotStatus.BOOKED;
+        //this.version++;  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 
     public boolean hasAvailableCapacity() {
-        return status == SlotStatus.AVAILABLE && bookingCount < maxCapacity;
+        return status == SlotStatus.AVAILABLE && bookingCount < maxBookingCapacity;
     }
 
     private void validateSlotTimeNotPassed(LocalDateTime currentTime) {
@@ -151,8 +160,8 @@ public class Slot {
         return Duration.between(startTime, endTime);
     }
 
-    public Integer getMaxCapacity() {
-        return maxCapacity;
+    public Integer getMaxBookingCapacity() {
+        return maxBookingCapacity;
     }
 
     public Integer getBookingCount() {
@@ -189,7 +198,7 @@ public class Slot {
                 ", day=" + day +
                 ", startTime=" + startTime +
                 ", endTime=" + endTime +
-                ", maxCapacity=" + maxCapacity +
+                ", maxCapacity=" + maxBookingCapacity +
                 ", bookingCount=" + bookingCount +
                 ", branchId='" + branchId + '\'' +
                 ", status=" + status +

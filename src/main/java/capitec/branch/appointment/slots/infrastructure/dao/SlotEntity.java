@@ -15,7 +15,10 @@ public record SlotEntity(
         LocalDate day,
         @Column("start_time") LocalTime startTime,
         @Column("end_time") LocalTime endTime,
-        Integer number,
+        @Column("max_booking_capacity")
+        Integer maxBookingCapacity,
+        @Column("booking_count")
+        Integer bookingCount,
         @Column("branch_id") String branchId,
         String status,
         @CreatedDate @Column("created_at") LocalDateTime createdAt,
@@ -28,19 +31,19 @@ public record SlotEntity(
     }
 
     public SlotEntity(UUID id, LocalDate day, LocalTime startTime, LocalTime endTime,
-                      Integer number, String branchId, String status) {
-        this(id.toString(), day, startTime, endTime, number, branchId, status, null, null, 0);
+                      Integer maxBookingCapacity,Integer bookingCount, String branchId, String status) {
+        this(id.toString(), day, startTime, endTime, maxBookingCapacity,bookingCount, branchId, status, null, null, 0);
     }
 
     public SlotEntity(UUID id, SlotEntity entity) {
         this(id.toString(), entity.day, entity.startTime, entity.endTime,
-                entity.number, entity.branchId, entity.status,
+                entity.maxBookingCapacity,entity.bookingCount, entity.branchId, entity.status,
                 entity.createdAt, entity.updatedAt, entity.version);
     }
 
     public SlotEntity withVersion(int version) {
         return new SlotEntity(this.id, this.day, this.startTime, this.endTime,
-                this.number, this.branchId, this.status,
+                this.maxBookingCapacity,this.bookingCount, this.branchId, this.status,
                 this.createdAt, this.updatedAt, version);
     }
 }

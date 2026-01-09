@@ -15,7 +15,7 @@ interface SloRepository extends CrudRepository<SlotEntity, String> {
     @Query(value="""
             SELECT
             id, day, start_time, end_time,
-            number, branch_id, status, 
+            max_booking_capacity,booking_count, branch_id, status, 
             created_at, last_modified_date, version
             FROM slot 
             WHERE slot.branch_id=:branchId AND slot.day=:day
@@ -24,7 +24,7 @@ interface SloRepository extends CrudRepository<SlotEntity, String> {
     @Query(value = """
                 SELECT 
                 id, day, start_time, end_time,
-                number, branch_id, status, 
+                max_booking_capacity,booking_count, branch_id, status, 
                 created_at, last_modified_date, version
                 FROM slot 
                 WHERE  slot.branch_id=:branchId AND slot.day >= :date AND (:status IS NULL OR slot.status = :status)
