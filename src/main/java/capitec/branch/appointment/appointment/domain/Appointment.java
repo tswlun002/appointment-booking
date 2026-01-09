@@ -1,7 +1,12 @@
 package capitec.branch.appointment.appointment.domain;
 
+import capitec.branch.appointment.user.domain.UsernameGenerator;
 import capitec.branch.appointment.utils.Username;
+import capitec.branch.appointment.utils.Validator;
 import jakarta.validation.constraints.*;
+import org.mapstruct.ObjectFactory;
+import org.springframework.util.Assert;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -17,6 +22,7 @@ public class Appointment {
     private static final String BOOKING_REF_PREFIX = "APT";
     private static final int BOOKING_REF_YEAR_LENGTH = 4;
     private static final int BOOKING_REF_SEQUENCE_LENGTH = 7;
+    protected static final String BOOKING_REF_REGEX = "^APT-\\d{4}-\\d{7}$";
 
     // --- Identity and Foreign Keys ---
     @NotNull(message = "Appointment ID cannot be null")
@@ -39,8 +45,7 @@ public class Appointment {
     private AppointmentStatus status;
 
     @NotBlank(message = "Booking reference cannot be blank")
-    @Pattern(regexp = "^APT-\\d{4}-\\d{7}$",
-            message = "Booking reference must match pattern: APT-YYYY-XXXXXXX")
+    @Pattern(regexp = Appointment.BOOKING_REF_REGEX, message = "Booking reference must match pattern: APT-YYYY-XXXXXXX")
     private String bookingReference;
 
     @Min(value = 0, message = "Version cannot be negative")
@@ -78,7 +83,6 @@ public class Appointment {
     private String terminationNotes;
 
     // --- Service Execution ---
-    @Size(min = 2, max = 50, message = "Consultant ID must be between 2 and 50 characters")
     private String assignedConsultantId;
 
     @Size(max = 1000, message = "Service notes cannot exceed 1000 characters")
@@ -91,8 +95,8 @@ public class Appointment {
     @Max(value = MAX_RESCHEDULE_COUNT, message = "Reschedule count cannot exceed " + MAX_RESCHEDULE_COUNT)
     private int rescheduleCount;
 
-    // --- Constructor for new booking ---
-    private Appointment(UUID slotId, String branchId, String customerUsername, String serviceType) {
+
+    public Appointment(UUID slotId, String branchId, String customerUsername, String serviceType) {
         validateConstructorInputs(slotId, branchId, customerUsername, serviceType);
 
         this.id = UUID.randomUUID();
@@ -101,42 +105,61 @@ public class Appointment {
         this.customerUsername = customerUsername;
         this.serviceType = serviceType;
         this.status = AppointmentStatus.BOOKED;
-        this.bookingReference = generateBookingReference();
         this.createdAt = LocalDateTime.now();
+        this.bookingReference = generateBookingReference();
         this.updatedAt = this.createdAt;
         this.version = 0;
         this.rescheduleCount = 0;
     }
+    private Appointment(
+            UUID id, UUID slotId, String branchId, String customerUsername, String serviceType,
+            AppointmentStatus status, String bookingReference, int version,
+            LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime checkedInAt,
+            LocalDateTime inProgressAt, LocalDateTime completedAt, LocalDateTime terminatedAt,
+            String terminatedBy, AppointmentTerminationReason terminationReason, String terminationNotes,
+            String assignedConsultantId, String serviceNotes, UUID previousSlotId, int rescheduleCount) {
 
-    // --- Input Validation ---
-
-    private static void validateConstructorInputs(UUID slotId, String branchId, String customerId, String serviceType) {
-        if (slotId == null) {
-            throw new IllegalArgumentException("Slot ID cannot be null");
-        }
-        if (branchId == null || branchId.isBlank()) {
-            throw new IllegalArgumentException("Branch ID cannot be null or blank");
-        }
-        if (branchId.length() < 2 || branchId.length() > 50) {
-            throw new IllegalArgumentException("Branch ID must be between 2 and 50 characters");
-        }
-        if (customerId == null || customerId.isBlank()) {
-            throw new IllegalArgumentException("Customer ID cannot be null or blank");
-        }
-        if (customerId.length() < 2 || customerId.length() > 50) {
-            throw new IllegalArgumentException("Customer ID must be between 2 and 50 characters");
-        }
-        if (serviceType == null || serviceType.isBlank()) {
-            throw new IllegalArgumentException("Service type cannot be null or blank");
-        }
-        if (serviceType.length() < 3 || serviceType.length() > 100) {
-            throw new IllegalArgumentException("Service type must be between 3 and 100 characters");
-        }
+        this.id = id;
+        this.slotId = slotId;
+        this.branchId = branchId;
+        this.customerUsername = customerUsername;
+        this.serviceType = serviceType;
+        this.status = status;
+        this.bookingReference = bookingReference;
+        this.version = version;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.checkedInAt = checkedInAt;
+        this.inProgressAt = inProgressAt;
+        this.completedAt = completedAt;
+        this.terminatedAt = terminatedAt;
+        this.terminatedBy = terminatedBy;
+        this.terminationReason = terminationReason;
+        this.terminationNotes = terminationNotes;
+        this.assignedConsultantId = assignedConsultantId;
+        this.serviceNotes = serviceNotes;
+        this.previousSlotId = previousSlotId;
+        this.rescheduleCount = rescheduleCount;
     }
 
-    // --- Static factory method for booking ---
-    public static Appointment book(UUID slotRef, String branchId, String customerId, String serviceType) {
-        return new Appointment(slotRef, branchId, customerId, serviceType);
+
+    // --- Input Validation ---
+    @ObjectFactory
+    private static void validateConstructorInputs(UUID slotId, String branchId, String customerUsername, String serviceType) {
+
+        Assert.notNull(slotId, "Slot ID cannot be null");
+        // Branch ID checks
+        Assert.hasText(branchId, "Branch ID cannot be null or blank");
+        Assert.isTrue(branchId.length() >= 2 && branchId.length() <= 50,
+                "Branch ID must be between 2 and 50 characters");
+
+        // Customer ID checks
+        Assert.isTrue(UsernameGenerator.isValid(customerUsername), Validator.USERNAME_MESSAGE);
+
+        // Service Type checks
+        Assert.hasText(serviceType, "Service type cannot be null or blank");
+        Assert.isTrue(serviceType.length() >= 3 && serviceType.length() <= 100,
+                "Service type must be between 3 and 100 characters");
     }
 
     // --- Business Methods (State Transitions) ---
@@ -157,11 +180,8 @@ public class Appointment {
     }
 
     public void startService(String consultantId, LocalDateTime currentTime) {
-        if (consultantId == null || consultantId.isBlank()) {
+        if (!UsernameGenerator.isValid(consultantId)) {
             throw new IllegalArgumentException("Consultant ID cannot be null or blank");
-        }
-        if (consultantId.length() < 2 || consultantId.length() > 50) {
-            throw new IllegalArgumentException("Consultant ID must be between 2 and 50 characters");
         }
         validateTimeInput(currentTime, "Current time");
 
@@ -419,6 +439,84 @@ public class Appointment {
             throw new IllegalStateException("Generated sequence is out of valid range");
         }
         return sequence;
+    }
+
+    public static Appointment restitutionFromPersistence(
+            UUID id,
+            UUID slotId,
+            String branchId,
+            String customerUsername,
+            String serviceType,
+            AppointmentStatus status,
+            String bookingReference,
+            int version,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            LocalDateTime checkedInAt,
+            LocalDateTime inProgressAt,
+            LocalDateTime completedAt,
+            LocalDateTime terminatedAt,
+            String terminatedBy,
+            AppointmentTerminationReason terminationReason,
+            String terminationNotes,
+            String assignedConsultantId,
+            String serviceNotes,
+            UUID previousSlotId,
+            int rescheduleCount) {
+
+
+        // --- END VALIDATION ---
+        validateMustHaveInRestitution(id,slotId,branchId,customerUsername,serviceType,status,bookingReference,version,createdAt);
+
+        // Calls the private constructor with all validated state
+        return new Appointment(
+                id, slotId, branchId, customerUsername, serviceType, status,
+                bookingReference, version, createdAt, updatedAt, checkedInAt,
+                inProgressAt, completedAt, terminatedAt, terminatedBy,
+                terminationReason, terminationNotes, assignedConsultantId,
+                serviceNotes, previousSlotId, rescheduleCount);
+    }
+
+    private  static void validateMustHaveInRestitution(            UUID id,
+                                                            UUID slotId,
+                                                            String branchId,
+                                                            String customerUsername,
+                                                            String serviceType,
+                                                            AppointmentStatus status,
+                                                            String bookingReference,
+                                                            int version,
+                                                            LocalDateTime createdAt){
+        // --- 🎯 RESTITUTION VALIDATION ---
+        if (id == null) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: ID must not be null.");
+        }
+        if (branchId == null || branchId.isBlank()) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Branch ID must not be null or blank.");
+        }
+        if (customerUsername == null || customerUsername.isBlank()) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Customer Username must not be null or blank.");
+        }
+        if(slotId == null) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Slot ID must not be null.");
+        }
+        if(bookingReference == null || bookingReference.isBlank()) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Booking Reference must not be null.");
+        }
+        // Assuming version must be >= 0 for a loaded record
+        if (version < 1) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Version must be greater than or equal to one.");
+        }
+        if(createdAt == null) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: CreatedAt must not be null.");
+        }
+        if(status == null) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Status must not be null.");
+        }
+        if(serviceType == null) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Service Type must not be null.");
+        }
+
+
     }
 
     // --- Getters ---

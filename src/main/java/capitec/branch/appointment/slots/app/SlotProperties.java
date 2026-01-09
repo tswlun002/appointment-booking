@@ -12,7 +12,8 @@ public record SlotProperties(
         Duration slotDuration,
         int staffCount,
         double utilizationFactor,
-        DayType dayType
+        DayType dayType,
+        int numberOfServedClientPerSlot
 ) {
 }
 

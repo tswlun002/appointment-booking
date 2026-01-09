@@ -1,5 +1,7 @@
 package capitec.branch.appointment.user.domain;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -25,7 +27,7 @@ public class UsernameGenerator {
     }
 
     public static boolean isValid(String username) {
-        boolean matches = username.matches(REGEX_VALIDATOR);
+        boolean matches = StringUtils.isNotBlank(username) && username.matches(REGEX_VALIDATOR);
         return  matches &&
                 (!hasTooManyConsecutiveDigits(Long.parseLong(username)));
 

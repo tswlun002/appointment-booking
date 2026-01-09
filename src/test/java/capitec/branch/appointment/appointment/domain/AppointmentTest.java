@@ -1,7 +1,6 @@
 package capitec.branch.appointment.appointment.domain;
 
-
-
+import capitec.branch.appointment.user.domain.UsernameGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -18,12 +17,18 @@ class AppointmentTest {
     private String customerUsername;
     private String serviceType;
     private LocalDateTime now;
+    // Default values for reconstitution test
+    private final UUID persistenceId = UUID.randomUUID();
+    private final String persistenceBookingRef = "APT-2025-1234567";
+    private final int persistenceVersion = 1;
+    private final AppointmentStatus persistenceStatus = AppointmentStatus.CHECKED_IN;
+    private final LocalDateTime persistenceCreatedAt = LocalDateTime.now().minusDays(1);
 
     @BeforeEach
     void setUp() {
         slotId = UUID.randomUUID();
         branchId = "BRANCH001";
-        customerUsername = "john.doe";
+        customerUsername = new UsernameGenerator().getId();
         serviceType = "Account Opening";
         now = LocalDateTime.now();
     }
@@ -35,7 +40,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully create appointment with valid inputs")
         void shouldCreateAppointmentWithValidInputs() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertNotNull(appointment.getId());
             assertEquals(slotId, appointment.getSlotId());
@@ -51,10 +56,10 @@ class AppointmentTest {
         @Test
         @DisplayName("Should generate valid booking reference format")
         void shouldGenerateValidBookingReference() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             String reference = appointment.getBookingReference();
 
-            assertTrue(reference.matches("^APT-\\d{4}-\\d{7}$"),
+            assertTrue(reference.matches(Appointment.BOOKING_REF_REGEX),
                     "Booking reference should match pattern APT-YYYY-XXXXXXX");
         }
 
@@ -62,7 +67,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when slot ID is null")
         void shouldThrowExceptionWhenSlotIdIsNull() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(null, branchId, customerUsername, serviceType)
+                    new Appointment(null, branchId, customerUsername, serviceType)
             );
         }
 
@@ -70,7 +75,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when branch ID is null")
         void shouldThrowExceptionWhenBranchIdIsNull() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, null, customerUsername, serviceType)
+                    new Appointment(slotId, null, customerUsername, serviceType)
             );
         }
 
@@ -78,7 +83,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when branch ID is blank")
         void shouldThrowExceptionWhenBranchIdIsBlank() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, "   ", customerUsername, serviceType)
+                    new Appointment(slotId, "   ", customerUsername, serviceType)
             );
         }
 
@@ -86,7 +91,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when branch ID length is invalid")
         void shouldThrowExceptionWhenBranchIdLengthIsInvalid() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, "A", customerUsername, serviceType)
+                    new Appointment(slotId, "A", customerUsername, serviceType)
             );
         }
 
@@ -94,7 +99,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when customer username is null")
         void shouldThrowExceptionWhenCustomerUsernameIsNull() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, branchId, null, serviceType)
+                    new Appointment(slotId, branchId, null, serviceType)
             );
         }
 
@@ -102,7 +107,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when customer username is blank")
         void shouldThrowExceptionWhenCustomerUsernameIsBlank() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, branchId, "   ", serviceType)
+                    new Appointment(slotId, branchId, "   ", serviceType)
             );
         }
 
@@ -110,7 +115,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when service type is null")
         void shouldThrowExceptionWhenServiceTypeIsNull() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, branchId, customerUsername, null)
+                    new Appointment(slotId, branchId, customerUsername, null)
             );
         }
 
@@ -118,7 +123,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when service type is blank")
         void shouldThrowExceptionWhenServiceTypeIsBlank() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, branchId, customerUsername, "   ")
+                    new Appointment(slotId, branchId, customerUsername, "   ")
             );
         }
 
@@ -126,7 +131,7 @@ class AppointmentTest {
         @DisplayName("Should throw exception when service type length is invalid")
         void shouldThrowExceptionWhenServiceTypeLengthIsInvalid() {
             assertThrows(IllegalArgumentException.class, () ->
-                    Appointment.book(slotId, branchId, customerUsername, "AB")
+                    new Appointment(slotId, branchId, customerUsername, "AB")
             );
         }
     }
@@ -138,7 +143,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully check in booked appointment")
         void shouldCheckInBookedAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             appointment.checkIn(now);
 
@@ -151,7 +156,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when checking in non-booked appointment")
         void shouldThrowExceptionWhenCheckingInNonBookedAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             assertThrows(IllegalStateException.class, () ->
@@ -162,7 +167,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when current time is null")
         void shouldThrowExceptionWhenCurrentTimeIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.checkIn(null)
@@ -177,9 +182,9 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully start service for checked-in appointment")
         void shouldStartServiceForCheckedInAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
-            String consultantId = "CONSULTANT001";
+            String consultantId = new UsernameGenerator().getId();
 
             appointment.startService(consultantId, now.plusMinutes(2));
 
@@ -192,17 +197,17 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when starting service on booked appointment")
         void shouldThrowExceptionWhenStartingServiceOnBookedAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.startService("CONSULTANT001", now)
+                    appointment.startService(new UsernameGenerator().getId(), now)
             );
         }
 
         @Test
         @DisplayName("Should throw exception when consultant ID is null")
         void shouldThrowExceptionWhenConsultantIdIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             assertThrows(IllegalArgumentException.class, () ->
@@ -213,7 +218,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when consultant ID is blank")
         void shouldThrowExceptionWhenConsultantIdIsBlank() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             assertThrows(IllegalArgumentException.class, () ->
@@ -224,7 +229,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when consultant ID length is invalid")
         void shouldThrowExceptionWhenConsultantIdLengthIsInvalid() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             assertThrows(IllegalArgumentException.class, () ->
@@ -254,7 +259,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when completing checked-in appointment")
         void shouldThrowExceptionWhenCompletingCheckedInAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             assertThrows(IllegalStateException.class, () ->
@@ -301,7 +306,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully cancel booked appointment with valid reason")
         void shouldCancelBookedAppointmentWithValidReason() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             String reason = "Cannot attend";
 
             appointment.cancelByCustomer(reason, now);
@@ -317,7 +322,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when cancellation reason is null")
         void shouldThrowExceptionWhenReasonIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.cancelByCustomer(null, now)
@@ -327,7 +332,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when cancellation reason is blank")
         void shouldThrowExceptionWhenReasonIsBlank() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.cancelByCustomer("   ", now)
@@ -337,7 +342,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when reason exceeds maximum length")
         void shouldThrowExceptionWhenReasonExceedsMaxLength() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             String longReason = "A".repeat(501);
 
             assertThrows(IllegalArgumentException.class, () ->
@@ -353,8 +358,8 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully cancel appointment by staff")
         void shouldCancelAppointmentByStaff() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
-            String staffId = "STAFF001";
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
+            String staffId = new UsernameGenerator().getId();
             String reason = "Staff cancellation reason";
 
             appointment.cancelByStaff(staffId, reason, now);
@@ -368,7 +373,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when staff ID is null")
         void shouldThrowExceptionWhenStaffIdIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.cancelByStaff(null, "reason", now)
@@ -381,18 +386,18 @@ class AppointmentTest {
             Appointment appointment = createCompletedAppointment();
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.cancelByStaff("STAFF001", "reason", now)
+                    appointment.cancelByStaff(new UsernameGenerator().getId(), "reason", now)
             );
         }
 
         @Test
         @DisplayName("Should throw exception when cancelling already cancelled appointment")
         void shouldThrowExceptionWhenCancellingAlreadyCancelledAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.cancelByCustomer("reason", now);
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.cancelByStaff("STAFF001", "reason", now.plusMinutes(5))
+                    appointment.cancelByStaff(new UsernameGenerator().getId(), "reason", now.plusMinutes(5))
             );
         }
     }
@@ -404,7 +409,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully reschedule booked appointment")
         void shouldRescheduleBookedAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             UUID newSlotId = UUID.randomUUID();
 
             appointment.reschedule(newSlotId, now);
@@ -418,7 +423,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should allow maximum of 3 reschedules")
         void shouldAllowMaximumThreeReschedules() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             appointment.reschedule(UUID.randomUUID(), now);
             appointment.reschedule(UUID.randomUUID(), now);
@@ -432,7 +437,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when new slot ID is null")
         void shouldThrowExceptionWhenNewSlotIdIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.reschedule(null, now)
@@ -442,7 +447,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when rescheduling to same slot")
         void shouldThrowExceptionWhenReschedulingToSameSlot() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.reschedule(slotId, now)
@@ -452,7 +457,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when rescheduling checked-in appointment")
         void shouldThrowExceptionWhenReschedulingCheckedInAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             assertThrows(IllegalStateException.class, () ->
@@ -468,7 +473,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully mark booked appointment as no-show")
         void shouldMarkBookedAppointmentAsNoShow() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             appointment.markAsNoShow(now);
 
@@ -481,7 +486,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully mark checked-in appointment as no-show")
         void shouldMarkCheckedInAppointmentAsNoShow() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             appointment.checkIn(now);
 
             appointment.markAsNoShow(now.plusMinutes(5));
@@ -507,7 +512,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return true when within 5-minute grace window")
         void shouldReturnTrueWhenWithinGraceWindow() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             LocalDateTime slotStartTime = now;
             LocalDateTime arrivalTime = now.plusMinutes(3);
 
@@ -517,7 +522,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return true at exactly slot start time")
         void shouldReturnTrueAtExactSlotStartTime() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             LocalDateTime slotStartTime = now;
 
             assertTrue(appointment.isWithinGraceWindow(slotStartTime, slotStartTime));
@@ -526,7 +531,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return false when outside grace window")
         void shouldReturnFalseWhenOutsideGraceWindow() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             LocalDateTime slotStartTime = now;
             LocalDateTime arrivalTime = now.plusMinutes(10);
 
@@ -536,7 +541,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when current time is null")
         void shouldThrowExceptionWhenCurrentTimeIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.isWithinGraceWindow(null, now)
@@ -546,7 +551,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception when slot start time is null")
         void shouldThrowExceptionWhenSlotStartTimeIsNull() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalArgumentException.class, () ->
                     appointment.isWithinGraceWindow(now, null)
@@ -561,13 +566,13 @@ class AppointmentTest {
         @Test
         @DisplayName("Should increment version on each state change")
         void shouldIncrementVersionOnEachStateChange() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
             assertEquals(0, appointment.getVersion());
 
             appointment.checkIn(now);
             assertEquals(1, appointment.getVersion());
 
-            appointment.startService("CONSULTANT001", now.plusMinutes(2));
+            appointment.startService(new UsernameGenerator().getId(), now.plusMinutes(2));
             assertEquals(2, appointment.getVersion());
 
             appointment.complete("Notes", now.plusMinutes(15));
@@ -577,7 +582,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should throw exception on version mismatch")
         void shouldThrowExceptionOnVersionMismatch() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertThrows(IllegalStateException.class, () ->
                     appointment.validateVersion(99)
@@ -587,7 +592,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should successfully validate correct version")
         void shouldSuccessfullyValidateCorrectVersion() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertDoesNotThrow(() -> appointment.validateVersion(0));
         }
@@ -600,7 +605,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return true when comparing same appointment")
         void shouldReturnTrueWhenComparingSameAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertEquals(appointment, appointment);
         }
@@ -608,8 +613,7 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return true when comparing appointments with same ID")
         void shouldReturnTrueWhenComparingAppointmentsWithSameId() {
-            Appointment appointment1 = Appointment.book(slotId, branchId, customerUsername, serviceType);
-            Appointment appointment2 = Appointment.book(slotId, branchId, "different.user", "Different Service");
+            Appointment appointment1 = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             // Note: This would require reflection or package-private access to set same ID
             // In practice, this tests the equality logic
@@ -619,18 +623,125 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return same hash code for same appointment")
         void shouldReturnSameHashCodeForSameAppointment() {
-            Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
 
             assertEquals(appointment.hashCode(), appointment.hashCode());
+        }
+    }
+    @Nested
+    @DisplayName("Reconstitution Tests")
+    class ReconstitutionTests {
+
+        @Test
+        @DisplayName("Should successfully reconstitute appointment with valid persistence data")
+        void shouldSuccessfullyReconstituteAppointment() {
+            LocalDateTime terminatedAt = now.minusHours(1);
+            String terminatedBy = "StaffUser";
+            String notes = "Late Cancellation";
+
+            Appointment appointment = Appointment.restitutionFromPersistence(
+                    persistenceId,
+                    slotId,
+                    branchId,
+                    customerUsername,
+                    serviceType,
+                    AppointmentStatus.CANCELLED, // Different status for test
+                    persistenceBookingRef,
+                    persistenceVersion,
+                    persistenceCreatedAt,
+                    now.minusMinutes(30), // updatedAt
+                    now.minusMinutes(45), // checkedInAt
+                    null, // inProgressAt
+                    null, // completedAt
+                    terminatedAt,
+                    terminatedBy,
+                    AppointmentTerminationReason.STAFF_CANCELLATION,
+                    notes,
+                    null, // assignedConsultantId
+                    null, // serviceNotes
+                    UUID.randomUUID(), // previousSlotId
+                    1 // rescheduleCount
+            );
+
+            // Assertions for critical fields
+            assertEquals(persistenceId, appointment.getId());
+            assertEquals(branchId, appointment.getBranchId());
+            assertEquals(customerUsername, appointment.getCustomerUsername());
+            assertEquals(AppointmentStatus.CANCELLED, appointment.getStatus());
+            assertEquals(persistenceVersion, appointment.getVersion());
+            assertEquals(terminatedAt, appointment.getTerminatedAt());
+            assertEquals(terminatedBy, appointment.getTerminatedBy());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when ID is null")
+        void shouldThrowExceptionWhenIdIsNull() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    Appointment.restitutionFromPersistence(
+                            null, // ID is null
+                            slotId, branchId, customerUsername, serviceType,
+                            persistenceStatus, persistenceBookingRef, persistenceVersion,
+                            persistenceCreatedAt, now, null, null, null, null, null, null, null, null, null, null, 0
+                    )
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when Branch ID is null")
+        void shouldThrowExceptionWhenBranchIdIsNull() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    Appointment.restitutionFromPersistence(
+                            persistenceId, slotId, null, // Branch ID is null
+                            customerUsername, serviceType, persistenceStatus, persistenceBookingRef,
+                            persistenceVersion, persistenceCreatedAt, now, null, null, null, null, null, null, null, null, null, null, 0
+                    )
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when Booking Reference is blank")
+        void shouldThrowExceptionWhenBookingReferenceIsBlank() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    Appointment.restitutionFromPersistence(
+                            persistenceId, slotId, branchId, customerUsername, serviceType,
+                            persistenceStatus, "   ", // Booking Reference is blank
+                            persistenceVersion, persistenceCreatedAt, now, null, null, null, null, null, null, null, null, null, null, 0
+                    )
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when Version is less than one")
+        void shouldThrowExceptionWhenVersionIsZero() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    Appointment.restitutionFromPersistence(
+                            persistenceId, slotId, branchId, customerUsername, serviceType,
+                            persistenceStatus, persistenceBookingRef, 0, // Version is 0
+                            persistenceCreatedAt, now, null, null, null, null, null, null, null, null, null, null, 0
+                    )
+            );
+        }
+
+        @Test
+        @DisplayName("Should throw exception when CreatedAt is null")
+        void shouldThrowExceptionWhenCreatedAtIsNull() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    Appointment.restitutionFromPersistence(
+                            persistenceId, slotId, branchId, customerUsername, serviceType,
+                            persistenceStatus, persistenceBookingRef, persistenceVersion,
+                            null, // CreatedAt is null
+                            now, null, null, null, null, null, null, null, null, null, null, 0
+                    )
+            );
         }
     }
 
     // --- Helper Methods ---
 
     private Appointment createInProgressAppointment() {
-        Appointment appointment = Appointment.book(slotId, branchId, customerUsername, serviceType);
+        Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType);
         appointment.checkIn(now);
-        appointment.startService("CONSULTANT001", now.plusMinutes(2));
+        appointment.startService(new UsernameGenerator().getId(), now.plusMinutes(2));
         return appointment;
     }
 

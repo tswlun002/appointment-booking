@@ -112,15 +112,47 @@ CREATE TABLE slot
     version            INTEGER     DEFAULT 1,
     CONSTRAINT positive_number CHECK (number >= 0),
     CONSTRAINT start_before_end CHECK (start_time < end_time),
-    CONSTRAINT unique_slot_per_branch_day UNIQUE (branch_id, day, start_time, end_time)
+    CONSTRAINT unique_slot_per_branch_day_number UNIQUE (branch_id, day, start_time, end_time,number)
 );
-
 CREATE INDEX idx_branch_day ON slot (branch_id, day);
-
 CREATE INDEX idx_day_status ON slot (day, status);
 -- ROLLBACK DROP TABLE slot
 
 -- changeset lungatsewu:-7
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables  where table_name='appointment';
+-- comment: /* Create table APPOINTMENT only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE appointment (
+     id UUID PRIMARY KEY NOT NULL,
+     slot_id UUID NOT NULL,
+     branch_id VARCHAR(50) NOT NULL,
+     customer_username VARCHAR(10) NOT NULL,
+     service_type VARCHAR(100) NOT NULL,
+     status VARCHAR(50) NOT NULL,
+     booking_reference VARCHAR(20) NOT NULL UNIQUE,
+     version INT NOT NULL DEFAULT 0,
+     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
+     checked_in_at TIMESTAMP WITH TIME ZONE,
+     in_progress_at TIMESTAMP WITH TIME ZONE,
+     completed_at TIMESTAMP WITH TIME ZONE,
+     terminated_at TIMESTAMP WITH TIME ZONE,
+     terminated_by VARCHAR(50),
+     termination_reason VARCHAR(50),
+     termination_notes VARCHAR(500),
+     assigned_consultant_id VARCHAR(10),
+     service_notes VARCHAR(1000),
+     previous_slot_id UUID,
+     reschedule_count INT NOT NULL DEFAULT 0,
+     day DATE GENERATED ALWAYS AS ((created_at AT TIME ZONE 'UTC')::date) STORED
+ );
+--// Ensure user has one booked appointment per day
+CREATE UNIQUE INDEX idx_unique_booking_action_day_status
+    ON appointment (customer_username, day)
+    WHERE status = 'BOOKED';
+-- ROLLBACK DROP TABLE appointment
+
+-- changeset lungatsewu:-8
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables  where table_name='otp';
 -- comment: /* Create table OTP only if it does not exist. ZERO means the schema does not exist*/
@@ -141,7 +173,7 @@ CREATE INDEX idx_username_code_status ON otp (username, code, status);
 CREATE INDEX idx_username_status ON otp (username, status);
 -- ROLLBACK DROP TABLE otp
 
--- changeset lungatsewu:1736901183105-7
+-- changeset lungatsewu:1736901183105-9
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='otp';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'otp' AND column_name = 'username';
@@ -152,7 +184,7 @@ ALTER TABLE otp
 -- ROLLBACK ALTER TABLE otp DROP CONSTRAINT unique_username;
 
 
--- changeset lungatsewu:-8
+-- changeset lungatsewu:-10
 --preconditions onFail:MARK_RAN onError:HALT
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'user_dead_letter_event' AND table_schema = current_schema()
 CREATE TABLE user_dead_letter_event
@@ -189,7 +221,7 @@ CREATE INDEX idx_user_dead_letter_event_time_stamp ON user_dead_letter_event (pu
 --rollback DROP TABLE user_dead_letter_event;
 
 
--- changeset lungatsewu:-9
+-- changeset lungatsewu:-11
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='user_dead_letter_event';
 CREATE
@@ -203,7 +235,7 @@ END
 $$
 LANGUAGE plpgsql;
 
--- changeset lungatsewu:-11
+-- changeset lungatsewu:-12
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='user_dead_letter_event';
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_event' AND event_object_table='user_dead_letter_event';
@@ -213,7 +245,7 @@ CREATE TRIGGER set_last_modified_date_event
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified_date();
 
--- changeset lungatsewu:-12
+-- changeset lungatsewu:-13
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='slot';
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='slot';
@@ -223,7 +255,7 @@ CREATE TRIGGER set_last_modified_date_slot
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified_date();
 
--- changeset lungatsewu:-13
+-- changeset lungatsewu:-14
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='branch';
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='branch';
@@ -233,7 +265,7 @@ CREATE TRIGGER set_last_modified_date_slot
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified_date();
 
--- -- changeset lungatsewu:-14
+-- -- changeset lungatsewu:-15
 -- -- preconditions onFail:MARK_RAN onError:HALT
 -- -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='staff';
 -- -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='staff';
@@ -243,7 +275,7 @@ CREATE TRIGGER set_last_modified_date_slot
 --     FOR EACH ROW
 --     EXECUTE FUNCTION update_last_modified_date();
 
--- changeset lungatsewu:-15
+-- changeset lungatsewu:-16
 -- preconditions onFail:MARK_RAN onError:HALT
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='branch_appointment_info';
 -- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='branch_appointment_info';
