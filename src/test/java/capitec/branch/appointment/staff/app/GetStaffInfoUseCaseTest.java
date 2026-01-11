@@ -4,8 +4,6 @@ import capitec.branch.appointment.staff.domain.StaffService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -24,7 +22,6 @@ class GetStaffInfoUseCaseTest extends StaffUseCaseTestBase {
     private  GetStaffInfoUseCase getStaffInfoUseCase;
     @Autowired
     private StaffService staffService;
-    private final String TEST_BRANCH_ID = "59f3c768-9712-423c-a940-9a873a4934fb";
     private static List<String> staffFirstHalf;
     private static List<String> staffSecondHalf;
 
@@ -38,9 +35,8 @@ class GetStaffInfoUseCaseTest extends StaffUseCaseTestBase {
         // 1. Add all staff (default status: TRAINING)
 
 
-
             for (var username : staff) {
-                StaffDTO staffDTO = new StaffDTO(username, TEST_BRANCH_ID);
+                StaffDTO staffDTO = new StaffDTO(username, branch.getBranchId());
                 addStaffUseCase.execute(staffDTO);
             }
 
@@ -69,17 +65,16 @@ class GetStaffInfoUseCaseTest extends StaffUseCaseTestBase {
     @Test
     void testGetStaffCountReturnsCorrectWorkingStaffCount() {
         // ACT: Call the method that counts staff with WORKING status
-        int workingStaffCount = getStaffInfoUseCase.getStaffCount(TEST_BRANCH_ID);
+        int workingStaffCount = getStaffInfoUseCase.getStaffCount(branch.getBranchId());
 
         // ASSERT: Should match the size of the first half
         assertThat(workingStaffCount).isEqualTo(staffFirstHalf.size());
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = TEST_BRANCH_ID)
-    void testGetStaffUsernamesReturnsCorrectSetForWorkingStatus(String branchId) {
+    @Test
+    void testGetStaffUsernamesReturnsCorrectSetForWorkingStatus() {
         // ACT: Get the set of usernames for WORKING staff
-        Set<String> resultUsernames = getStaffInfoUseCase.getStaffUsernames(branchId, WORKING);
+        Set<String> resultUsernames = getStaffInfoUseCase.getStaffUsernames(branch.getBranchId(), WORKING);
 
         // ASSERT: Result set should be exactly the first half of staff
         assertThat(resultUsernames)
@@ -87,11 +82,10 @@ class GetStaffInfoUseCaseTest extends StaffUseCaseTestBase {
             .containsExactlyInAnyOrderElementsOf(staffFirstHalf);
     }
     
-    @ParameterizedTest
-    @ValueSource(strings = TEST_BRANCH_ID)
-    void testGetStaffUsernamesReturnsCorrectSetForLeaveStatus(String branchId) {
+    @Test
+    void testGetStaffUsernamesReturnsCorrectSetForLeaveStatus() {
         // ACT: Get the set of usernames for LEAVE staff
-        Set<String> resultUsernames = getStaffInfoUseCase.getStaffUsernames(branchId, LEAVE);
+        Set<String> resultUsernames = getStaffInfoUseCase.getStaffUsernames(branch.getBranchId(), LEAVE);
 
         // ASSERT: Result set should be exactly the second half of staff
         assertThat(resultUsernames)
@@ -99,11 +93,11 @@ class GetStaffInfoUseCaseTest extends StaffUseCaseTestBase {
             .containsExactlyInAnyOrderElementsOf(staffSecondHalf);
     }
     
-    @ParameterizedTest
-    @ValueSource(strings = TEST_BRANCH_ID)
-    void testGetStaffUsernamesReturnsEmptySetForUnusedStatus(String branchId) {
+    @Test
+
+    void testGetStaffUsernamesReturnsEmptySetForUnusedStatus() {
         // ACT: Get the set of usernames for a status we didn't set (e.g., TRAINING)
-        Set<String> resultUsernames = getStaffInfoUseCase.getStaffUsernames(branchId, TRAINING);
+        Set<String> resultUsernames = getStaffInfoUseCase.getStaffUsernames(branch.getBranchId(), TRAINING);
 
         // ASSERT: Result set should be empty
         assertThat(resultUsernames).isEmpty();

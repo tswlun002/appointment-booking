@@ -11,6 +11,6 @@ public interface StaffService {
     @Transactional
     boolean addStaff(@Valid Staff staff);
     Optional<Staff> updateStaffWorkStatus(String username, StaffStatus status);
-    Set<Staff> getStaffByBranchAndStatus(String branchId, StaffStatus status);
+    Set<Staff> getStaff(String branchId, StaffStatus status);
     boolean deleteStaff(String username);
 }

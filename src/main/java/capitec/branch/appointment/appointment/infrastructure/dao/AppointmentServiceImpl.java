@@ -5,14 +5,17 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.exeption.SlotFullyBookedException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +33,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     @Transactional
-    public Appointment book(Appointment appointment) {
+    public Appointment book(@Valid Appointment appointment) {
 
 
         try {
@@ -96,7 +99,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         if(appointmentId == null) {
             return Optional.empty();
         }
-        return appointmentRepository.findById(appointmentId.toString())
+        return appointmentRepository.findById(appointmentId)
                 .map(appointmentMapper::toDomain);
 
     }
@@ -113,7 +116,7 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
         var isDeleted = false;
         try {
-            appointmentRepository.deleteById(appointmentId.toString());
+            appointmentRepository.deleteById(appointmentId);
             isDeleted = true;
 
         } catch (Exception e) {
@@ -125,8 +128,15 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    public Collection<Appointment> branchAppointments(String branchId) {
-        Collection<AppointmentEntity> appointments = appointmentRepository.getBranchAppointments(branchId);
+    public Collection<Appointment> branchAppointments(String branchId, int pageNumber, int pageSize) {
+
+        Collection<AppointmentEntity> appointments = appointmentRepository.getBranchAppointments(branchId,pageNumber,pageSize);
         return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
+    }
+
+    @Override
+    public Optional<Appointment> getUserActiveAppointment(String branchId, LocalDate day, String customerUsername) {
+        Optional<AppointmentEntity> entity = appointmentRepository.getUserActiveAppointment(branchId,day,customerUsername);
+        return entity.map(appointmentMapper::toDomain);
     }
 }

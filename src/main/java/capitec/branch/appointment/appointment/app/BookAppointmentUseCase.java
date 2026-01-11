@@ -6,7 +6,8 @@ import capitec.branch.appointment.branch.app.GetBranchQuery;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.exeption.SlotFullyBookedException;
-import capitec.branch.appointment.slots.app.GetSlotQuery;
+import capitec.branch.appointment.slots.app.SlotStatusTransitionAction;
+import capitec.branch.appointment.slots.app.UpdateSlotStatusUseCase;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.utils.UseCase;
@@ -15,8 +16,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
 
 @UseCase
 @Slf4j
@@ -27,16 +31,20 @@ public class BookAppointmentUseCase {
     private final AppointmentService appointmentService;
     private final ApplicationEventPublisher publisher;
     private final GetBranchQuery getBranchQuery;
-    private final GetSlotQuery slotsQuery;
     private final GetUserQuery getUserQuery;
+    private final UpdateSlotStatusUseCase updateSlotStatusUseCase;
 
+    @Transactional
     boolean execute(@Valid AppointmentDTO appointmentDTO){
 
-        Appointment appointment = new Appointment(appointmentDTO.slotId(), appointmentDTO.branchId(),
-                appointmentDTO.customerUsername(), appointmentDTO.serviceType());
+
+        LocalDateTime dateTime = appointmentDTO.day().atTime(appointmentDTO.startTime());
+        var appointment = new Appointment(appointmentDTO.slotId(), appointmentDTO.branchId(), appointmentDTO.customerUsername(),
+                appointmentDTO.serviceType(), dateTime);
 
         log.debug("Book appointment created: {}", appointment);
 
+        updateSlotStatusUseCase.execute(new SlotStatusTransitionAction.Book(appointmentDTO.slotId(), LocalDateTime.now()));
 
         try {
 
@@ -52,7 +60,7 @@ public class BookAppointmentUseCase {
         catch (EntityAlreadyExistException e) {
 
             log.debug("Book appointment already exist: {}", appointment,e);
-            throw  new ResponseStatusException(HttpStatus.CONFLICT, "User cannot book more than one slot per day.", e);
+            throw  new ResponseStatusException(HttpStatus.CONFLICT, "User have existing appointment on this day.", e);
         }
         catch (Exception e) {
 
@@ -64,13 +72,12 @@ public class BookAppointmentUseCase {
         if (appointment != null) {
 
             Branch branch = getBranchQuery.execute(appointment.getBranchId());
-            var slot = slotsQuery.execute(appointment.getSlotId());
             var user  = getUserQuery.execute(new UsernameCommand(appointment.getCustomerUsername()));
 
 
             AppointmentBookedEvent appointmentBookedEvent = new AppointmentBookedEvent(
-                    appointment.getBookingReference(), appointment.getCustomerUsername(), user.getEmail(),
-                    slot.getDay(), slot.getStartTime(), slot.getEndTime(), branch.getBranchId(),
+                    appointment.getReference(), appointment.getCustomerUsername(), user.getEmail(),
+                    appointmentDTO.day(), appointmentDTO.startTime(), appointmentDTO.endTime(), branch.getBranchId(),
                     branch.getAddress()
             );
 
@@ -83,4 +90,5 @@ public class BookAppointmentUseCase {
         return isAdded;
 
     }
+
 }

@@ -3,6 +3,7 @@ package capitec.branch.appointment.appointment.domain;
 import jakarta.validation.Valid;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,5 +23,7 @@ public interface AppointmentService {
     Collection<Appointment> customerAppointments(String username,AppointmentStatus status);
     boolean deleteAppointment(UUID appointmentId);
 
-    Collection<Appointment> branchAppointments(String branchId);
+    Collection<Appointment> branchAppointments(String branchId, int pageNumber, int pageSize);
+
+    Optional<Appointment> getUserActiveAppointment(String bra, LocalDate day, String customerUsername);
 }

@@ -55,23 +55,24 @@ abstract class StaffSchedulerTestBase extends AppointmentBookingApplicationTests
 
     @AfterEach
     public void tearDownBase() {
-
-
-        // 2. Delete all test branches
-        deleteBranches();
-
-        // 3. Delete all test staff users
+        //1. Delete all test staff users
         UsersResource usersResource = keycloakService.getRealm().users();
         List<String> staffIds = usersResource
                 .list()
                 .stream()
                 .filter(u -> excludeAdmin.test(u.getUsername()))
                 .map(UserRepresentation::getId)
-                .collect(Collectors.toList());
+                .toList();
 
         for (var id : staffIds) {
             usersResource.delete(id);
         }
+        // 2. Delete all test branches
+        deleteBranches();
+
+
+
+
     }
 
     // --- Utility Methods ---

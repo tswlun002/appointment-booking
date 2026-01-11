@@ -29,8 +29,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
     @Autowired
     private CheckHolidayQuery checkHolidayQuery;
 
-    @Autowired
-    private BranchSlotConfigs branchSlotConfigs;
+
 
 
     /**
@@ -46,7 +45,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
 
        // VERIFY
        // Use the new GetNext7DaySlotsQuery to retrieve the persisted slots
-       Map<LocalDate, List<Slot>> weeklySlots = getNext7DaySlotsQuery.execute(branchId,LocalDate.now());
+       Map<LocalDate, List<Slot>> weeklySlots = getNext7DaySlotsQuery.execute(branch.getBranchId(), LocalDate.now());
        
        assertThat(weeklySlots).as("Weekly slots map should not be empty").isNotEmpty();
        assertThat(weeklySlots.size()).as("Should generate slots for exactly 7 days").isEqualTo(7);
@@ -62,7 +61,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
 
            boolean isHoliday = checkHolidayQuery.execute(slot.getDay());
            boolean isWeekend = isWeekend(slot.getDay().getDayOfWeek());
-           Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs.branchConfigs().get(branchId);
+           Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs.branchConfigs().get(branch.getBranchId());
 
            SlotProperties slotProperties = (isHoliday) ?
                    dayTypeSlotPropertiesMap.get(DayType.HOLIDAY) :
@@ -75,7 +74,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
            assertThat(slot.getBookingCount()).isEqualTo(0);
            assertThat(slot.getMaxBookingCapacity()).isEqualTo(slotProperties.maxBookingCapacity());
            assertThat(slot.getStartTime()).isBefore(slot.getEndTime());
-           assertThat(slot.getDay()).isNotNull().isBeforeOrEqualTo(LocalDate.now().plusDays(7));
+           assertThat(slot.getDay()).isNotNull().isBeforeOrEqualTo(LocalDate.now().plusDays(1).plusDays(7));
            assertThat(slot.getDuration())
                    .isEqualTo(Duration.between(slot.getStartTime(), slot.getEndTime()))
                    .isEqualTo(slotProperties.slotDuration());

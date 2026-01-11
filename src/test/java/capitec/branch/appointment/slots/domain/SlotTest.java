@@ -1,5 +1,6 @@
 package capitec.branch.appointment.slots.domain;
 
+import capitec.branch.appointment.exeption.SlotFullyBookedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -102,7 +103,7 @@ class SlotTest {
             slot.book(beforeSlotTime);
 
             assertThatThrownBy(() -> slot.book(beforeSlotTime))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(SlotFullyBookedException.class)
                     .hasMessageContaining("fully booked");
         }
 

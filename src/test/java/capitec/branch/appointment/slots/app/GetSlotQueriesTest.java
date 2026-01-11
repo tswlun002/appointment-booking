@@ -19,21 +19,28 @@ class GetSlotQueriesTest extends SlotTestBase {
     private GetDailySlotsQuery getDailySlotsQuery;
     @Autowired
     private GetNext7DaySlotsQuery getNext7DaySlotsQuery;
-    private final LocalDate TODAY = LocalDate.now();
+    private final LocalDate TODAY = LocalDate.now().plusDays(1);
     private final LocalDate TOMORROW = TODAY.plusDays(1);
     private final LocalDate DAY_AFTER = TODAY.plusDays(2);
     private final int  MAX_BOOKING_CAPACITY = 1;
     
     // Example Slots for arrangement
-    private final Slot slot1 = new Slot(TODAY, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branchId);
-    private final Slot slot2 = new Slot(TODAY, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branchId);
-    private final Slot slot3 = new Slot(TOMORROW, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branchId);
-    private final Slot slot4 = new Slot(TOMORROW, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branchId);
-    private final Slot slot5 = new Slot(DAY_AFTER, LocalTime.of(8, 0), LocalTime.of(8, 30), MAX_BOOKING_CAPACITY, branchId);
+    private  Slot slot1 ;
+    private  Slot slot2 ;
+    private  Slot slot3 ;
+    private  Slot slot4 ;
+    private  Slot slot5 ;
     
     
     @BeforeEach
-    void setupTestData() {
+    public void setUp() {
+        setUpBranch();
+        slot1 = new Slot(TODAY, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branch.getBranchId());
+         slot2 = new Slot(TODAY, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branch.getBranchId());
+         slot3 = new Slot(TOMORROW, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branch.getBranchId());
+         slot4 = new Slot(TOMORROW, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branch.getBranchId());
+        slot5 = new Slot(DAY_AFTER, LocalTime.of(8, 0), LocalTime.of(8, 30), MAX_BOOKING_CAPACITY, branch.getBranchId());
+
         slotService.save(List.of(slot1, slot2, slot3, slot4, slot5));
 
     }
@@ -43,7 +50,7 @@ class GetSlotQueriesTest extends SlotTestBase {
     void testGetDailySlotsQuery_RetrievesSlotsForSpecificDay() {
         // ARRANGE: (Assuming SlotStorage is set up to return slot1 and slot2 for TODAY)
 
-        List<Slot> dailySlots = getDailySlotsQuery.execute(branchId,TODAY);
+        List<Slot> dailySlots = getDailySlotsQuery.execute(branch.getBranchId(),TODAY);
         
         // ASSERT
         assertThat(dailySlots).as("Should retrieve exactly 2 slots for today").hasSize(2);
@@ -54,7 +61,7 @@ class GetSlotQueriesTest extends SlotTestBase {
     void testGetNext7DaySlotsQuery_RetrievesAndGroupsByDay() {
         // ARRANGE: (Assuming SlotStorage is set up to return all 5 slots for the next 7 days)
 
-        Map<LocalDate, List<Slot>> weeklySlotsMap = getNext7DaySlotsQuery.execute(branchId,TODAY);
+        Map<LocalDate, List<Slot>> weeklySlotsMap = getNext7DaySlotsQuery.execute(branch.getBranchId(),TODAY);
         
         // ASSERT
         assertThat(weeklySlotsMap).as("Map should contain three unique days").hasSize(3);
@@ -67,7 +74,7 @@ class GetSlotQueriesTest extends SlotTestBase {
     @Test
     void testGetNext7DaySlotsQuery_WithStatusFilter() {
 
-        Map<LocalDate, List<Slot>> filteredSlotsMap = getNext7DaySlotsQuery.execute(branchId,TODAY, SlotStatus.AVAILABLE);
+        Map<LocalDate, List<Slot>> filteredSlotsMap = getNext7DaySlotsQuery.execute(branch.getBranchId(),TODAY, SlotStatus.AVAILABLE);
 
         // ASSERT
         assertThat(filteredSlotsMap).as("Map should contain 3 days with available slots").hasSize(3);

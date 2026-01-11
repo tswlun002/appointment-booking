@@ -1,8 +1,12 @@
 package capitec.branch.appointment.staff.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.branch.domain.BranchService;
+import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
+import capitec.branch.appointment.staff.domain.StaffService;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UsernameGenerator;
 import org.junit.jupiter.api.AfterEach;
@@ -12,6 +16,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -28,14 +33,19 @@ abstract class StaffUseCaseTestBase extends AppointmentBookingApplicationTests {
     protected FetchRoleByNameService fetchRoleByNameService;
     @Autowired
     protected UserRoleService userRoleService;
+    @Autowired
+    private  BranchService branchService;
+    @Autowired private StaffService staffService;
 
     protected List<String> staff;
+    protected   Branch branch;
 
     protected Predicate<String> excludeAdmin = username -> !ADMIN_USERNAME.equals(username);
 
     @BeforeEach
     public void setupBase() {
         setUpTestUsers();
+        setUpBranch();
         UsersResource usersResource = keycloakService.getRealm().users();
         staff = usersResource.list().stream()
                 .map(UserRepresentation::getUsername)
@@ -45,17 +55,38 @@ abstract class StaffUseCaseTestBase extends AppointmentBookingApplicationTests {
 
     @AfterEach
     public void tearDownBase() {
-
+        for (String username : staff) {
+            staffService.deleteStaff(username);
+        }
+        deleteBranches();
         UsersResource usersResource = keycloakService.getRealm().users();
         // Delete only the test staff users created by setUpTestStaffUsers
-        List<String> staffIds = usersResource.list().stream()
+        List<String> users = usersResource.list().stream()
                 .filter(u -> excludeAdmin.test(u.getUsername()))
                 .map(UserRepresentation::getId)
                 .toList();
 
-        for (var id : staffIds) {
+        for (var id : users) {
             usersResource.delete(id);
         }
+    }
+    protected void setUpBranch() {
+        var branchString = "BR001;09:00;17:00;123;Main Street;Rosebank;Johannesburg;Gauteng;2196;South Africa";
+                //   "BR002;08:30;16:30;456;Church Street;Hatfield;Pretoria;Gauteng;2828;South Africa",
+
+
+            String[] branchInfo = branchString.split(";");
+            Address address = new Address(branchInfo[3], branchInfo[4], branchInfo[5], branchInfo[6], branchInfo[7], Integer.parseInt(branchInfo[8]), branchInfo[9]);
+             branch = new Branch(branchInfo[0], LocalTime.parse(branchInfo[1]), LocalTime.parse(branchInfo[2]), address);
+        branch =branchService.add(branch);
+
+
+    }
+
+    protected void deleteBranches() {
+
+       branchService.delete(branch.getBranchId());
+
     }
 
     /**

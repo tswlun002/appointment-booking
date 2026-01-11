@@ -13,6 +13,9 @@ import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.slots.app.GenerateSlotsUseCase;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
+import capitec.branch.appointment.staff.domain.Staff;
+import capitec.branch.appointment.staff.domain.StaffService;
+import capitec.branch.appointment.staff.domain.StaffStatus;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UsernameGenerator;
 import org.junit.jupiter.api.AfterEach;
@@ -25,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -36,16 +40,14 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
     @Autowired
     protected AppointmentService appointmentService;
-    //protected final String branchId = "BR001";
     public final static String ADMIN_USERNAME = "admin";
     @Autowired private DeleteBranchUseCase branchUseCase;   //
     @Autowired private AddBranchUseCase addBranchUseCase;
     @Autowired protected KeycloakService keycloakService;
     @Autowired protected FetchRoleByNameService fetchRoleByNameService;
     @Autowired protected UserRoleService userRoleService;
-    @Autowired
-    private GenerateSlotsUseCase generateSlotsUseCase;
     @Autowired protected SlotService slotService;
+    @Autowired protected StaffService staffService;
 
     protected Predicate<String> excludeAdmin = username -> !ADMIN_USERNAME.equals(username);
     protected List<String> staff = new ArrayList<>();
@@ -56,6 +58,12 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     protected List<Slot> slots;
     protected  String branchId;
 
+    //SLOT
+    protected final LocalDate TODAY = LocalDate.now().plusDays(1);
+    protected final LocalDate TOMORROW = LocalDate.now().plusDays(2);
+    protected final LocalDate DAY_AFTER = LocalDate.now().plusDays(3);
+    protected final int  MAX_BOOKING_CAPACITY = 2;
+
     @BeforeEach
     public void setupBase() {
 
@@ -64,7 +72,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
         setUpStaff();
         setUpCustomers();
         setUpSlots();
-        slots = slotService.getNext7DaySlots(branchId,LocalDate.now());
+        slots = slotService.getNext7DaySlots(branchId,TODAY);
       //  UsersResource usersResource = keycloakService.getRealm().users();
 
 
@@ -76,7 +84,8 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
         //clear up appointments
 
-            for (Appointment appointment : appointmentService.branchAppointments(branchId)) {
+        Collection<Appointment> appointments = appointmentService.branchAppointments(branchId,0,Integer.MAX_VALUE);
+        for (Appointment appointment : appointments) {
 
                 appointmentService.deleteAppointment(appointment.getId());
             }
@@ -86,6 +95,10 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         slotService.cleanUpSlot(slot.getId());
                     });
 
+        // delete staff
+        for (var username : staff) {
+            staffService.deleteStaff(username);
+        }
         // 2. Delete all test branches
         deleteBranches();
 
@@ -107,8 +120,17 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
     protected void setUpSlots(){
 
-        wireMockGetHolidayByYearAndCountryCode("2025", "ZA");
-        generateSlotsUseCase.createNext7DaySlots();
+
+        // Example Slots for arrangement
+         final Slot slot1 = new Slot(TODAY, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branchId);
+         final Slot slot2 = new Slot(TODAY, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branchId);
+         final Slot slot3 = new Slot(TOMORROW, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branchId);
+         final Slot slot4 = new Slot(TOMORROW, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branchId);
+         final Slot slot5 = new Slot(DAY_AFTER, LocalTime.of(8, 0), LocalTime.of(8, 30), MAX_BOOKING_CAPACITY, branchId);
+
+        slotService.save(List.of(slot1, slot2, slot3, slot4, slot5));
+
+
     }
 
     protected void setUpBranch() {
@@ -180,7 +202,6 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
             String[] userProp = user.split(";");
             UserRepresentation userRepresentation = new UserRepresentation();
             String username = new UsernameGenerator().getId();
-            staff.add(username);
             userRepresentation.setUsername(username);
             userRepresentation.setEmail(userProp[0]);
             userRepresentation.setFirstName(userProp[1]);
@@ -195,6 +216,11 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
             String adminId = fetchRoleByNameService.getGroupId(ADMIN_GROUP, true).orElseThrow();
             userRoleService.addUserToGroup(username, adminId);
+            staffService.addStaff(new Staff(username, StaffStatus.WORKING,branchId));
+            staff.add(username);
+
         }
+
+
     }
 }

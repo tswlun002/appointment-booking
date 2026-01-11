@@ -4,7 +4,8 @@ import capitec.branch.appointment.user.domain.UsernameGenerator;
 import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;
 import jakarta.validation.constraints.*;
-import org.mapstruct.ObjectFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.time.Duration;
@@ -15,6 +16,7 @@ import java.util.UUID;
 public class Appointment {
 
     // --- Validation Constants ---
+    private static   final Logger LOGGER = LoggerFactory.getLogger(Appointment.class);
     private static final int MIN_BOOKING_ADVANCE_MINUTES = 60;
     private static final int CANCELLATION_WINDOW_MINUTES = 120;
     private static final int GRACE_WINDOW_MINUTES = 5;
@@ -22,7 +24,8 @@ public class Appointment {
     private static final String BOOKING_REF_PREFIX = "APT";
     private static final int BOOKING_REF_YEAR_LENGTH = 4;
     private static final int BOOKING_REF_SEQUENCE_LENGTH = 7;
-    protected static final String BOOKING_REF_REGEX = "^APT-\\d{4}-\\d{7}$";
+    protected static final String BOOKING_REF_REGEX = "^APT-\\d{"+BOOKING_REF_YEAR_LENGTH+"}-\\d{"+BOOKING_REF_SEQUENCE_LENGTH+"}$";
+    private static final int BOOKING_MAX_REFERENCE_LENGTH = 20;
 
     // --- Identity and Foreign Keys ---
     @NotNull(message = "Appointment ID cannot be null")
@@ -44,10 +47,11 @@ public class Appointment {
     @NotNull(message = "Appointment status cannot be null")
     private AppointmentStatus status;
 
-    @NotBlank(message = "Booking reference cannot be blank")
-    @Pattern(regexp = Appointment.BOOKING_REF_REGEX, message = "Booking reference must match pattern: APT-YYYY-XXXXXXX")
-    private String bookingReference;
-
+    @NotBlank(message = "Appointment reference cannot be blank")
+    @Pattern(regexp = Appointment.BOOKING_REF_REGEX, message = "Appointment reference must match pattern: APT-YYYY-XXXXXXX")
+    private final String reference;
+    @NotNull(message = "Appointment dateTime cannot be null")
+    private final LocalDateTime dateTime;
     @Min(value = 0, message = "Version cannot be negative")
     @Max(value = Integer.MAX_VALUE, message = "Version exceeds maximum allowed value")
     private int version;
@@ -96,24 +100,25 @@ public class Appointment {
     private int rescheduleCount;
 
 
-    public Appointment(UUID slotId, String branchId, String customerUsername, String serviceType) {
-        validateConstructorInputs(slotId, branchId, customerUsername, serviceType);
+    public Appointment(UUID slotId, String branchId, String customerUsername, String serviceType,LocalDateTime dateTime) {
+        validateConstructorInputs(slotId, branchId, customerUsername, serviceType, dateTime);
 
         this.id = UUID.randomUUID();
         this.slotId = slotId;
         this.branchId = branchId;
         this.customerUsername = customerUsername;
         this.serviceType = serviceType;
+        this.dateTime = dateTime;
         this.status = AppointmentStatus.BOOKED;
         this.createdAt = LocalDateTime.now();
-        this.bookingReference = generateBookingReference();
+        this.reference = generateAppointmentReference();
         this.updatedAt = this.createdAt;
         this.version = 0;
         this.rescheduleCount = 0;
     }
     private Appointment(
             UUID id, UUID slotId, String branchId, String customerUsername, String serviceType,
-            AppointmentStatus status, String bookingReference, int version,
+            AppointmentStatus status, String reference, LocalDateTime dateTime, int version,
             LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime checkedInAt,
             LocalDateTime inProgressAt, LocalDateTime completedAt, LocalDateTime terminatedAt,
             String terminatedBy, AppointmentTerminationReason terminationReason, String terminationNotes,
@@ -125,7 +130,8 @@ public class Appointment {
         this.customerUsername = customerUsername;
         this.serviceType = serviceType;
         this.status = status;
-        this.bookingReference = bookingReference;
+        this.reference = reference;
+        this.dateTime = dateTime;
         this.version = version;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -144,8 +150,7 @@ public class Appointment {
 
 
     // --- Input Validation ---
-    @ObjectFactory
-    private static void validateConstructorInputs(UUID slotId, String branchId, String customerUsername, String serviceType) {
+    private static void validateConstructorInputs(UUID slotId, String branchId, String customerUsername, String serviceType,LocalDateTime dateTime) {
 
         Assert.notNull(slotId, "Slot ID cannot be null");
         // Branch ID checks
@@ -160,42 +165,55 @@ public class Appointment {
         Assert.hasText(serviceType, "Service type cannot be null or blank");
         Assert.isTrue(serviceType.length() >= 3 && serviceType.length() <= 100,
                 "Service type must be between 3 and 100 characters");
+        // Appointment date
+        Assert.isTrue(dateTime !=null, "Appointment dateTime cannot be null");
+        Assert.isTrue(dateTime.isAfter(LocalDateTime.now()), "Appointment dateTime cannot be a past date");
     }
 
     // --- Business Methods (State Transitions) ---
 
     public void checkIn(LocalDateTime currentTime) {
-        validateTimeInput(currentTime, "Current time");
+        if(currentTime == null) {
+            throw new IllegalArgumentException("Current time cannot be null");
+        }
+        LocalDateTime deadline = dateTime.plusMinutes(GRACE_WINDOW_MINUTES);
+        if(currentTime.isAfter(deadline)) {
 
+            LOGGER.error("Check-in failed. Appointment check deadline was {}", deadline);
+            throw new IllegalStateException("Check-in failed. Appointment check deadline was "+deadline);
+        }
         if (this.status != AppointmentStatus.BOOKED) {
-            throw new IllegalStateException(
-                    "Cannot check in. Appointment must be booked. Current status: " + this.status
-            );
+
+            LOGGER.error("Cannot check in. Appointment must be booked. Current status: {}" , this.status);
+            throw new IllegalStateException("Cannot check in. Appointment must be booked.");
         }
 
         this.status = AppointmentStatus.CHECKED_IN;
         this.checkedInAt = currentTime;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 
     public void startService(String consultantId, LocalDateTime currentTime) {
+
         if (!UsernameGenerator.isValid(consultantId)) {
-            throw new IllegalArgumentException("Consultant ID cannot be null or blank");
+
+            LOGGER.error("Consultant ID is not valid. {}",Validator.USERNAME_MESSAGE);
+            throw new IllegalArgumentException("Consultant ID is not valid");
         }
         validateTimeInput(currentTime, "Current time");
 
         if (this.status != AppointmentStatus.CHECKED_IN) {
-            throw new IllegalStateException(
-                    "Cannot start service. Appointment must be checked in. Current status: " + this.status
-            );
+
+            LOGGER.error("Cannot start service. Appointment must be checked in. Current status:{}",this.status);
+            throw new IllegalStateException("Cannot start service. Appointment must be checked in.");
         }
 
         this.status = AppointmentStatus.IN_PROGRESS;
         this.assignedConsultantId = consultantId;
         this.inProgressAt = currentTime;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 
     public void complete(String consultantNotes, LocalDateTime currentTime) {
@@ -209,16 +227,15 @@ public class Appointment {
         }
 
         if (this.status != AppointmentStatus.IN_PROGRESS) {
-            throw new IllegalStateException(
-                    "Cannot complete. Appointment must be in progress. Current status: " + this.status
-            );
+            LOGGER.error("Cannot complete. Appointment must be in progress. Current status: {}" , this.status);
+            throw new IllegalStateException("Cannot complete. Appointment must be in progress.");
         }
 
         this.status = AppointmentStatus.COMPLETED;
         this.serviceNotes = consultantNotes;
         this.completedAt = currentTime;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 
     public void cancelByCustomer(String reason, LocalDateTime currentTime) {
@@ -232,17 +249,14 @@ public class Appointment {
         }
 
         if (!canBeCancelledByCustomer(currentTime)) {
-            throw new IllegalStateException(
-                    "Appointment cannot be canceled. Cancellation window has closed. " +
-                            "Must cancel at least " + CANCELLATION_WINDOW_MINUTES + " minutes before appointment."
-            );
+
+            LOGGER.error("Appointment cannot be canceled. Cancellation window has closed. " + "Must cancel at least " + CANCELLATION_WINDOW_MINUTES + " minutes before appointment.");
+            throw new IllegalStateException("Appointment cannot be canceled. Cancellation window has closed.");
         }
 
         if (this.status != AppointmentStatus.BOOKED && this.status != AppointmentStatus.CHECKED_IN) {
-            throw new IllegalStateException(
-                    "Cannot cancel appointment with status " + this.status +
-                            ". Only BOOKED or CHECKED_IN appointments can be cancelled."
-            );
+            LOGGER.error("Cannot cancel appointment with status {}. Only BOOKED or CHECKED_IN appointments can be cancelled.", this.status);
+            throw new IllegalStateException("Only BOOKED or CHECKED_IN appointments can be cancelled.");
         }
 
         this.status = AppointmentStatus.CANCELLED;
@@ -251,7 +265,8 @@ public class Appointment {
         this.terminationNotes = reason;
         this.terminatedAt = currentTime;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
+
     }
 
     public void cancelByStaff(String staffId, String reason, LocalDateTime currentTime) {
@@ -273,10 +288,9 @@ public class Appointment {
         if (this.status == AppointmentStatus.COMPLETED ||
                 this.status == AppointmentStatus.CANCELLED ||
                 this.status == AppointmentStatus.NO_SHOW) {
-            throw new IllegalStateException(
-                    "Cannot cancel a " + this.status + " appointment. " +
-                            "Only BOOKED, CHECKED_IN, or IN_PROGRESS appointments can be cancelled by staff."
-            );
+
+            LOGGER.error("Cannot cancel a {} appointment. Only BOOKED, CHECKED_IN, or IN_PROGRESS appointments can be cancelled by staff.", this.status);
+            throw new IllegalStateException("Only BOOKED, CHECKED_IN, or IN_PROGRESS appointments can be cancelled by staff.");
         }
 
         this.status = AppointmentStatus.CANCELLED;
@@ -285,62 +299,62 @@ public class Appointment {
         this.terminationNotes = reason;
         this.terminatedAt = currentTime;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
+
     }
 
     public void reschedule(UUID newSlotId, LocalDateTime currentTime) {
+
         if (newSlotId == null) {
             throw new IllegalArgumentException("New slot ID cannot be null");
         }
-        validateTimeInput(currentTime, "Current time");
+        if(currentTime == null) {
+            throw new IllegalArgumentException("Current time cannot be null");
+        }
 
         if (!canBeRescheduled(currentTime)) {
-            throw new IllegalStateException(
-                    "Cannot reschedule after the cancellation window deadline. " +
-                            "Appointment will be marked as no-show and slot will be forfeited."
-            );
+
+            LocalDateTime rescheduleDeadline  = dateTime.plusMinutes(MIN_BOOKING_ADVANCE_MINUTES);
+            LOGGER.error("Cannot reschedule appointment after deadline {} which is {} minutes before appointment.",rescheduleDeadline,MIN_BOOKING_ADVANCE_MINUTES);
+
+            throw new IllegalStateException("Cannot reschedule after the reschedule window deadline.");
         }
 
         if (this.rescheduleCount >= MAX_RESCHEDULE_COUNT) {
-            throw new IllegalStateException(
-                    "Maximum reschedule limit (" + MAX_RESCHEDULE_COUNT + ") exceeded. " +
-                            "Customer must book a new appointment."
-            );
+            LOGGER.error("Maximum reschedule limit (" + MAX_RESCHEDULE_COUNT + ") exceeded. " + "Customer must book a new appointment.");
+            throw new IllegalStateException("Maximum reschedule limit (" + MAX_RESCHEDULE_COUNT + ") exceeded. " + "Customer must book a new appointment.");
         }
 
         if (this.status != AppointmentStatus.BOOKED) {
-            throw new IllegalStateException(
-                    "Only BOOKED appointments can be rescheduled. Current status: " + this.status
-            );
+            LOGGER.error("Only BOOKED appointments can be rescheduled. Current status: {}" , this.status);
+            throw new IllegalStateException("Only BOOKED appointments can be rescheduled.");
         }
 
         if (newSlotId.equals(this.slotId)) {
-            throw new IllegalArgumentException(
-                    "New slot ID must be different from current slot ID"
-            );
+            LOGGER.error("New slot ID must be different from current slot ID. new slotId: {} , current slot:{}", newSlotId, this.slotId);
+            throw new IllegalArgumentException("New slot ID must be different from current slot ID");
         }
 
         this.previousSlotId = this.slotId;
         this.slotId = newSlotId;
         this.rescheduleCount++;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 
     public void markAsNoShow(LocalDateTime currentTime) {
         validateTimeInput(currentTime, "Current time");
 
         if (this.status != AppointmentStatus.BOOKED && this.status != AppointmentStatus.CHECKED_IN) {
-            throw new IllegalStateException(
-                    "Can only mark BOOKED or CHECKED_IN appointment as no-show. Current status: " + this.status
-            );
+            LOGGER.error("Can only mark BOOKED or CHECKED_IN appointment as no-show. Current status: {}" , this.status);
+            throw new IllegalStateException("Can only mark BOOKED or CHECKED_IN appointment as no-show.");
         }
 
         this.status = AppointmentStatus.NO_SHOW;
         this.terminationReason = AppointmentTerminationReason.CUSTOMER_NO_SHOW;
         this.terminatedAt = currentTime;
         this.updatedAt = currentTime;
-        increaseVersion();
+        //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 
     // --- Query Methods ---
@@ -349,14 +363,12 @@ public class Appointment {
         if (currentTime == null) {
             throw new IllegalArgumentException("Current time cannot be null");
         }
-        return true;
+        LocalDateTime deadline = dateTime.plusMinutes(MIN_BOOKING_ADVANCE_MINUTES);
+        return currentTime.isBefore(deadline);
     }
 
     public boolean canBeRescheduled(LocalDateTime currentTime) {
-        if (currentTime == null) {
-            throw new IllegalArgumentException("Current time cannot be null");
-        }
-        return true;
+       return  canBeCancelledByCustomer(currentTime);
     }
 
     public boolean isUpcoming(LocalDateTime currentTime) {
@@ -384,49 +396,51 @@ public class Appointment {
         return minutes >= 0 && minutes <= GRACE_WINDOW_MINUTES;
     }
 
-    public boolean meetsMinimumBookingAdvance(LocalDateTime slotStartTime) {
+    public boolean meetsMinimumAppointmentAdvance(LocalDateTime slotStartTime) {
         if (slotStartTime == null) {
             throw new IllegalArgumentException("Slot start time cannot be null");
         }
 
-        Duration durationUntilSlot = Duration.between(this.createdAt, slotStartTime);
+        Duration durationUntilSlot = Duration.between(this.dateTime, slotStartTime);
         return durationUntilSlot.toMinutes() >= MIN_BOOKING_ADVANCE_MINUTES;
     }
 
-    // --- Concurrency Control (Optimistic Locking) ---
-
+    /**
+     * Concurrency Control (Optimistic Locking)
+     */
     private void increaseVersion() {
         this.version++;
     }
 
     public void validateVersion(int expectedVersion) {
         if (this.version != expectedVersion) {
-            throw new IllegalStateException(
-                    "Version mismatch. Expected: " + expectedVersion + ", Actual: " + this.version +
-                            ". Another user may have modified this appointment."
-            );
+            LOGGER.error("Version mismatch. Expected: {}, Actual: {}. Another user may have modified this appointment.", expectedVersion, this.version);
+            throw new IllegalStateException("Version mismatch. Another user may have modified this appointment.");
         }
     }
 
     // --- Helper Methods ---
 
-    private static void validateTimeInput(LocalDateTime dateTime, String fieldName) {
-        if (dateTime == null) {
+    private  void validateTimeInput(LocalDateTime currentDateTime, String fieldName) {
+        if (currentDateTime == null) {
             throw new IllegalArgumentException(fieldName + " cannot be null");
         }
-    }
-
-    private String generateBookingReference() {
-        if (this.createdAt == null) {
-            throw new IllegalStateException("Created timestamp cannot be null");
+        if (currentDateTime.isAfter(dateTime)) {
+            throw new IllegalArgumentException("Cannot modify appointment after the appointment dateTime.");
         }
 
-        int year = this.createdAt.getYear();
-        long sequence = getNextSequence();
-        String reference = String.format("%s-%d-%0" + BOOKING_REF_SEQUENCE_LENGTH + "d",
-                BOOKING_REF_PREFIX, year, sequence);
+    }
 
-        if (reference.length() > 20) {
+    private String generateAppointmentReference() {
+        if (this.dateTime == null) {
+            throw new IllegalStateException("Appointment date cannot be null");
+        }
+
+        int year = this.dateTime.getYear();
+        long sequence = getNextSequence();
+        String reference = String.format("%s-%d-%0" + BOOKING_REF_SEQUENCE_LENGTH + "d", BOOKING_REF_PREFIX, year, sequence);
+
+        if (reference.length() > BOOKING_MAX_REFERENCE_LENGTH) {
             throw new IllegalStateException("Generated booking reference exceeds maximum length");
         }
 
@@ -449,6 +463,7 @@ public class Appointment {
             String serviceType,
             AppointmentStatus status,
             String bookingReference,
+            LocalDateTime dateTime,
             int version,
             LocalDateTime createdAt,
             LocalDateTime updatedAt,
@@ -466,12 +481,12 @@ public class Appointment {
 
 
         // --- END VALIDATION ---
-        validateMustHaveInRestitution(id,slotId,branchId,customerUsername,serviceType,status,bookingReference,version,createdAt);
+        validateMustHaveInRestitution(id,slotId,branchId,customerUsername,serviceType,status,bookingReference,dateTime,version,createdAt);
 
         // Calls the private constructor with all validated state
         return new Appointment(
                 id, slotId, branchId, customerUsername, serviceType, status,
-                bookingReference, version, createdAt, updatedAt, checkedInAt,
+                bookingReference, dateTime, version, createdAt, updatedAt, checkedInAt,
                 inProgressAt, completedAt, terminatedAt, terminatedBy,
                 terminationReason, terminationNotes, assignedConsultantId,
                 serviceNotes, previousSlotId, rescheduleCount);
@@ -483,7 +498,8 @@ public class Appointment {
                                                             String customerUsername,
                                                             String serviceType,
                                                             AppointmentStatus status,
-                                                            String bookingReference,
+                                                            String reference,
+                                                            LocalDateTime dateTime,
                                                             int version,
                                                             LocalDateTime createdAt){
         // --- 🎯 RESTITUTION VALIDATION ---
@@ -499,8 +515,11 @@ public class Appointment {
         if(slotId == null) {
             throw new IllegalArgumentException("Cannot reconstitute Appointment: Slot ID must not be null.");
         }
-        if(bookingReference == null || bookingReference.isBlank()) {
-            throw new IllegalArgumentException("Cannot reconstitute Appointment: Booking Reference must not be null.");
+        if(reference == null || reference.isBlank()) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Appointment Reference must not be null.");
+        }
+        if(dateTime == null) {
+            throw new IllegalArgumentException("Cannot reconstitute Appointment: Appointment dateTime must not be null.");
         }
         // Assuming version must be >= 0 for a loaded record
         if (version < 1) {
@@ -527,7 +546,8 @@ public class Appointment {
     public String getCustomerUsername() { return customerUsername; }
     public String getServiceType() { return serviceType; }
     public AppointmentStatus getStatus() { return status; }
-    public String getBookingReference() { return bookingReference; }
+    public String getReference() { return reference; }
+    public LocalDateTime getDateTime() { return dateTime; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public LocalDateTime getCheckedInAt() { return checkedInAt; }
@@ -565,7 +585,8 @@ public class Appointment {
                 ", customerId='" + customerUsername + '\'' +
                 ", serviceType='" + serviceType + '\'' +
                 ", status=" + status +
-                ", bookingReference='" + bookingReference + '\'' +
+                ", dateTime='" + dateTime + '\'' +
+                ", reference='" + reference + '\'' +
                 ", assignedConsultantId='" + assignedConsultantId + '\'' +
                 ", rescheduleCount=" + rescheduleCount +
                 ", version=" + version +

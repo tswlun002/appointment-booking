@@ -22,7 +22,7 @@ interface StaffRepository extends CrudRepository<StaffEntity, Long> {
 
     @Query("""
          SELECT  id, username, branch_id, status, created_at, last_modified_date FROM staff AS s
-            WHERE s.branch_id=:branchId AND s.status=:status
+            WHERE s.branch_id=:branchId AND (s.status IS NULL OR s.status=:status)
     """)
     Set<StaffEntity> getStaffByBranchIdAndStatus(@Param("branchId") String branchId, @Param("status") String status);
      @Modifying

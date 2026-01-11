@@ -34,10 +34,12 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     private int MAX_BOOKING_CAPACITY = 2;
 
     @BeforeEach
-    void setUp() {
+    public void setUp() {
+
+        setUpBranch();
 
         // 1. Create a new Slot domain object (Starts as AVAILABLE)
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now().plusDays(1);
         LocalTime now = LocalTime.now();
         LocalTime startTime = now.plusMinutes(30);
         LocalTime endTime = now.plusHours(1);
@@ -45,7 +47,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         // Time that has passed the slot's start time, required by domain logic
         pastTime = LocalDateTime.of(today, startTime).plusSeconds(1);
 
-        Slot newSlot = new Slot(today, startTime, endTime, MAX_BOOKING_CAPACITY, branchId);
+        Slot newSlot = new Slot(today, startTime, endTime, MAX_BOOKING_CAPACITY, branch.getBranchId());
 
         // 2. Save the Slot to the database via the service or repository
         //    (Service preferred to maintain transactional integrity if applicable)
@@ -256,8 +258,8 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         // Act & Assert (Domain logic prevents save)
         Slot beforeSlot = slotService.getSlot(existingSlotId).orElseThrow();
 
-        assertThrows(ResponseStatusException.class,
-                () -> useCase.execute(new SlotStatusTransitionAction.Release(existingSlotId, pastTime)));
+        assertThrows(IllegalStateException.class,
+                () -> useCase.execute(new SlotStatusTransitionAction.Release(existingSlotId, LocalDateTime.now())));
 
         // Assert Persistence: Check the database state to ensure it was NOT saved
         Slot slotAfterAttempt = slotService.getSlot(existingSlotId).orElseThrow();

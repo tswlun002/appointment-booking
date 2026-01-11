@@ -41,7 +41,7 @@ public class GenerateSlotsUseCase {
                 .collect(Collectors.toSet());
 
         for (String branch : strings) {
-            Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,LocalDate.now(), 7);
+            Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,LocalDate.now().plusDays(1), 7);
             List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
             slotStorage.save(list);
         }

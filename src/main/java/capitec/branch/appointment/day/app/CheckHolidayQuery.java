@@ -25,6 +25,7 @@ public class CheckHolidayQuery {
      * @return True if the date is a holiday, false otherwise.
      */
     public boolean execute(LocalDate date) {
+
         Set<Holiday> holidays = holidayClient.getHolidays(COUNTRY_CODE, CURRENT_YEAR);
 
         return holidays.stream()

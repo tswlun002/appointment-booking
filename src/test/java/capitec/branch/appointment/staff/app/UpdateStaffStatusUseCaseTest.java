@@ -4,8 +4,7 @@ import capitec.branch.appointment.staff.domain.Staff;
 import capitec.branch.appointment.staff.domain.StaffService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -29,10 +28,10 @@ class UpdateStaffStatusUseCaseTest extends StaffUseCaseTestBase {
 
     @BeforeEach
     void setupInitialStaff() {
-        String branchId = "59f3c768-9712-423c-a940-9a873a4934fb";
+
 
         for (var username : staff) {
-            StaffDTO staffDTO = new StaffDTO(username, branchId);
+            StaffDTO staffDTO = new StaffDTO(username, branch.getBranchId());
             addStaffUseCase.execute(staffDTO);
         }
     }
@@ -47,9 +46,8 @@ class UpdateStaffStatusUseCaseTest extends StaffUseCaseTestBase {
     }
 
 
-    @ParameterizedTest
-    @ValueSource(strings = "59f3c768-9712-423c-a940-9a873a4934fb")
-    void testUpdateStaffStatusExistingStaff(String branchId) {
+    @Test
+    void testUpdateStaffStatusExistingStaff() {
         int halfStaffSize = staff.size() / 2;
         List<String> firstHalf = staff.subList(0, halfStaffSize);
         List<String> secondHalf = staff.subList(halfStaffSize, staff.size());
@@ -69,19 +67,18 @@ class UpdateStaffStatusUseCaseTest extends StaffUseCaseTestBase {
         }
 
         // VERIFY 1: WORKING staff count and content
-        Set<String> workingStaff = getStaffInfoUseCase.getStaffUsernames(branchId, WORKING);
+        Set<String> workingStaff = getStaffInfoUseCase.getStaffUsernames(branch.getBranchId(), WORKING);
         assertThat(workingStaff).hasSize(firstHalf.size());
         assertThat(workingStaff).containsAll(firstHalf);
 
         // VERIFY 2: LEAVE staff count and content
-        Set<String> leaveStaff = getStaffInfoUseCase.getStaffUsernames(branchId, LEAVE);
+        Set<String> leaveStaff = getStaffInfoUseCase.getStaffUsernames(branch.getBranchId(), LEAVE);
         assertThat(leaveStaff).hasSize(secondHalf.size());
        assertThat(leaveStaff).containsAll(secondHalf);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = "59f3c768-9712-423c-a940-9a873a4934fb")
-    void testUpdateStaffStatusNonExistingStaffFails(String branchId) {
+    @Test
+    void testUpdateStaffStatusNonExistingStaffFails() {
         String nonExistingUsername = "non_existent_user";
         
         // ASSERT: Attempting to update a user not in the staff table fails with 404
@@ -90,7 +87,7 @@ class UpdateStaffStatusUseCaseTest extends StaffUseCaseTestBase {
                 .hasMessageContaining("404 NOT_FOUND \"Staff not found.\"");
 
         // VERIFY: The staff list remains unchanged
-        Set<String> allStaff = getStaffInfoUseCase.getStaffUsernames(branchId, TRAINING);
+        Set<String> allStaff = getStaffInfoUseCase.getStaffUsernames(branch.getBranchId(), TRAINING);
         assertThat(allStaff).containsAll(staff);
     }
 }

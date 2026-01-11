@@ -62,6 +62,10 @@ public class UpdateSlotStatusUseCase {
                 log.warn("Slot with id: {} is fully booked. Current bookings: {}, Max capacity: {}", slotId, slot.getBookingCount(), slot.getMaxBookingCapacity());
                 throw  new ResponseStatusException(HttpStatus.CONFLICT, "Slot is fully booked.",ex);
             }
+            catch (IllegalStateException ex) {
+                log.warn("Slot with id: {} is not booked", slotId, ex);
+                throw ex;
+            }
             catch (Exception e) {
                 log.error("Unexpected error updating slot status for id: {}", slotId, e);
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.", e);

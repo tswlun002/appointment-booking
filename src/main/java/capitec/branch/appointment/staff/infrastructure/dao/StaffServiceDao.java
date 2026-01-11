@@ -69,12 +69,12 @@ class StaffServiceDao implements StaffService {
     }
 
     @Override
-    public Set<Staff> getStaffByBranchAndStatus(String branchId, StaffStatus status) {
+    public Set<Staff> getStaff(String branchId, StaffStatus status) {
 
         Set<StaffEntity> staffEntities;
         try {
             log.debug("Getting staff by branch:{} and status: {}",branchId,status);
-            staffEntities = staffRepository.getStaffByBranchIdAndStatus(branchId, status.name());
+            staffEntities = staffRepository.getStaffByBranchIdAndStatus(branchId, status==null?null: status.name());
 
         } catch (Exception e) {
 

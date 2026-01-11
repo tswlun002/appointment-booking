@@ -20,9 +20,36 @@ public interface AppointmentMapper {
      * Converts a persistence Entity back to a Domain Appointment.
      * Maps String fields in the Entity back to Enum fields in the Domain.
      */
-    //@Mapping(target = "status", source = "status", qualifiedByName = "stringToAppointmentStatus")
-   // @Mapping(target = "terminationReason", source = "terminationReason", qualifiedByName = "stringToTerminationReason")
-     Appointment toDomain(AppointmentEntity entity) ;
+
+     default Appointment toDomain(AppointmentEntity entity){
+
+         String terminationReason = entity.terminationReason();
+         AppointmentTerminationReason terminationReasonEnum = terminationReason == null ? null : AppointmentTerminationReason.valueOf(terminationReason);
+         return  Appointment.restitutionFromPersistence(
+                 entity.id(),
+                 entity.slotId(),
+                 entity.branchId(),
+                 entity.customerUsername(),
+                 entity.serviceType(),
+                 AppointmentStatus.valueOf(entity.status()),
+                 entity.reference(),
+                 entity.dateTime(),
+                 entity.version(),
+                 entity.createdAt(),
+                 entity.updatedAt(),
+                 entity.checkedInAt(),
+                 entity.inProgressAt(),
+                 entity.completedAt(),
+                 entity.terminatedAt(),
+                 entity.terminatedBy(),
+                 terminationReasonEnum,
+                 entity.terminationNotes(),
+                 entity.assignedConsultantId(),
+                 entity.serviceNotes(),
+                 entity.previousSlotId(),
+                 entity.rescheduleCount()
+         );
+     }
 
     /** Converts Entity String to Domain Enum */
     @Named("stringToAppointmentStatus")

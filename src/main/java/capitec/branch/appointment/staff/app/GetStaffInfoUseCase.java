@@ -21,20 +21,20 @@ class GetStaffInfoUseCase {
 
     private final StaffService staffService;
 
-    private Set<Staff> getStaffByBranchIdAndStatus(String branchId, StaffStatus status) {
+    private Set<Staff> getStaff(String branchId, StaffStatus status) {
         try {
-            return staffService.getStaffByBranchAndStatus(branchId, status);
+            return staffService.getStaff(branchId, status);
         } catch (Exception e) {
             log.error("Error getting staff by branch {} and status:{}", branchId, status, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error");
         }
     }
     public int getStaffCount(String branchId) {
-        return getStaffByBranchIdAndStatus(branchId, StaffStatus.WORKING).size();
+        return getStaff(branchId, StaffStatus.WORKING).size();
     }
 
     public Set<String> getStaffUsernames(String branchId, StaffStatus status) {
-        return getStaffByBranchIdAndStatus(branchId, status)
+        return getStaff(branchId, status)
                 .stream()
                 .map(Staff::username)
                 .collect(Collectors.toSet());

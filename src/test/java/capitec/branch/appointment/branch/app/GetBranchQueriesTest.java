@@ -64,8 +64,8 @@ class GetBranchQueriesTest extends BranchTestBase {
     @Test
     void testGetAllBranchesQuery_ReturnsAllCreatedBranches() {
         // ARRANGE: Add two known branches
-        BranchDTO dto1 = createBranchDTO("B1", LocalTime.NOON, LocalTime.MIDNIGHT.minusMinutes(1), "1", "A", "S", "C", "P", 1, "SA");
-        BranchDTO dto2 = createBranchDTO("B2", LocalTime.NOON, LocalTime.MIDNIGHT.minusMinutes(1), "2", "B", "S", "C", "P", 2, "SA");
+        BranchDTO dto1 = createBranchDTO("B1", LocalTime.NOON, LocalTime.MIDNIGHT.minusMinutes(1), "1", "A", "S", "C", "P", 9949, "SA");
+        BranchDTO dto2 = createBranchDTO("B2", LocalTime.NOON, LocalTime.MIDNIGHT.minusMinutes(1), "2", "B", "S", "C", "P", 4356, "SA");
         addBranchUseCase.execute(dto1);
         addBranchUseCase.execute(dto2);
         
