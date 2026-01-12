@@ -1,4 +1,5 @@
-package capitec.branch.appointment.day.domain;
+package capitec.branch.appointment.branch.domain.appointmentinfo;
+
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

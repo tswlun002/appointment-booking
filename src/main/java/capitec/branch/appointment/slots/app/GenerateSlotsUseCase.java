@@ -1,8 +1,7 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.day.app.CheckHolidayQuery;
-import capitec.branch.appointment.day.domain.Day;
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.slots.domain.Day;
+import capitec.branch.appointment.slots.domain.SlotDayType;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.utils.UseCase;
@@ -63,23 +62,23 @@ public class GenerateSlotsUseCase {
             
             int slotGenerated = 0;
             
-            DayType dayType = checkHolidayQuery.execute(day) ? DayType.HOLIDAY : 
-                              Day.isWeekend(day.getDayOfWeek()) ? DayType.WEEKEND : DayType.WEEK_DAYS;
+            SlotDayType slotDayType = checkHolidayQuery.execute(day) ? SlotDayType.HOLIDAY :
+                              Day.isWeekend(day.getDayOfWeek()) ? SlotDayType.WEEKEND : SlotDayType.WEEK_DAYS;
 
             var slotProperties = branchSlotConfigs
                     .branchConfigs()
                     .get(branchId)
-                    .get(dayType);
+                    .get(slotDayType);
             
             // Check if branchConfigs exist for this day type
             if (slotProperties == null) {
-                log.warn("No slot branchConfigs configured for DayType: {}. Skipping slot generation for {}.", dayType, day);
+                log.warn("No slot branchConfigs configured for SlotDayType: {}. Skipping slot generation for {}.", slotDayType, day);
                 day = day.plusDays(1);
                 continue; 
             }
 
             Duration slotDuration = slotProperties.slotDuration();
-            int availableCapacity = calculateAvailableCapacityService.execute(branchId,dayType);
+            int availableCapacity = calculateAvailableCapacityService.execute(branchId, slotDayType);
             LocalTime closingTime = slotProperties.closingTime();
             LocalTime openTime = slotProperties.openTime();
             

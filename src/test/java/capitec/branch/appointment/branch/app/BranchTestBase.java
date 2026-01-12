@@ -20,8 +20,6 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
 
     // We must autowire the new Use Case implementations for setup/cleanup
     @Autowired
-    protected AddBranchUseCase addBranchUseCase;
-    @Autowired
     protected DeleteBranchUseCase deleteBranchUseCase;
     @Autowired
     protected GetBranchQuery getAllBranchesQuery;

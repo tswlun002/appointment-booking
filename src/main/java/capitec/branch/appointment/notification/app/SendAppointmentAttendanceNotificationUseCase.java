@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class SendAppointmentAttendanceStateTransitionNotificationUseCase {
+public class SendAppointmentAttendanceNotificationUseCase {
 
     private final CustomerLookup customerLookup;
     private final NotificationService notificationService;

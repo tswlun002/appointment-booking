@@ -1,6 +1,5 @@
 package capitec.branch.appointment.branch.domain.appointmentinfo;
 
-import capitec.branch.appointment.day.domain.DayType;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Duration;
@@ -15,7 +14,7 @@ public record BranchAppointmentInfo(
         DayType dayType
 ) {
 
-    public BranchAppointmentInfo(Duration slotDuration, double utilizationFactor, int staffCount,DayType dayType) {
+    public BranchAppointmentInfo(Duration slotDuration, double utilizationFactor, int staffCount, DayType dayType) {
 
         assert slotDuration != null;
         assert dayType != null;

@@ -1,6 +1,6 @@
 package capitec.branch.appointment.branch.app;
 
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 

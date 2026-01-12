@@ -3,7 +3,7 @@ package capitec.branch.appointment.branch.infrastructure;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import org.mapstruct.*;
 
 import java.time.Duration;
@@ -11,7 +11,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
-public interface BranchMapper {
+interface BranchMapper {
 
     /**
      * Converts BranchEntity Record to Branch (Domain Model).
@@ -30,10 +30,8 @@ public interface BranchMapper {
     @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapAppointmentInfoToMap(domain))")
-    //@Mapping(target = "dailyStaff", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapWeeklyStaffToSet(domain))")
     BranchEntity toEntity(Branch domain);
 
-    // Custom mapping: List<BranchAppointmentInfo> -> Map<DayType, BranchAppointmentInfoEntity>
     static   Map<DayType, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
         if(branch == null) {
             return null;
@@ -55,7 +53,6 @@ public interface BranchMapper {
                 ));
     }
 
-    // Custom mapping: Map<DayType, BranchAppointmentInfoEntity> -> List<BranchAppointmentInfo>
     default List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<DayType, BranchAppointmentInfoEntity> map) {
         if (map == null || map.isEmpty()) {
             return Collections.emptyList();

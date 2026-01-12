@@ -1,4 +1,4 @@
-package capitec.branch.appointment.day.domain;
+package capitec.branch.appointment.branch.domain.appointmentinfo;
 
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;

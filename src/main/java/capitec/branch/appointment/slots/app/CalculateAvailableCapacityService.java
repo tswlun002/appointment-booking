@@ -1,6 +1,6 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.slots.domain.SlotDayType;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 
@@ -14,12 +14,12 @@ class CalculateAvailableCapacityService {
     private final BranchSlotConfigs branchSlotConfigs;
 
     /**
-     * Calculates the available slot capacity for a given DayType based on staff count,
+     * Calculates the available slot capacity for a given SlotDayType based on staff count,
      * working hours, slot duration, and utilization factor.
      */
-    public int execute(String branchId,DayType dayType) {
+    public int execute(String branchId, SlotDayType slotDayType) {
 
-        Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs
+        Map<SlotDayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs
                 .branchConfigs()
                 .get(branchId);
 
@@ -27,7 +27,7 @@ class CalculateAvailableCapacityService {
             return 0;
         }
         SlotProperties slotProperties = dayTypeSlotPropertiesMap
-                .get(dayType);
+                .get(slotDayType);
 
         if (slotProperties==null) {
             return 0;

@@ -2,7 +2,7 @@ package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -45,8 +45,8 @@ class UpdateBranchAppointmentConfigUseCaseTest extends BranchTestBase {
 
         BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(staffCount, 
                                                                            Duration.ofMinutes(duration), 
-                                                                           utilizationFactor, 
-                                                                           dayType);
+                                                                           utilizationFactor,
+                dayType);
         
         // ACT
         boolean isAdded = updateBranchAppointmentConfigUseCase.execute(branchId, configDTO);

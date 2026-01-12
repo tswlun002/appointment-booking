@@ -3,7 +3,7 @@ package capitec.branch.appointment.branch.domain;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.exeption.InvalidAppointmentConfigurationException;
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
@@ -74,7 +74,7 @@ public class Branch {
 
 
 
-    public  void updateAppointmentInfo(@NotNull  DayType dayType , @NotNull BranchAppointmentInfo branchAppointmentInfo) {
+    public  void updateAppointmentInfo(@NotNull DayType dayType, @NotNull BranchAppointmentInfo branchAppointmentInfo) {
         if(this.branchAppointmentInfo == null) {
             this.branchAppointmentInfo = new ArrayList<>();
         }

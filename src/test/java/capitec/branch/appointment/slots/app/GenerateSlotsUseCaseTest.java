@@ -1,7 +1,6 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.day.app.CheckHolidayQuery;
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.slots.domain.SlotDayType;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import org.junit.jupiter.api.Test;
@@ -12,7 +11,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-import static capitec.branch.appointment.day.domain.Day.isWeekend;
+import static capitec.branch.appointment.slots.domain.Day.isWeekend;
 import static org.assertj.core.api.Assertions.assertThat;
 
 
@@ -61,13 +60,13 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
 
            boolean isHoliday = checkHolidayQuery.execute(slot.getDay());
            boolean isWeekend = isWeekend(slot.getDay().getDayOfWeek());
-           Map<DayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs.branchConfigs().get(branch.getBranchId());
+           Map<SlotDayType, SlotProperties> dayTypeSlotPropertiesMap = branchSlotConfigs.branchConfigs().get(branch.getBranchId());
 
            SlotProperties slotProperties = (isHoliday) ?
-                   dayTypeSlotPropertiesMap.get(DayType.HOLIDAY) :
+                   dayTypeSlotPropertiesMap.get(SlotDayType.HOLIDAY) :
                    isWeekend ?
-                   dayTypeSlotPropertiesMap.get(DayType.WEEKEND):
-                   dayTypeSlotPropertiesMap.get(DayType.WEEK_DAYS);
+                   dayTypeSlotPropertiesMap.get(SlotDayType.WEEKEND):
+                   dayTypeSlotPropertiesMap.get(SlotDayType.WEEK_DAYS);
 
            assertThat(slot.getVersion()).isEqualTo(1);
            assertThat(slot.getStatus()).isEqualTo(SlotStatus.AVAILABLE);

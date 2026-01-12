@@ -4,7 +4,7 @@ import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Validated
-public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService/*StaffSchedule*/ {
+public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService {
 
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
@@ -93,7 +92,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
 
     @Override
-    public boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType,  @Valid Branch branch) {
+    public boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType, @Valid Branch branch) {
 
         var branchAppointmentInfo = branch.getBranchAppointmentInfo()
                 .stream()
@@ -121,15 +120,4 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
         return isAdded;
     }
 
- /*   @Override
-    public boolean addWorkingStaff(String branchId, Set<StaffRef> staff) {
-
-      var isAdded = false;
-        try {
-            isAdded=branchRepository.addWorkingStaff(branchId,staff);
-        } catch (Exception e) {
-            log.error("Unable to add branch:{} working staff", branchId,e);
-        }
-        return isAdded;
-    }*/
 }

@@ -1,4 +1,4 @@
-package capitec.branch.appointment.day.domain;
+package capitec.branch.appointment.slots.domain;
 
 import java.util.Set;
 

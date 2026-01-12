@@ -4,10 +4,6 @@ import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.address.Address;
-import capitec.branch.appointment.day.app.CheckHolidayQuery;
-import capitec.branch.appointment.day.app.GetDayTypeQuery;
-import capitec.branch.appointment.day.domain.DayType;
-import capitec.branch.appointment.day.domain.HolidayClient;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import org.junit.jupiter.api.AfterEach;
@@ -15,14 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import static capitec.branch.appointment.day.domain.Day.isWeekend;
 
 /**
  * Base class for all Slot Use Case tests.

@@ -1,17 +1,13 @@
-package capitec.branch.appointment.day.app;
+package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.day.domain.DayType;
-import capitec.branch.appointment.day.domain.Holiday;
-import capitec.branch.appointment.day.domain.HolidayClient;
+import capitec.branch.appointment.slots.domain.SlotDayType;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Set;
 
-import static capitec.branch.appointment.day.domain.Day.isWeekend;
+import static capitec.branch.appointment.slots.domain.Day.isWeekend;
 
 @UseCase
 @Validated
@@ -27,13 +23,13 @@ public class GetDayTypeQuery {
      * @return day type of today
      * @throws   IllegalArgumentException if the day to check is null
      */
-    public DayType execute(LocalDate day) {
+    public SlotDayType execute(LocalDate day) {
         if (day == null) {
             throw  new IllegalArgumentException("The day to check must not be null");
         }
         return checkHolidayQuery.execute(day)?
-                DayType.HOLIDAY:
+                SlotDayType.HOLIDAY:
                 isWeekend(day.getDayOfWeek())?
-                DayType.WEEKEND:DayType.WEEK_DAYS;
+                SlotDayType.WEEKEND: SlotDayType.WEEK_DAYS;
     }
 }

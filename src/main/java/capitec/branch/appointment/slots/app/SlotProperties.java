@@ -1,6 +1,6 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.day.domain.DayType;
+import capitec.branch.appointment.slots.domain.SlotDayType;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Duration;
@@ -12,7 +12,7 @@ public record SlotProperties(
         Duration slotDuration,
         int staffCount,
         double utilizationFactor,
-        DayType dayType,
+        SlotDayType slotDayType,
         int maxBookingCapacity
 ) {
 }

@@ -1,7 +1,7 @@
-package capitec.branch.appointment.day.app;
+package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.day.domain.HolidayClient;
-import capitec.branch.appointment.day.domain.Holiday;
+import capitec.branch.appointment.slots.domain.HolidayClient;
+import capitec.branch.appointment.slots.domain.Holiday;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
