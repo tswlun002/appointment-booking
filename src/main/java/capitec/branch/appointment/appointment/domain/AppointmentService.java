@@ -1,7 +1,6 @@
 package capitec.branch.appointment.appointment.domain;
 
 import jakarta.validation.Valid;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -10,8 +9,8 @@ import java.util.UUID;
 
 public interface AppointmentService {
 
-    @Transactional
     Appointment book(@Valid Appointment appointment);
+    Appointment update(@Valid Appointment appointment);
     boolean checkIn(UUID appointmentId);
     boolean startService(String staffRef,UUID appointmentId);
     boolean complete(UUID appointmentId);

@@ -5,7 +5,6 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.branch.app.GetBranchQuery;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.exeption.SlotFullyBookedException;
 import capitec.branch.appointment.slots.app.SlotStatusTransitionAction;
 import capitec.branch.appointment.slots.app.UpdateSlotStatusUseCase;
 import capitec.branch.appointment.user.app.GetUserQuery;
@@ -51,12 +50,6 @@ public class BookAppointmentUseCase {
             appointment= appointmentService.book(appointment);
 
         }
-        catch (SlotFullyBookedException e){
-
-            log.error("Slot is already booked: {}", appointment, e);
-
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot is already booked");
-        }
         catch (EntityAlreadyExistException e) {
 
             log.debug("Book appointment already exist: {}", appointment,e);
@@ -68,27 +61,20 @@ public class BookAppointmentUseCase {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Book appointment failed", e);
         }
 
-        var isAdded = false;
-        if (appointment != null) {
+        publishBookedEvent(appointment, appointmentDTO);
 
-            Branch branch = getBranchQuery.execute(appointment.getBranchId());
-            var user  = getUserQuery.execute(new UsernameCommand(appointment.getCustomerUsername()));
+        return true;
+
+    }
+    private void publishBookedEvent(Appointment appointment, AppointmentDTO dto) {
+        Branch branch = getBranchQuery.execute(appointment.getBranchId());
+        var user = getUserQuery.execute(new UsernameCommand(appointment.getCustomerUsername()));
 
 
-            AppointmentBookedEvent appointmentBookedEvent = new AppointmentBookedEvent(
-                    appointment.getReference(), appointment.getCustomerUsername(), user.getEmail(),
-                    appointmentDTO.day(), appointmentDTO.startTime(), appointmentDTO.endTime(), branch.getBranchId(),
-                    branch.getAddress()
-            );
-
-            log.info("Book appointment successfully created: {}", appointmentBookedEvent);
-
-            publisher.publishEvent(appointmentBookedEvent);
-            isAdded = true;
-        }
-
-        return isAdded;
-
+        AppointmentStateChangedEvent event = AppointmentStateChangedEvent.booked(appointment.getId(), appointment.getReference(), appointment.getCustomerUsername(), user.getEmail(),
+                dto.day(), dto.startTime(), dto.endTime(), branch.getBranchId(), branch.getAddress());
+        log.info("Appointment booked: {}", event);
+        publisher.publishEvent(event);
     }
 
 }

@@ -220,7 +220,7 @@ CREATE TABLE appointment
     customer_username      VARCHAR(10)              NOT NULL,
     service_type           VARCHAR(100)             NOT NULL,
     status                 VARCHAR(50)              NOT NULL,
-    reference      VARCHAR(20)              NOT NULL UNIQUE,
+    reference      VARCHAR(20)                      NOT NULL,
     date_time              TIMESTAMP WITH TIME ZONE NOT NULL,
     version                INT                      NOT NULL DEFAULT 0,
     created_at             TIMESTAMP WITH TIME ZONE NOT NULL,

@@ -438,10 +438,12 @@ class AppointmentTest {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
             UUID newSlotId = UUID.randomUUID();
 
-            appointment.reschedule(newSlotId, now);
+            LocalDateTime newDateTime = appointment.getDateTime().plusDays(2);
+            appointment.reschedule(newSlotId, newDateTime, now);
 
             assertEquals(newSlotId, appointment.getSlotId());
             assertEquals(slotId, appointment.getPreviousSlotId());
+            assertEquals(newDateTime, appointment.getDateTime());
             assertEquals(1, appointment.getRescheduleCount());
             assertEquals(AppointmentStatus.BOOKED, appointment.getStatus());
         }
@@ -451,12 +453,12 @@ class AppointmentTest {
         void shouldAllowMaximumThreeReschedules() {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
 
-            appointment.reschedule(UUID.randomUUID(), now);
-            appointment.reschedule(UUID.randomUUID(), now);
-            appointment.reschedule(UUID.randomUUID(), now);
+            appointment.reschedule(UUID.randomUUID(),appointment.getDateTime().plusDays(1), now);
+            appointment.reschedule(UUID.randomUUID(),appointment.getDateTime().plusDays(2), now);
+            appointment.reschedule(UUID.randomUUID(),appointment.getDateTime().plusDays(3), now);
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.reschedule(UUID.randomUUID(), now)
+                    appointment.reschedule(UUID.randomUUID(),appointment.getDateTime().plusDays(1), now)
             );
         }
 
@@ -466,7 +468,28 @@ class AppointmentTest {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
 
             assertThrows(IllegalArgumentException.class, () ->
-                    appointment.reschedule(null, now)
+                    appointment.reschedule(null,appointment.getDateTime().plusDays(1), now)
+            );
+        }
+        @Test
+        @DisplayName("Should throw exception when new appointment dateTime is null")
+        void shouldThrowExceptionWhenNewDateTimeIsNull() {
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
+
+            assertThrows(IllegalArgumentException.class, () ->
+                    appointment.reschedule(UUID.randomUUID(),null, now)
+            );
+        }
+        @Test
+        @DisplayName("Should throw exception when new appointment dateTime is not future")
+        void shouldThrowExceptionWhenNewDateTimeIsNotFuture() {
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
+
+            assertThrows(IllegalArgumentException.class, () ->
+                    appointment.reschedule(UUID.randomUUID(),LocalDateTime.now(), now)
+            );
+            assertThrows(IllegalArgumentException.class, () ->
+                    appointment.reschedule(UUID.randomUUID(),LocalDateTime.now().minusDays(-1), now)
             );
         }
 
@@ -476,7 +499,7 @@ class AppointmentTest {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
 
             assertThrows(IllegalArgumentException.class, () ->
-                    appointment.reschedule(slotId, now)
+                    appointment.reschedule(slotId,appointment.getDateTime().plusDays(1), now)
             );
         }
 
@@ -487,7 +510,7 @@ class AppointmentTest {
             appointment.checkIn(now);
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.reschedule(UUID.randomUUID(), now)
+                    appointment.reschedule(UUID.randomUUID(),appointment.getDateTime().plusDays(1), now)
             );
         }
     }
@@ -589,21 +612,22 @@ class AppointmentTest {
     @DisplayName("Version Control Tests")
     class VersionControlTests {
 
-//        @Test
-//        @DisplayName("Should increment version on each state change")
-//        void shouldIncrementVersionOnEachStateChange() {
-//            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
-//            assertEquals(0, appointment.getVersion());
-//
-//            appointment.checkIn(now);
-//            assertEquals(1, appointment.getVersion());
-//
-//            appointment.startService(new UsernameGenerator().getId(), now.plusMinutes(2));
-//            assertEquals(2, appointment.getVersion());
-//
-//            appointment.complete("Notes", now.plusMinutes(15));
-//            assertEquals(3, appointment.getVersion());
-//        }
+        @Test
+        @DisplayName("Should increment version on each state change")
+        void shouldIncrementVersionOnEachStateChange() {
+            //NOTE, version will not change on domain level due to version on case is managed by infrastructure(Spring data JDBC)
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
+            assertEquals(0, appointment.getVersion());
+
+            appointment.checkIn(now);
+            assertEquals(0, appointment.getVersion());
+
+            appointment.startService(new UsernameGenerator().getId(), now.plusMinutes(2));
+            assertEquals(0, appointment.getVersion());
+
+            appointment.complete("Notes", now.plusMinutes(15));
+            assertEquals(0, appointment.getVersion());
+        }
 
         @Test
         @DisplayName("Should throw exception on version mismatch")

@@ -51,7 +51,7 @@ public class Appointment {
     @Pattern(regexp = Appointment.BOOKING_REF_REGEX, message = "Appointment reference must match pattern: APT-YYYY-XXXXXXX")
     private final String reference;
     @NotNull(message = "Appointment dateTime cannot be null")
-    private final LocalDateTime dateTime;
+    private  LocalDateTime dateTime;
     @Min(value = 0, message = "Version cannot be negative")
     @Max(value = Integer.MAX_VALUE, message = "Version exceeds maximum allowed value")
     private int version;
@@ -269,6 +269,7 @@ public class Appointment {
 
     }
 
+    //May need to cancel due to emergencies, system issues, customer requests at any time
     public void cancelByStaff(String staffId, String reason, LocalDateTime currentTime) {
         if (staffId == null || staffId.isBlank()) {
             throw new IllegalArgumentException("Staff ID cannot be null or blank");
@@ -276,7 +277,6 @@ public class Appointment {
         if (staffId.length() < 2 || staffId.length() > 50) {
             throw new IllegalArgumentException("Staff ID must be between 2 and 50 characters");
         }
-        validateTimeInput(currentTime, "Current time");
 
         if (reason == null || reason.isBlank()) {
             throw new IllegalArgumentException("Cancellation reason cannot be null or blank");
@@ -303,13 +303,20 @@ public class Appointment {
 
     }
 
-    public void reschedule(UUID newSlotId, LocalDateTime currentTime) {
+    public void reschedule(UUID newSlotId,LocalDateTime newDateTime, LocalDateTime currentTime) {
 
         if (newSlotId == null) {
             throw new IllegalArgumentException("New slot ID cannot be null");
         }
+        if (newDateTime == null) {
+            throw new IllegalArgumentException("New appointment dateTime cannot be null");
+        }
         if(currentTime == null) {
             throw new IllegalArgumentException("Current time cannot be null");
+        }
+
+        if(newDateTime.isBefore(currentTime)) {
+            throw new IllegalArgumentException("New appointment dateTime cannot be in the past");
         }
 
         if (!canBeRescheduled(currentTime)) {
@@ -335,8 +342,10 @@ public class Appointment {
             throw new IllegalArgumentException("New slot ID must be different from current slot ID");
         }
 
+
         this.previousSlotId = this.slotId;
         this.slotId = newSlotId;
+        this.dateTime = newDateTime;
         this.rescheduleCount++;
         this.updatedAt = currentTime;
         //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking

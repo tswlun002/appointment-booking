@@ -7,10 +7,10 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("test")
 public class AppointEventListenerTest {
-    AppointmentBookedEvent bookedEvent;
+    AppointmentStateChangedEvent bookedEvent;
 
-    @EventListener(AppointmentBookedEvent.class)
-    public void handle(AppointmentBookedEvent event){
+    @EventListener(AppointmentStateChangedEvent.class)
+    public void handle(AppointmentStateChangedEvent event){
         this.bookedEvent = event;
     }
 }

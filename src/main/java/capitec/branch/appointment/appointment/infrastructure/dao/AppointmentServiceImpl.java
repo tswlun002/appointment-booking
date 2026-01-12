@@ -4,15 +4,13 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.exeption.SlotFullyBookedException;
+import capitec.branch.appointment.exeption.OptimisticLockConflictException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
@@ -32,10 +30,34 @@ public class AppointmentServiceImpl implements AppointmentService {
     private final AppointmentMapper appointmentMapper;
 
     @Override
-    @Transactional
     public Appointment book(@Valid Appointment appointment) {
 
+        try {
 
+            return save(appointment);
+
+        } catch (Exception e) {
+
+            if (e instanceof DuplicateKeyException || (e.getCause() != null && e.getCause() instanceof DuplicateKeyException)) {
+                throw new EntityAlreadyExistException(e.getMessage());
+            }
+            throw e;
+        }
+    }
+
+    @Override
+    public Appointment update(@Valid Appointment appointment) {
+        try {
+
+           return save(appointment);
+
+        } catch (OptimisticLockingFailureException e) {
+
+            throw new OptimisticLockConflictException(e.getMessage(),e);
+        }
+    }
+
+    private Appointment save(Appointment appointment) {
         try {
 
             AppointmentEntity entity = appointmentMapper.toEntity(appointment);
@@ -43,17 +65,10 @@ public class AppointmentServiceImpl implements AppointmentService {
 
             return appointmentMapper.toDomain(save);
 
-        } catch (OptimisticLockingFailureException e) {
+        }
+        catch (Exception e) {
 
-            log.error("Failed to save appointment db.\n", e);
-            throw new SlotFullyBookedException(e.getMessage(),e);
-        } catch (Exception e) {
-
-            log.error("Failed to save appointment to DB.\n", e);
-
-            if (e instanceof DuplicateKeyException || (e.getCause() != null && e.getCause() instanceof DuplicateKeyException)) {
-                throw new EntityAlreadyExistException(e.getMessage());
-            }
+            log.error("Failed to update or save appointment to DB.\n", e);
             throw e;
         }
     }
