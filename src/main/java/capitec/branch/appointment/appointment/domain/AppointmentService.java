@@ -25,5 +25,5 @@ public interface AppointmentService {
 
     Collection<Appointment> branchAppointments(String branchId, int pageNumber, int pageSize);
 
-    Optional<Appointment> getUserActiveAppointment(String bra, LocalDate day, String customerUsername);
+    Optional<Appointment> getUserActiveAppointment(String branchId, LocalDate day, String customerUsername);
 }
