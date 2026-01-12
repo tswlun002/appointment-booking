@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import capitec.branch.appointment.notification.domain.ConfirmationEmail;
 import capitec.branch.appointment.notification.domain.Notification;
 import capitec.branch.appointment.notification.domain.OTPEmail;
-import capitec.branch.appointment.notification.domain.SendEmail;
+import capitec.branch.appointment.notification.domain.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -30,7 +30,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 @RequiredArgsConstructor
 public class EmailSendUseCase   {
 
-    private final SendEmail sendEmail;
+    private final NotificationService notificationService;
     @Value("${mail.username}")
     private String hostEmail;
 
@@ -41,7 +41,7 @@ public class EmailSendUseCase   {
 
         var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(), event.OTPCode(), hostEmail);
         String subject = getSubject(event.eventType());
-        sendEmail.sendOTPEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
+        notificationService.sendOTPEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
 
     }
     private final Function<String,String> readFile =(path)->{
@@ -57,7 +57,7 @@ public class EmailSendUseCase   {
 
         var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(),null, hostEmail);
         String subject = getSubject(event.eventType());
-        sendEmail.sendOTPEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
+        notificationService.sendOTPEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
 
 
     }

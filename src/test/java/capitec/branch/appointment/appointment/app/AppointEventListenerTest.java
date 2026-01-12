@@ -8,9 +8,14 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class AppointEventListenerTest {
     AppointmentStateChangedEvent bookedEvent;
+    AppointmentBookedEvent bookedEvent2;
 
     @EventListener(AppointmentStateChangedEvent.class)
     public void handle(AppointmentStateChangedEvent event){
         this.bookedEvent = event;
+    }
+    @EventListener(AppointmentBookedEvent.class)
+    public void handle(AppointmentBookedEvent event){
+        this.bookedEvent2 = event;
     }
 }

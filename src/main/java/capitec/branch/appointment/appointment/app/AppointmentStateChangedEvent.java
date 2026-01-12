@@ -20,8 +20,6 @@ public record AppointmentStateChangedEvent(
         String appointmentReference,
         @Username
         String customerUsername,
-        @Email
-        String email,
         AppointmentStatus fromState,
         @NotNull
         AppointmentStatus toState,
@@ -35,7 +33,6 @@ public record AppointmentStateChangedEvent(
             UUID appointmentId,
             String appointmentReference,
             String customerUsername,
-            String email,
             LocalDate day,
             LocalTime startTime,
             LocalTime endTime,
@@ -46,7 +43,6 @@ public record AppointmentStateChangedEvent(
                 appointmentId,
                 appointmentReference,
                 customerUsername,
-                email,
                 null,
                 AppointmentStatus.BOOKED,
                 customerUsername,
@@ -65,7 +61,6 @@ public record AppointmentStateChangedEvent(
             UUID appointmentId,
             String appointmentReference,
             String customerUsername,
-            String email,
             AppointmentStatus fromState,
             AppointmentStatus toState,
             String triggeredBy,
@@ -75,7 +70,6 @@ public record AppointmentStateChangedEvent(
                 appointmentId,
                 appointmentReference,
                 customerUsername,
-                email,
                 fromState,
                 toState,
                 triggeredBy,

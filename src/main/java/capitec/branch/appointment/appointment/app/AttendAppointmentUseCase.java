@@ -5,9 +5,6 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
-import capitec.branch.appointment.user.app.GetUserQuery;
-import capitec.branch.appointment.user.app.UsernameCommand;
-import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +26,6 @@ public class AttendAppointmentUseCase {
 
     private final AppointmentService appointmentService;
     private final ApplicationEventPublisher publisher;
-    private final GetUserQuery getUserQuery;
 
     @Transactional
     public void execute(AttendingAppointmentStateTransitionAction action) {
@@ -46,8 +42,7 @@ public class AttendAppointmentUseCase {
                     "Appointment was modified by another user. Please refresh and try again.", e);
         }
 
-        User user = getUserQuery.execute(new UsernameCommand(appointment.getCustomerUsername()));
-        publishEvent(action, appointment,previousStatus,user);
+        publishEvent(action, appointment,previousStatus);
     }
 
     private Appointment resolveAppointment(AttendingAppointmentStateTransitionAction action) {
@@ -72,14 +67,13 @@ public class AttendAppointmentUseCase {
         };
     }
 
-    private void publishEvent(AttendingAppointmentStateTransitionAction action, Appointment appointment, AppointmentStatus previousStatus, User user) {
+    private void publishEvent(AttendingAppointmentStateTransitionAction action, Appointment appointment, AppointmentStatus previousStatus) {
         var event = switch (action) {
             case AttendingAppointmentStateTransitionAction.CheckIn(_, _, String customerUsername) ->
                     AppointmentStateChangedEvent.transition(
                             appointment.getId(),
                             appointment.getReference(),
                             customerUsername,
-                            user.getEmail(),
                             previousStatus,
                             AppointmentStatus.CHECKED_IN,
                             customerUsername,
@@ -90,7 +84,6 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
-                            user.getEmail(),
                             previousStatus,
                             AppointmentStatus.IN_PROGRESS,
                             staffUsername,
@@ -101,7 +94,6 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
-                            user.getEmail(),
                             previousStatus,
                             AppointmentStatus.COMPLETED,
                             "system",
@@ -112,7 +104,6 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
-                            user.getEmail(),
                             previousStatus,
                             AppointmentStatus.CANCELLED,
                             staffUsername,

@@ -1,14 +1,9 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.port.SlotReservationPort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
-import capitec.branch.appointment.branch.app.GetBranchQuery;
-import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.slots.app.SlotStatusTransitionAction;
-import capitec.branch.appointment.slots.app.UpdateSlotStatusUseCase;
-import capitec.branch.appointment.user.app.GetUserQuery;
-import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +24,8 @@ public class BookAppointmentUseCase {
 
     private final AppointmentService appointmentService;
     private final ApplicationEventPublisher publisher;
-    private final GetBranchQuery getBranchQuery;
-    private final GetUserQuery getUserQuery;
-    private final UpdateSlotStatusUseCase updateSlotStatusUseCase;
+    private final SlotReservationPort slotReservationPort;
+
 
     @Transactional
     boolean execute(@Valid AppointmentDTO appointmentDTO){
@@ -43,12 +37,14 @@ public class BookAppointmentUseCase {
 
         log.debug("Book appointment created: {}", appointment);
 
-        updateSlotStatusUseCase.execute(new SlotStatusTransitionAction.Book(appointmentDTO.slotId(), LocalDateTime.now()));
-
         try {
-
+            slotReservationPort.reserve(appointmentDTO.slotId(), LocalDateTime.now());
             appointment= appointmentService.book(appointment);
 
+        } catch (ResponseStatusException e) {
+
+            log.error("Failed to reserve slot: {}", appointmentDTO.slotId(),e);
+            throw e;
         }
         catch (EntityAlreadyExistException e) {
 
@@ -67,14 +63,18 @@ public class BookAppointmentUseCase {
 
     }
     private void publishBookedEvent(Appointment appointment, AppointmentDTO dto) {
-        Branch branch = getBranchQuery.execute(appointment.getBranchId());
-        var user = getUserQuery.execute(new UsernameCommand(appointment.getCustomerUsername()));
-
-
-        AppointmentStateChangedEvent event = AppointmentStateChangedEvent.booked(appointment.getId(), appointment.getReference(), appointment.getCustomerUsername(), user.getEmail(),
-                dto.day(), dto.startTime(), dto.endTime(), branch.getBranchId(), branch.getAddress());
+        AppointmentBookedEvent event = new AppointmentBookedEvent(
+                appointment.getId(),
+                appointment.getReference(),
+                appointment.getBranchId(),
+                appointment.getCustomerUsername(),
+                dto.day(),
+                dto.startTime(),
+                dto.endTime()
+        );
         log.info("Appointment booked: {}", event);
         publisher.publishEvent(event);
+
     }
 
 }

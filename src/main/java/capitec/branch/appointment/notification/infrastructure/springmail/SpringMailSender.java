@@ -2,13 +2,17 @@ package capitec.branch.appointment.notification.infrastructure.springmail;
 
 
 
+import capitec.branch.appointment.appointment.app.AppointmentBookedEvent;
+import capitec.branch.appointment.appointment.app.AppointmentStateChangedEvent;
+import capitec.branch.appointment.notification.app.port.BranchDetails;
+import capitec.branch.appointment.notification.app.port.CustomerDetails;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import capitec.branch.appointment.exeption.MailSenderException;
-import capitec.branch.appointment.notification.domain.SendEmail;
+import capitec.branch.appointment.notification.domain.NotificationService;
 import org.eclipse.angus.mail.util.MailConnectException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -22,7 +26,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class SpringMailSender  implements SendEmail {
+public class SpringMailSender  implements NotificationService {
 
     private final JavaMailSender mailSender;
 
@@ -54,5 +58,15 @@ public class SpringMailSender  implements SendEmail {
 
             throw new RuntimeException("Dead for mail sender exception", e);
         }
+    }
+
+    @Override
+    public void sendAttendanceStateTransitionEmail(CustomerDetails user, AppointmentStateChangedEvent event) {
+
+    }
+
+    @Override
+    public void sendBookingConfirmation(BranchDetails branch, CustomerDetails user, AppointmentBookedEvent event) {
+
     }
 }
