@@ -39,8 +39,18 @@ public class CustomerUpdateAppointmentUseCase {
 
         try {
 
-            updateSlotStatePort.execute(appointment.getSlotId(), LocalDateTime.now());
-            action.execute(appointment, LocalDateTime.now());
+            LocalDateTime now = LocalDateTime.now();
+
+            switch (action){
+                    case CustomerUpdateAppointmentAction.Reschedule reschedule -> {
+                        updateSlotStatePort.release(reschedule.newSlotId(), now);
+                    }
+                    case CustomerUpdateAppointmentAction.Cancel ignored -> {
+                        updateSlotStatePort.release(appointment.getSlotId(), now);
+                    }
+             }
+
+            action.execute(appointment, now);
             appointment = appointmentService.update(appointment);
 
         } catch (ResponseStatusException ex) {
@@ -56,7 +66,7 @@ public class CustomerUpdateAppointmentUseCase {
         }
 
         var event = switch (action) {
-            case CustomerUpdateAppointmentAction.Cancel ignored -> new CustomerRescheduledAppointmentEvent(
+            case CustomerUpdateAppointmentAction.Reschedule ignored -> new CustomerRescheduledAppointmentEvent(
                     appointment.getId(),
                     appointment.getReference(),
                     appointment.getCustomerUsername(),
@@ -66,7 +76,7 @@ public class CustomerUpdateAppointmentUseCase {
             );
 
 
-            case CustomerUpdateAppointmentAction.Reschedule ignored -> new CustomerCanceledAppointmentEvent(
+            case CustomerUpdateAppointmentAction.Cancel ignored -> new CustomerCanceledAppointmentEvent(
                     appointment.getId(),
                     appointment.getReference(),
                     appointment.getCustomerUsername(),
