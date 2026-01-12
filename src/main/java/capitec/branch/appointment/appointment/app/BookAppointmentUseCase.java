@@ -1,6 +1,6 @@
 package capitec.branch.appointment.appointment.app;
 
-import capitec.branch.appointment.appointment.app.port.SlotReservationPort;
+import capitec.branch.appointment.appointment.app.port.UpdateSlotStatePort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
@@ -24,7 +24,7 @@ public class BookAppointmentUseCase {
 
     private final AppointmentService appointmentService;
     private final ApplicationEventPublisher publisher;
-    private final SlotReservationPort slotReservationPort;
+    private final UpdateSlotStatePort updateSlotStatePort;
 
 
     @Transactional
@@ -38,7 +38,7 @@ public class BookAppointmentUseCase {
         log.debug("Book appointment created: {}", appointment);
 
         try {
-            slotReservationPort.reserve(appointmentDTO.slotId(), LocalDateTime.now());
+            updateSlotStatePort.execute(appointmentDTO.slotId(), LocalDateTime.now());
             appointment= appointmentService.book(appointment);
 
         } catch (ResponseStatusException e) {
