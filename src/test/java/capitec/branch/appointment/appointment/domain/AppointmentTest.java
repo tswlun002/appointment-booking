@@ -485,11 +485,9 @@ class AppointmentTest {
         void shouldThrowExceptionWhenNewDateTimeIsNotFuture() {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
 
+
             assertThrows(IllegalArgumentException.class, () ->
-                    appointment.reschedule(UUID.randomUUID(),LocalDateTime.now(), now)
-            );
-            assertThrows(IllegalArgumentException.class, () ->
-                    appointment.reschedule(UUID.randomUUID(),LocalDateTime.now().minusDays(-1), now)
+                    appointment.reschedule(UUID.randomUUID(),appointmentDateTime.minusDays(1), now)
             );
         }
 

@@ -58,11 +58,11 @@ record AppointmentEntity(
         @Column("reschedule_count")
         int rescheduleCount,
 
-        @Column("total_appointments_count")
-        @ReadOnlyProperty
+
+        @Transient
         Long totalAppointmentsCount
 ) {
-
+    @PersistenceCreator
       AppointmentEntity(
             UUID id,
             UUID slotId,
@@ -98,10 +98,6 @@ record AppointmentEntity(
                createdAt,updatedAt,checkedInAt,inProgressAt,completedAt,terminatedAt,
                terminatedBy,terminationReason,terminationNotes,assignedConsultantId,
                serviceNotes,previousSlotId,rescheduleCount, 0L);
-
-    }
-    @PersistenceCreator
-    AppointmentEntity{
 
     }
 

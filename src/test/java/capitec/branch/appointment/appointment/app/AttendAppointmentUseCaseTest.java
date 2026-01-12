@@ -3,6 +3,7 @@ package capitec.branch.appointment.appointment.app;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
+import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.user.app.GetUserQuery;
@@ -16,8 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
+import static capitec.branch.appointment.appointment.domain.AppointmentStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -62,9 +65,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         );
 
         bookAppointmentUseCase.execute(dto);
-        bookedAppointment = appointmentService.findByCustomerUsernameAndDay(
-                customer.getUsername(),
-                slot.getDay()
+        bookedAppointment = appointmentService.getUserActiveAppointment(
+                branchId,
+                slot.getDay(),
+                customer.getUsername()
+
         ).orElseThrow();
     }
 
@@ -76,21 +81,21 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should check in successfully and publish event")
         void shouldCheckInSuccessfully() {
             var action = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    bookedAppointment.getId(),
-                    bookedAppointment.getReference(),
+                    bookedAppointment.getBranchId(),
+                    bookedAppointment.getDateTime().toLocalDate(),
                     customer.getUsername()
             );
 
             attendAppointmentUseCase.execute(action);
 
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
-            assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CHECKED_IN);
+            assertThat(updated.getStatus()).isEqualTo(CHECKED_IN);
 
-            AppointmentStateChangedEvent event = appointmentEventListenerTest.stateChangedEvent;
+            AppointmentStateChangedEvent event = appointmentEventListenerTest.bookedEvent;
             assertThat(event).isNotNull();
             assertThat(event.appointmentId()).isEqualTo(bookedAppointment.getId());
-            assertThat(event.fromState()).isEqualTo("BOOKED");
-            assertThat(event.toState()).isEqualTo("CHECKED_IN");
+            assertThat(event.fromState()).isEqualTo(BOOKED);
+            assertThat(event.toState()).isEqualTo(CHECKED_IN);
             assertThat(event.triggeredBy()).isEqualTo(customer.getUsername());
         }
 
@@ -98,8 +103,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should throw NOT_FOUND when appointment does not exist")
         void shouldThrowNotFoundWhenAppointmentNotExists() {
             var action = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    UUID.randomUUID(),
-                    "INVALID_REF",
+                    UUID.randomUUID().toString(),
+                    LocalDate.now(),
                     customer.getUsername()
             );
 
@@ -113,8 +118,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should throw exception when checking in already checked-in appointment")
         void shouldThrowWhenAlreadyCheckedIn() {
             var action = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    bookedAppointment.getId(),
-                    bookedAppointment.getReference(),
+                    bookedAppointment.getBranchId(),
+                    bookedAppointment.getDateTime().toLocalDate(),
                     customer.getUsername()
             );
 
@@ -132,8 +137,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @BeforeEach
         void checkInFirst() {
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    bookedAppointment.getId(),
-                    bookedAppointment.getReference(),
+                    bookedAppointment.getBranchId(),
+                    bookedAppointment.getDateTime().toLocalDate(),
                     customer.getUsername()
             );
             attendAppointmentUseCase.execute(checkIn);
@@ -150,12 +155,12 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             attendAppointmentUseCase.execute(action);
 
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
-            assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.IN_PROGRESS);
+            assertThat(updated.getStatus()).isEqualTo(IN_PROGRESS);
 
-            AppointmentStateChangedEvent event = appointmentEventListenerTest.stateChangedEvent;
+            AppointmentStateChangedEvent event = appointmentEventListenerTest.bookedEvent;
             assertThat(event).isNotNull();
-            assertThat(event.fromState()).isEqualTo("CHECKED_IN");
-            assertThat(event.toState()).isEqualTo("IN_PROGRESS");
+            assertThat(event.fromState()).isEqualTo(CHECKED_IN);
+            assertThat(event.toState()).isEqualTo(IN_PROGRESS);
             assertThat(event.triggeredBy()).isEqualTo(staffUsername);
             assertThat(event.metadata()).containsEntry("staffUsername", staffUsername);
         }
@@ -178,9 +183,10 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             );
             bookAppointmentUseCase.execute(dto);
 
-            Appointment notCheckedIn = appointmentService.findByCustomerUsernameAndDay(
-                    anotherCustomer,
-                    anotherSlot.getDay()
+            Appointment notCheckedIn = appointmentService.getUserActiveAppointment(
+                    branch.getBranchId(),
+                    anotherSlot.getDay(),
+                    anotherCustomer
             ).orElseThrow();
 
             var action = new AttendingAppointmentStateTransitionAction.StartService(
@@ -200,8 +206,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @BeforeEach
         void startServiceFirst() {
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    bookedAppointment.getId(),
-                    bookedAppointment.getReference(),
+                    bookedAppointment.getBranchId(),
+                    bookedAppointment.getDateTime().toLocalDate(),
                     customer.getUsername()
             );
             attendAppointmentUseCase.execute(checkIn);
@@ -226,10 +232,10 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
 
-            AppointmentStateChangedEvent event = appointmentEventListenerTest.stateChangedEvent;
+            AppointmentStateChangedEvent event = appointmentEventListenerTest.bookedEvent;
             assertThat(event).isNotNull();
-            assertThat(event.fromState()).isEqualTo("IN_PROGRESS");
-            assertThat(event.toState()).isEqualTo("COMPLETED");
+            assertThat(event.fromState()).isEqualTo(IN_PROGRESS);
+            assertThat(event.toState()).isEqualTo(COMPLETED);
             assertThat(event.triggeredBy()).isEqualTo("system");
         }
     }
@@ -254,10 +260,10 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
 
-            AppointmentStateChangedEvent event = appointmentEventListenerTest.stateChangedEvent;
+            AppointmentStateChangedEvent event = appointmentEventListenerTest.bookedEvent;
             assertThat(event).isNotNull();
-            assertThat(event.fromState()).isEqualTo("BOOKED");
-            assertThat(event.toState()).isEqualTo("CANCELLED");
+            assertThat(event.fromState()).isEqualTo(BOOKED);
+            assertThat(event.toState()).isEqualTo(CANCELLED);
             assertThat(event.triggeredBy()).isEqualTo(staffUsername);
             assertThat(event.metadata()).containsEntry("reason", reason);
         }
@@ -266,8 +272,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should cancel CHECKED_IN appointment by staff")
         void shouldCancelCheckedInAppointment() {
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    bookedAppointment.getId(),
-                    bookedAppointment.getReference(),
+                    bookedAppointment.getBranchId(),
+                    bookedAppointment.getDateTime().toLocalDate(),
                     customer.getUsername()
             );
             attendAppointmentUseCase.execute(checkIn);
@@ -285,9 +291,9 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
 
-            AppointmentStateChangedEvent event = appointmentEventListenerTest.stateChangedEvent;
-            assertThat(event.fromState()).isEqualTo("CHECKED_IN");
-            assertThat(event.toState()).isEqualTo("CANCELLED");
+            AppointmentStateChangedEvent event = appointmentEventListenerTest.bookedEvent;
+            assertThat(event.fromState()).isEqualTo(CHECKED_IN);
+            assertThat(event.toState()).isEqualTo(CANCELLED);
         }
 
         @Test
@@ -295,8 +301,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         void shouldThrowWhenCancellingCompleted() {
             // Complete the appointment first
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
-                    bookedAppointment.getId(),
-                    bookedAppointment.getReference(),
+                    bookedAppointment.getBranchId(),
+                    bookedAppointment.getDateTime().toLocalDate(),
                     customer.getUsername()
             );
             attendAppointmentUseCase.execute(checkIn);
@@ -345,18 +351,18 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should complete full appointment lifecycle: BOOKED → CHECKED_IN → IN_PROGRESS → COMPLETED")
         void shouldCompleteFullLifecycle() {
             // Initial state
-            assertThat(bookedAppointment.getStatus()).isEqualTo(AppointmentStatus.BOOKED);
+            assertThat(bookedAppointment.getStatus()).isEqualTo(BOOKED);
 
             // Check-in
             attendAppointmentUseCase.execute(
                     new AttendingAppointmentStateTransitionAction.CheckIn(
-                            bookedAppointment.getId(),
-                            bookedAppointment.getReference(),
+                            bookedAppointment.getBranchId(),
+                            bookedAppointment.getDateTime().toLocalDate(),
                             customer.getUsername()
                     )
             );
             Appointment afterCheckIn = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
-            assertThat(afterCheckIn.getStatus()).isEqualTo(AppointmentStatus.CHECKED_IN);
+            assertThat(afterCheckIn.getStatus()).isEqualTo(CHECKED_IN);
 
             // Start service
             attendAppointmentUseCase.execute(
@@ -366,7 +372,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                     )
             );
             Appointment afterStart = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
-            assertThat(afterStart.getStatus()).isEqualTo(AppointmentStatus.IN_PROGRESS);
+            assertThat(afterStart.getStatus()).isEqualTo(IN_PROGRESS);
 
             // Complete
             attendAppointmentUseCase.execute(

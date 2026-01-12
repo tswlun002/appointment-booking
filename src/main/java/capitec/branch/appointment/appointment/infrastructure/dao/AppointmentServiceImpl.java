@@ -145,13 +145,23 @@ public class AppointmentServiceImpl implements AppointmentService {
     @Override
     public Collection<Appointment> branchAppointments(String branchId, int pageNumber, int pageSize) {
 
-        Collection<AppointmentEntity> appointments = appointmentRepository.getBranchAppointments(branchId,pageNumber,pageSize);
-        return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
+        try {
+            Collection<AppointmentEntity> appointments = appointmentRepository.getBranchAppointments(branchId,pageNumber,pageSize);
+            return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("Failed to get appointment from DB.\n", e);
+            throw e;
+        }
     }
 
     @Override
     public Optional<Appointment> getUserActiveAppointment(String branchId, LocalDate day, String customerUsername) {
-        Optional<AppointmentEntity> entity = appointmentRepository.getUserActiveAppointment(branchId,day,customerUsername);
-        return entity.map(appointmentMapper::toDomain);
+        try {
+            Optional<AppointmentEntity> entity = appointmentRepository.getUserActiveAppointment(branchId, day, customerUsername);
+            return entity.map(appointmentMapper::toDomain);
+        }catch (Exception e) {
+            log.error("Failed to get user active appointment from DB.\n", e);
+            throw e;
+        }
     }
 }

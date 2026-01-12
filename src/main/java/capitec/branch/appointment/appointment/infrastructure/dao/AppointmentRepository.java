@@ -73,6 +73,6 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
         appointment
         WHERE  branch_id =:branchId AND customer_username=:customerUsername AND status IN('BOOKED', 'CHECKED_IN','IN_PROGRESS') AND day=:day 
     """)
-    Optional<AppointmentEntity> getUserActiveAppointment(@Param("branchId")String branchId, @Param("dateTime")LocalDate day,
+    Optional<AppointmentEntity> getUserActiveAppointment(@Param("branchId")String branchId, @Param("day")LocalDate day,
                                                          @Param("customerUsername") String customerUsername);
 }

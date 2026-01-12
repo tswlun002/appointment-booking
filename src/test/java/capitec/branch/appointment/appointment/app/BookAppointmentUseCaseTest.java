@@ -57,15 +57,15 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             // 3. Assertions
             assertTrue(result, "The execution should return true on successful event publication.");
 
-            AppointmentBookedEvent bookedEvent = appointmentEventListenerTest.bookedEvent;
+            var bookedEvent = appointmentEventListenerTest.bookedEvent;
             assertThat(bookedEvent).isNotNull();
             assertThat(bookedEvent.appointmentReference()).isNotNull();
-            assertThat(bookedEvent.day()).isEqualTo(slot.getDay());
-            assertThat(bookedEvent.startTime()).isEqualTo(slot.getStartTime());
-            assertThat(bookedEvent.endTime()).isEqualTo(slot.getEndTime());
-            assertThat(bookedEvent.branchName()).isEqualTo(branch.getBranchId());
-            assertThat(bookedEvent.address()).isEqualTo(branch.getAddress());
-            assertThat(bookedEvent.username()).isEqualTo(user.getUsername());
+            assertThat(bookedEvent.metadata().get("day")).isEqualTo(slot.getDay());
+            assertThat(bookedEvent.metadata().get("startTime")).isEqualTo(slot.getStartTime());
+            assertThat(bookedEvent.metadata().get("endTime")).isEqualTo(slot.getEndTime());
+            assertThat(bookedEvent.metadata().get("branchName")).isEqualTo(branch.getBranchId());
+            assertThat(bookedEvent.metadata().get("address")).isEqualTo(branch.getAddress());
+            assertThat(bookedEvent.customerUsername()).isEqualTo(user.getUsername());
             assertThat(bookedEvent.email()).isEqualTo(user.getEmail());
 
             //VERIFY slot booking
@@ -93,15 +93,15 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         // 2. Execute the Use Case
         boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isTrue();
-        AppointmentBookedEvent bookedEvent = appointmentEventListenerTest.bookedEvent;
+        var bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();
         assertThat(bookedEvent.appointmentReference()).isNotNull();
-        assertThat(bookedEvent.day()).isEqualTo(slot.getDay());
-        assertThat(bookedEvent.startTime()).isEqualTo(slot.getStartTime());
-        assertThat(bookedEvent.endTime()).isEqualTo(slot.getEndTime());
-        assertThat(bookedEvent.branchName()).isEqualTo(branch.getBranchId());
-        assertThat(bookedEvent.address()).isEqualTo(branch.getAddress());
-        assertThat(bookedEvent.username()).isEqualTo(user.getUsername());
+        assertThat(bookedEvent.metadata().get("day")).isEqualTo(slot.getDay());
+        assertThat(bookedEvent.metadata().get("startTime")).isEqualTo(slot.getStartTime());
+        assertThat(bookedEvent.metadata().get("endTime")).isEqualTo(slot.getEndTime());
+        assertThat(bookedEvent.metadata().get("branchName")).isEqualTo(branch.getBranchId());
+        assertThat(bookedEvent.metadata().get("address")).isEqualTo(branch.getAddress());
+        assertThat(bookedEvent.customerUsername()).isEqualTo(user.getUsername());
         assertThat(bookedEvent.email()).isEqualTo(user.getEmail());
 
 
@@ -113,12 +113,12 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();
         assertThat(bookedEvent.appointmentReference()).isNotNull();
-        assertThat(bookedEvent.day()).isEqualTo(slot.getDay());
-        assertThat(bookedEvent.startTime()).isEqualTo(slot.getStartTime());
-        assertThat(bookedEvent.endTime()).isEqualTo(slot.getEndTime());
-        assertThat(bookedEvent.branchName()).isEqualTo(branch.getBranchId());
-        assertThat(bookedEvent.address()).isEqualTo(branch.getAddress());
-        assertThat(bookedEvent.username()).isEqualTo(user.getUsername());
+        assertThat(bookedEvent.metadata().get("day")).isEqualTo(slot.getDay());
+        assertThat(bookedEvent.metadata().get("startTime")).isEqualTo(slot.getStartTime());
+        assertThat(bookedEvent.metadata().get("endTime")).isEqualTo(slot.getEndTime());
+        assertThat(bookedEvent.metadata().get("branchName")).isEqualTo(branch.getBranchId());
+        assertThat(bookedEvent.metadata().get("address")).isEqualTo(branch.getAddress());
+        assertThat(bookedEvent.customerUsername()).isEqualTo(user.getUsername());
         assertThat(bookedEvent.email()).isEqualTo(user.getEmail());
 
         //VERIFY slot booking
@@ -147,7 +147,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isTrue();
-        AppointmentBookedEvent bookedEvent = appointmentEventListenerTest.bookedEvent;
+        var bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();
 
         // 2. Execute the Use Case
@@ -190,7 +190,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isTrue();
-        AppointmentBookedEvent bookedEvent = appointmentEventListenerTest.bookedEvent;
+        var bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();
 
         // 2. Execute the Use Case
