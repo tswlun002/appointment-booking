@@ -23,7 +23,7 @@ public class SendUpdatedAppointmentNotificationUseCase {
         var user = customerLookup.findByUsername(event.customerUsername());
 
 
-        notificationService.se(branch,user, event);
+        notificationService.sendAppointmentRescheduled(branch,user, event);
     }
 
 }

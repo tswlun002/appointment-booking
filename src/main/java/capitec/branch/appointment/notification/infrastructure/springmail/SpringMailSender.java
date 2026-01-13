@@ -4,6 +4,7 @@ package capitec.branch.appointment.notification.infrastructure.springmail;
 
 import capitec.branch.appointment.appointment.app.AppointmentBookedEvent;
 import capitec.branch.appointment.appointment.app.AppointmentStateChangedEvent;
+import capitec.branch.appointment.appointment.app.CustomerRescheduledAppointmentEvent;
 import capitec.branch.appointment.notification.app.port.BranchDetails;
 import capitec.branch.appointment.notification.app.port.CustomerDetails;
 import jakarta.mail.Message;
@@ -67,6 +68,11 @@ public class SpringMailSender  implements NotificationService {
 
     @Override
     public void sendBookingConfirmation(BranchDetails branch, CustomerDetails user, AppointmentBookedEvent event) {
+
+    }
+
+    @Override
+    public void sendAppointmentRescheduled(BranchDetails branch, CustomerDetails user, CustomerRescheduledAppointmentEvent event) {
 
     }
 }

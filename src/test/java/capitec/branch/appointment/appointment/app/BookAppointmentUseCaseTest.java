@@ -52,7 +52,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             validAppointmentDTO = new AppointmentDTO(slot.getId(), branchId, user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
 
             // 2. Execute the Use Case
-            boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
+            boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
 
             // 3. Assertions
             assertTrue(result, "The execution should return true on successful event publication.");
@@ -89,7 +89,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
 
         // 2. Execute the Use Case
-        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
+        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
         assertThat(result).isTrue();
         var bookedEvent = appointmentEventListenerTest.bookedEvent2;
         assertThat(bookedEvent).isNotNull();
@@ -103,7 +103,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
         // Another user pick same slot
         AppointmentDTO appointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        result = bookAppointmentUseCase.execute(appointmentDTO);
+        result = bookAppointmentUseCase.execute(appointmentDTO) !=null;
         user = getUserQuery.execute(new UsernameCommand(guestClients.get(1)));
         assertThat(result).isTrue();
          bookedEvent = appointmentEventListenerTest.bookedEvent2;
@@ -139,14 +139,14 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
         // 1. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
+        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
         assertThat(result).isTrue();
         var bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();
 
         // 2. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        result = bookAppointmentUseCase.execute(validAppointmentDTO);
+        result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
         assertThat(result).isTrue();
         bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();
@@ -182,7 +182,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
         // 1. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO);
+        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
         assertThat(result).isTrue();
         var bookedEvent = appointmentEventListenerTest.bookedEvent;
         assertThat(bookedEvent).isNotNull();

@@ -36,7 +36,12 @@ public class AttendAppointmentUseCase {
 
         try {
             appointmentService.update(appointment);
-        } catch (OptimisticLockConflictException e) {
+        }
+        catch (IllegalStateException  | IllegalArgumentException e){
+            log.error("Illegal state/argument exception. Appointment id {}", appointment.getId(), e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(),e);
+        }
+        catch (OptimisticLockConflictException e) {
             log.warn("Concurrent modification detected for appointment: {}", appointment.getId());
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Appointment was modified by another user. Please refresh and try again.", e);

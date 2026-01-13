@@ -27,7 +27,8 @@ public class UpdateSlotStateAdapter implements UpdateSlotStatePort {
     }
 
     @Override
-    public void reschedule(UUID slotId, LocalDateTime timestamp) {
-        updateSlotStatusUseCase.execute(new SlotStatusTransitionAction.Release(slotId, timestamp));
+    public void reschedule(UUID OldSlotId, UUID newSlotId, LocalDateTime timestamp) {
+        release(OldSlotId, timestamp);
+        reserve(newSlotId, timestamp);
     }
 }

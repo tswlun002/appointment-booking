@@ -7,6 +7,6 @@ public interface UpdateSlotStatePort {
 
     void reserve(UUID slotId, LocalDateTime timestamp);
     void release(UUID slotId,LocalDateTime timestamp);
-    void reschedule(UUID slotId,LocalDateTime timestamp);
+    void reschedule(UUID OldSlotId,UUID newSlotId,LocalDateTime timestamp);
 
 }

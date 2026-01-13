@@ -1,6 +1,7 @@
 package capitec.branch.appointment.appointment.domain;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.UUID;
 
 public sealed interface CustomerUpdateAppointmentAction permits CustomerUpdateAppointmentAction.Cancel,
@@ -25,11 +26,11 @@ public sealed interface CustomerUpdateAppointmentAction permits CustomerUpdateAp
             return "canceled";
         }
     }
-    record Reschedule(UUID appointmentId,UUID newSlotId,LocalDateTime newDateTime) implements CustomerUpdateAppointmentAction {
+    record Reschedule(UUID appointmentId, UUID newSlotId, LocalDateTime newStartDateTime, LocalTime newEndTime) implements CustomerUpdateAppointmentAction {
 
         @Override
         public void execute(Appointment appointment, LocalDateTime currentTime) {
-            appointment.reschedule(newSlotId,newDateTime,currentTime);
+            appointment.reschedule(newSlotId, newStartDateTime,currentTime);
         }
 
         @Override

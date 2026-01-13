@@ -27,6 +27,7 @@ public class CustomerUpdateAppointmentUseCase {
     private final UpdateSlotStatePort updateSlotStatePort;
     private final ApplicationEventPublisher applicationEventPublisher;
 
+
     @Transactional
     public Appointment execute(CustomerUpdateAppointmentAction action) {
 
@@ -42,27 +43,28 @@ public class CustomerUpdateAppointmentUseCase {
             LocalDateTime now = LocalDateTime.now();
 
             switch (action){
-                    case CustomerUpdateAppointmentAction.Reschedule reschedule -> {
-                        updateSlotStatePort.release(reschedule.newSlotId(), now);
-                    }
-                    case CustomerUpdateAppointmentAction.Cancel ignored -> {
-                        updateSlotStatePort.release(appointment.getSlotId(), now);
-                    }
+                    case CustomerUpdateAppointmentAction.Reschedule sc -> updateSlotStatePort.reschedule(appointment.getSlotId(),sc.newSlotId(), now);
+                    case CustomerUpdateAppointmentAction.Cancel ignored -> updateSlotStatePort.release(appointment.getSlotId(), now);
              }
 
             action.execute(appointment, now);
             appointment = appointmentService.update(appointment);
 
-        } catch (ResponseStatusException ex) {
+        }
+        catch (IllegalStateException  | IllegalArgumentException e){
+            log.error("Illegal state/argument exception. Appointment id {}", appointmentId, e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(),e);
+        }
+        catch (ResponseStatusException ex) {
             log.error("Appointment slot update failed. Appointment id {}", appointmentId);
             throw ex;
         } catch (OptimisticLockConflictException e) {
 
             log.error("Failed to update appointment. There was concurrently update. Appointment id {}", appointmentId);
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Failed to cancel appointment, there was concurrently update. Please refresh and try again.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Failed to cancel appointment, there was concurrently update. Please refresh and try again.",e);
         } catch (Exception e) {
             log.error("Failed to update appointment. Appointment id:{}", appointmentId, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.",e);
         }
 
         var event = switch (action) {

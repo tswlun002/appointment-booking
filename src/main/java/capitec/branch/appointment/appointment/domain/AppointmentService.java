@@ -14,7 +14,7 @@ public interface AppointmentService {
     boolean checkIn(UUID appointmentId);
     boolean startService(String staffRef,UUID appointmentId);
     boolean complete(UUID appointmentId);
-    boolean cancelByCustomer(UUID appointmentId);
+    Appointment  cancelByCustomer(@Valid Appointment  appointment);
     boolean cancelByStaff(String staffRef,String reason,UUID appointmentId);
     boolean reschedule(UUID appointmentId,UUID newSlotId);
     boolean markAsNoShow(UUID appointmentId);

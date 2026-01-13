@@ -28,7 +28,7 @@ public class BookAppointmentUseCase {
 
 
     @Transactional
-    boolean execute(@Valid AppointmentDTO appointmentDTO){
+    Appointment execute(@Valid AppointmentDTO appointmentDTO){
 
 
         LocalDateTime dateTime = appointmentDTO.day().atTime(appointmentDTO.startTime());
@@ -38,10 +38,15 @@ public class BookAppointmentUseCase {
         log.debug("Book appointment created: {}", appointment);
 
         try {
-            updateSlotStatePort.execute(appointmentDTO.slotId(), LocalDateTime.now());
+            updateSlotStatePort.reserve(appointmentDTO.slotId(), LocalDateTime.now());
             appointment= appointmentService.book(appointment);
 
-        } catch (ResponseStatusException e) {
+        }
+        catch (IllegalStateException  | IllegalArgumentException e){
+            log.error("Illegal state/argument exception. customer username {}", appointmentDTO.customerUsername(), e);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(),e);
+        }
+        catch (ResponseStatusException e) {
 
             log.error("Failed to reserve slot: {}", appointmentDTO.slotId(),e);
             throw e;
@@ -59,7 +64,7 @@ public class BookAppointmentUseCase {
 
         publishBookedEvent(appointment, appointmentDTO);
 
-        return true;
+        return appointment;
 
     }
     private void publishBookedEvent(Appointment appointment, AppointmentDTO dto) {

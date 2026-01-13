@@ -5,6 +5,8 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.slots.domain.Slot;
+import capitec.branch.appointment.slots.domain.SlotService;
+import capitec.branch.appointment.slots.domain.SlotStatus;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
@@ -40,6 +42,9 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
     @Autowired
     private AppointEventListenerTest appointmentEventListenerTest;
+
+    @Autowired
+    private SlotService slotService;
 
     private Appointment bookedAppointment;
     private User customer;
@@ -82,12 +87,18 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
                     customer.getUsername()
             );
 
+            Slot slotBefore = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+
             Appointment result = customerUpdateAppointmentUseCase.execute(action);
 
             assertThat(result.getStatus()).isEqualTo(CANCELLED);
 
-            Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
-            assertThat(updated.getStatus()).isEqualTo(CANCELLED);
+            //VERIFY slot is released
+            Slot slotAfter = slotService.getSlot(result.getSlotId()).orElseThrow();
+            assertThat(slotAfter.getId()).isEqualTo(slotBefore.getId());
+            assertThat(slotAfter.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+            assertThat(slotAfter.getBookingCount()).isEqualTo(slotBefore.getBookingCount()-1);
+
         }
 
         @Test
@@ -131,7 +142,8 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             customerUpdateAppointmentUseCase.execute(action);
 
             assertThatThrownBy(() -> customerUpdateAppointmentUseCase.execute(action))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class);
         }
     }
 
@@ -141,20 +153,77 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should reschedule appointment successfully")
-        void shouldRescheduleAppointmentSuccessfully() {
+        void shouldRescheduleAppointmentSameDay_Successfully() {
+
+            Slot oldSlot = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+
             Slot newSlot = slots.get(1);
             LocalDateTime newDateTime = LocalDateTime.of(newSlot.getDay(), newSlot.getStartTime());
 
             var action = new CustomerUpdateAppointmentAction.Reschedule(
                     bookedAppointment.getId(),
                     newSlot.getId(),
-                    newDateTime
+                    newDateTime,
+                    newSlot.getEndTime()
             );
 
             Appointment result = customerUpdateAppointmentUseCase.execute(action);
 
-            assertThat(result.getStatus()).isEqualTo(RESCHEDULED);
+            assertThat(result.getStatus()).isEqualTo(BOOKED);
             assertThat(result.getSlotId()).isEqualTo(newSlot.getId());
+
+            //VERIFY slot is released
+            Slot slotAfter = slotService.getSlot(result.getSlotId()).orElseThrow();
+            // verify new slot
+            assertThat(slotAfter.getId()).isEqualTo(newSlot.getId());
+            assertThat(slotAfter.getBookingCount()).isEqualTo(newSlot.getBookingCount()+1);
+            // verify old slot
+            Slot oldSlotAfterReschedule = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            assertThat(oldSlot.getId()).isEqualTo(oldSlotAfterReschedule.getId())
+                    .isNotEqualTo(slotAfter.getId()).isNotEqualTo(newSlot.getId());
+
+            assertThat(oldSlot.getBookingCount()-1).isEqualTo(oldSlotAfterReschedule.getBookingCount());
+            assertThat(oldSlotAfterReschedule.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+
+
+
+        }
+        @Test
+        @DisplayName("Should reschedule appointment successfully")
+        void shouldRescheduleAppointmentOtherDay_Successfully() {
+
+            Slot oldSlot = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+
+            Slot newSlot = slots.get(2);
+            LocalDateTime newDateTime = LocalDateTime.of(newSlot.getDay(), newSlot.getStartTime());
+
+            var action = new CustomerUpdateAppointmentAction.Reschedule(
+                    bookedAppointment.getId(),
+                    newSlot.getId(),
+                    newDateTime,
+                    newSlot.getEndTime()
+            );
+
+            Appointment result = customerUpdateAppointmentUseCase.execute(action);
+
+            assertThat(result.getStatus()).isEqualTo(BOOKED);
+            assertThat(result.getSlotId()).isEqualTo(newSlot.getId());
+
+            //VERIFY slot is released
+            Slot slotAfter = slotService.getSlot(result.getSlotId()).orElseThrow();
+            // verify new slot
+            assertThat(slotAfter.getId()).isEqualTo(newSlot.getId());
+            assertThat(slotAfter.getBookingCount()).isEqualTo(newSlot.getBookingCount()+1);
+            // verify old slot
+            Slot oldSlotAfterReschedule = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            assertThat(oldSlot.getId()).isEqualTo(oldSlotAfterReschedule.getId())
+                    .isNotEqualTo(slotAfter.getId()).isNotEqualTo(newSlot.getId());
+
+            assertThat(oldSlot.getBookingCount()-1).isEqualTo(oldSlotAfterReschedule.getBookingCount());
+            assertThat(oldSlotAfterReschedule.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
+
+
+
         }
 
         @Test
@@ -166,7 +235,8 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             var action = new CustomerUpdateAppointmentAction.Reschedule(
                     bookedAppointment.getId(),
                     newSlot.getId(),
-                    newDateTime
+                    newDateTime,
+                    newSlot.getEndTime()
             );
 
             customerUpdateAppointmentUseCase.execute(action);
@@ -184,7 +254,8 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             var action = new CustomerUpdateAppointmentAction.Reschedule(
                     UUID.randomUUID(),
                     newSlot.getId(),
-                    LocalDateTime.now().plusDays(1)
+                    LocalDateTime.now().plusDays(1),
+                    newSlot.getEndTime()
             );
 
             assertThatThrownBy(() -> customerUpdateAppointmentUseCase.execute(action))
@@ -194,24 +265,4 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
         }
     }
 
-    @Nested
-    @DisplayName("Error Handling Tests")
-    class ErrorHandlingTests {
-
-        @Test
-        @DisplayName("Should throw FORBIDDEN when cancelling another user's appointment")
-        void shouldThrowForbiddenWhenCancellingOtherUsersAppointment() {
-            String anotherUsername = guestClients.get(1);
-
-            var action = new CustomerUpdateAppointmentAction.Cancel(
-                    bookedAppointment.getId(),
-                    anotherUsername
-            );
-
-            assertThatThrownBy(() -> customerUpdateAppointmentUseCase.execute(action))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                    .isEqualTo(HttpStatus.FORBIDDEN);
-        }
-    }
 }

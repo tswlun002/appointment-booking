@@ -487,7 +487,7 @@ class AppointmentTest {
 
 
             assertThrows(IllegalArgumentException.class, () ->
-                    appointment.reschedule(UUID.randomUUID(),appointmentDateTime.minusDays(1), now)
+                    appointment.reschedule(UUID.randomUUID(),appointmentDateTime, appointmentDateTime.plusDays(1))
             );
         }
 

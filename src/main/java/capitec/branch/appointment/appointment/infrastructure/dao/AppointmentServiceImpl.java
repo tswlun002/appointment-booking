@@ -89,8 +89,23 @@ public class AppointmentServiceImpl implements AppointmentService {
     }
 
     @Override
-    public boolean cancelByCustomer(UUID appointmentId) {
-        return false;
+    public Appointment cancelByCustomer(@Valid Appointment appointment) {
+        try {
+
+            var entity = appointmentMapper.toEntity(appointment);
+            entity = appointmentRepository.save(entity);
+
+            return appointmentMapper.toDomain(entity);
+        }
+        catch (OptimisticLockingFailureException e) {
+            log.error("Failed to update or save appointment to DB.\n", e);
+            throw new OptimisticLockConflictException(e.getMessage(),e);
+        }
+        catch (Exception e) {
+
+            log.error("Failed to update appointment status to cancel on DB.",e);
+            throw e;
+        }
     }
 
     @Override
