@@ -129,7 +129,7 @@ branch-slot:
         utilization-factor: ${WEEK_DAY_UTILIZATION_FACTOR:0.5}
         open-time: ${WEEK_DAY_OPEN_TIME:08:30}
         closing-time: ${WEEK_DAY_CLOSING_TIME:17:30}
-        day-type: WEEK_DAYS
+        slot-day-type: WEEK_DAYS
         max-booking-capacity: 2
       WEEKEND:
         slot-duration: ${WEEKEND_SLOT_DURATION:30M}
@@ -137,7 +137,7 @@ branch-slot:
         utilization-factor: ${WEEKEND_UTILIZATION_FACTOR:0.25}
         open-time: ${WEEKEND_OPEN_TIME:09:00}
         closing-time: ${WEEKEND_CLOSING_TIME:15:00}
-        day-type: WEEKEND
+        slot-day-type: WEEKEND
         max-booking-capacity: 1
       HOLIDAY:
         slot-duration: ${HOLIDAY_SLOT_DURATION:30M}
@@ -145,7 +145,7 @@ branch-slot:
         utilization-factor: ${HOLIDAY_UTILIZATION_FACTOR:0.1}
         open-time: ${HOLIDAY_OPEN_TIME:09:00}
         closing-time: ${HOLIDAY_CLOSING_TIME:13:00}
-        day-type: HOLIDAY
+        slot-day-type: HOLIDAY
         max-booking-capacity: 1
   branch-use-default-configs:
     - BR004
@@ -154,3 +154,9 @@ branch-slot:
 
 holidays-client:
   baseurl: ${HOLIDAYS_CLIENT_API:https://date.nager.at}
+
+slot:
+  rolling-window-days:
+    init-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_INIT:7}
+    daily-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_DAILY:1}
+  cron: ${SLOT_SCHEDULAR_CRON:0 30 0 * * *}

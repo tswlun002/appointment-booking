@@ -21,4 +21,5 @@ public interface SlotService {
 
     Optional<Slot> getSlot(UUID slotId);
 
+    Optional<LocalDate> getLastestGeneratedSlotDate( LocalDate fromDate);
 }

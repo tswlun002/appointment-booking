@@ -27,10 +27,17 @@ public class GenerateSlotsUseCase {
     private final CheckHolidayQuery checkHolidayQuery;
     private final CalculateAvailableCapacityService calculateAvailableCapacityService;
 
+    private static final int ROLLING_WINDOW_DAYS = 7;
+
     /**
-     * Command to generate and save time slots for the next 7 days.
+     * Command to generate and save time slots for the next given days, by default 7 days.
+     * @param  fromDate default to next day. The first day of slots that will be generated
+     * @param nextDays default 7 days. The number of days of slots that will be generated starting from fromDate
+     *
      */
-    public void createNext7DaySlots() {
+    public void createNext7DaySlots(LocalDate fromDate, int nextDays) {
+        int rolling_window = nextDays == 0 ? ROLLING_WINDOW_DAYS : nextDays;
+        LocalDate date = fromDate == null ? LocalDate.now().plusDays(1) : fromDate;
 
         Set<String> strings = branchSlotConfigs
                 .branchConfigs()
@@ -40,7 +47,7 @@ public class GenerateSlotsUseCase {
                 .collect(Collectors.toSet());
 
         for (String branch : strings) {
-            Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,LocalDate.now().plusDays(1), 7);
+            Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,date, rolling_window );
             List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
             slotStorage.save(list);
         }

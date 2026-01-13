@@ -100,4 +100,15 @@ public class SlotDaoImpl implements SlotService {
                 .map(slotMapper::toDomain);
     }
 
+    @Override
+    public Optional<LocalDate> getLastestGeneratedSlotDate(LocalDate fromDate) {
+
+        try {
+            return  sloRepository.getLastestGeneratedSlotDate(fromDate);
+        } catch (Exception e) {
+            log.error("Could not get last generated slot into DB", e);
+            throw e;
+        }
+    }
+
 }

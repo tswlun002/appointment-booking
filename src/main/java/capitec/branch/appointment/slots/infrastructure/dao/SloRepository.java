@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -37,5 +38,8 @@ interface SloRepository extends CrudRepository<SlotEntity, UUID> {
             DELETE  FROM  slot AS s WHERE  s.id=:id  
             """)
     int deleteSlotEntitiesBySlotId(@Param("id") UUID id);
-
+     @Query("""
+        SELECT  day FROM slot WHERE day >=:day ORDER BY created_at DESC IMIT 1
+        """)
+     Optional<LocalDate> getLastestGeneratedSlotDate(@Param("fromDate") LocalDate fromDate);
 }

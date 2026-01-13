@@ -40,7 +40,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
 
         wireMockGetHolidayByYearAndCountryCode("2025", "ZA");
 
-       generateSlotsUseCase.createNext7DaySlots();
+       generateSlotsUseCase.createNext7DaySlots(null,0);
 
        // VERIFY
        // Use the new GetNext7DaySlotsQuery to retrieve the persisted slots
