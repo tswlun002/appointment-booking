@@ -31,7 +31,7 @@ interface SloRepository extends CrudRepository<SlotEntity, UUID> {
                 FROM slot 
                 WHERE  slot.branch_id=:branchId AND slot.day >= :date AND (:status IS NULL OR slot.status = :status)
             """)
-    List<SlotEntity> next7DaySlots(@Param("branchId")String branchId,@Param("date") LocalDate date, @Param("status") String status);
+    List<SlotEntity> nextDaySlots(@Param("branchId")String branchId, @Param("date") LocalDate date, @Param("status") String status);
 
     @Modifying
     @Query("""
@@ -39,7 +39,7 @@ interface SloRepository extends CrudRepository<SlotEntity, UUID> {
             """)
     int deleteSlotEntitiesBySlotId(@Param("id") UUID id);
      @Query("""
-        SELECT  day FROM slot WHERE day >=:day ORDER BY created_at DESC IMIT 1
+        SELECT  day FROM slot WHERE day >=:fromDate ORDER BY day DESC LIMIT 1
         """)
      Optional<LocalDate> getLastestGeneratedSlotDate(@Param("fromDate") LocalDate fromDate);
 }

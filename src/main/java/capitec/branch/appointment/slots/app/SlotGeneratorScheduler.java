@@ -30,7 +30,7 @@ public class SlotGeneratorScheduler {
     private int dailyRollingWindowDays;
 
     @Scheduled(cron = "${slot.cron:0 30 0 * * *}", zone = "Africa/Johannesburg")
-    public void generateDailySlots() {
+    public void execute() {
         log.info("Starting daily slot generation");
         try {
             executeWithRetry();
@@ -38,7 +38,7 @@ public class SlotGeneratorScheduler {
         } catch (Exception e) {
             log.error("Daily slot generation failed after all retries", e);
             // Future: Add alerting here (Slack, email, etc.)
-            var slotGenerationFailed = new SlotGenerationSchedulerEventFailure("Slot generation failed  ",
+            var slotGenerationFailed = new SlotGenerationSchedulerEventFailure("Slot generation failed.",
                     LocalDateTime.now(), LocalDate.now().plusDays(1));
             applicationEventPublisher.publishEvent(slotGenerationFailed);
         }

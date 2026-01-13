@@ -10,7 +10,6 @@ import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
-import capitec.branch.appointment.slots.app.GenerateSlotsUseCase;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.staff.domain.Staff;
@@ -72,7 +71,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
         setUpStaff();
         setUpCustomers();
         setUpSlots();
-        slots = slotService.getNext7DaySlots(branchId,TODAY);
+        slots = slotService.getSlots(branchId,TODAY);
       //  UsersResource usersResource = keycloakService.getRealm().users();
 
 
@@ -90,7 +89,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                 appointmentService.deleteAppointment(appointment.getId());
             }
         // delete slots
-            slotService.getNext7DaySlots(branchId, LocalDate.now())
+            slotService.getSlots(branchId, LocalDate.now())
                     .forEach(slot -> {
                         slotService.cleanUpSlot(slot.getId());
                     });

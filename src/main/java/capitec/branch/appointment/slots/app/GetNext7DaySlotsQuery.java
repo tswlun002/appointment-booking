@@ -26,7 +26,7 @@ public class GetNext7DaySlotsQuery {
      * @return A map of dates to a list of slots.
      */
     public Map<LocalDate, List<Slot>> execute(String branchId,LocalDate fromDay) {
-        List<Slot> slots = slotStorage.getNext7DaySlots(branchId,fromDay);
+        List<Slot> slots = slotStorage.getSlots(branchId,fromDay);
         return slots.stream().collect(Collectors.groupingBy(Slot::getDay));
     }
 
@@ -37,7 +37,7 @@ public class GetNext7DaySlotsQuery {
      * @return A map of dates to a list of filtered slots.
      */
     public Map<LocalDate, List<Slot>> execute(String branchId,LocalDate fromDay, SlotStatus status) {
-        List<Slot> slots = slotStorage.getNext7DaySlots(branchId,fromDay, status);
+        List<Slot> slots = slotStorage.getSlots(branchId,fromDay, status);
         return slots.stream().collect(Collectors.groupingBy(Slot::getDay));
     }
 }

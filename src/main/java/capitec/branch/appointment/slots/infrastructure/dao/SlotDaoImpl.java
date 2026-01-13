@@ -1,6 +1,5 @@
 package capitec.branch.appointment.slots.infrastructure.dao;
 
-import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
 import capitec.branch.appointment.utils.IdStore;
 import capitec.branch.appointment.slots.domain.SlotService;
@@ -64,14 +63,14 @@ public class SlotDaoImpl implements SlotService {
     }
 
     @Override
-    public List<Slot> getNext7DaySlots(String branchId,LocalDate date) {
-         return getNext7DaySlots(branchId,date,null);
+    public List<Slot> getSlots(String branchId, LocalDate date) {
+         return getSlots(branchId,date,null);
     }
 
     @Override
-    public List<Slot> getNext7DaySlots(String branchId,LocalDate fromDate, SlotStatus status) {
+    public List<Slot> getSlots(String branchId, LocalDate fromDate, SlotStatus status) {
         String status1 = status == null ? null : status.name();
-        return  sloRepository.next7DaySlots(branchId,fromDate, status1)
+        return  sloRepository.nextDaySlots(branchId,fromDate, status1)
                 .stream()
                 .map(slotMapper::toDomain)
                 .toList();

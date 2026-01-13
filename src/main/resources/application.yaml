@@ -161,6 +161,6 @@ slot:
     daily-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_DAILY:1}
   cron: ${SLOT_SCHEDULAR_CRON:0 30 0 * * *}
   generation-errors:
-    retryables: ${SLOT_GENERATION_ERRORS_RETRYABLES:[]}
+    retryables: []
 
 

@@ -13,9 +13,9 @@ public interface SlotService {
 
     List<Slot> getDailySlot(String branchId,LocalDate day);
 
-    List<Slot> getNext7DaySlots(String branchId,LocalDate fromDate);
+    List<Slot> getSlots(String branchId, LocalDate fromDate);
 
-     List<Slot> getNext7DaySlots(String branchId,LocalDate fromDate, SlotStatus status);
+     List<Slot> getSlots(String branchId, LocalDate fromDate, SlotStatus status);
      @Transactional
     boolean cleanUpSlot(UUID id);
 

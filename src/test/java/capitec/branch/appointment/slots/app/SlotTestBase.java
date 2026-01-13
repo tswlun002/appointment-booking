@@ -38,7 +38,7 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     public void cleanupSlots() {
 
         for (Branch branch : branches) {
-            List<Slot> slots = slotService.getNext7DaySlots(branch.getBranchId(),LocalDate.now().plusDays(1));
+            List<Slot> slots = slotService.getSlots(branch.getBranchId(),LocalDate.now().plusDays(1));
 
             for (Slot slot : slots) {
                 slotService.cleanUpSlot(slot.getId());
