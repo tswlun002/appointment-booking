@@ -134,7 +134,7 @@ CREATE TABLE branch_staff_assignment
     CONSTRAINT  unique_branch_id_username_day UNIQUE(branch_id, username, day),
     CONSTRAINT check_day_not_future CHECK (day <= CURRENT_DATE + INTERVAL '365 days')
     );
--- Index for querying "who was working on date X?"
+-- Index for querying "who was working on dateOfSlots X?"
 CREATE INDEX idx_branch_date_status ON branch_staff_assignment (branch_id, day, username);
 -- ROLLBAK DROP TABLE branch_staff_assignment
 

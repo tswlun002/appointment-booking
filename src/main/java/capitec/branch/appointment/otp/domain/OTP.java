@@ -65,7 +65,7 @@ public class OTP {
 
     public  final  OTP  validate(){
         if(creationDate.equals(expiresDate)||creationDate.isAfter(expiresDate)) {
-            log.error("Invalid creation date, it cannot be same or after expire datetime, creation date: {}, expiresDate: {}", creationDate, expiresDate);
+            log.error("Invalid creation dateOfSlots, it cannot be same or after expire datetime, creation dateOfSlots: {}, expiresDate: {}", creationDate, expiresDate);
             throw  new InternalServerErrorException("Internal Server Error");
         }
         Validator.validate(this);

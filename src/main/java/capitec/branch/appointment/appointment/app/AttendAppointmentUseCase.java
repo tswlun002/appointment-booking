@@ -53,9 +53,9 @@ public class AttendAppointmentUseCase {
     private Appointment resolveAppointment(AttendingAppointmentStateTransitionAction action) {
         return switch (action) {
             case AttendingAppointmentStateTransitionAction.CheckIn(String branchId, LocalDate day, String customerUsername) -> {
-                log.info("Check-in for user:{} at branch:{} on date:{}", customerUsername, branchId, day);
+                log.info("Check-in for user:{} at branch:{} on dateOfSlots:{}", customerUsername, branchId, day);
                 yield appointmentService.getUserActiveAppointment(branchId, day, customerUsername)
-                        .orElseThrow(() -> notFound("User:%s at branch:%s on date:%s", customerUsername, branchId, day));
+                        .orElseThrow(() -> notFound("User:%s at branch:%s on dateOfSlots:%s", customerUsername, branchId, day));
             }
             case AttendingAppointmentStateTransitionAction.StartService(UUID appointmentId, String staffUsername) -> {
                 log.info("Staff {} starting appointment {}", staffUsername, appointmentId);

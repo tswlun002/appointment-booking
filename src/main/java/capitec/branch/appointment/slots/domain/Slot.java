@@ -131,7 +131,7 @@ public class Slot {
      * Booking count is decremented when slot is released
      * Make slot available if slot is not blocked, is fully booked and
      * booking count still less than maximum booking capacity
-     * @param currentTime is the date time when release slot is performed
+     * @param currentTime is the dateOfSlots time when release slot is performed
      * @throws  IllegalStateException when try to release slot that not yet booked
      */
     public void release(LocalDateTime currentTime) {

@@ -57,24 +57,24 @@ public class Appointment {
     private int version;
 
     // --- Timestamps ---
-    @NotNull(message = "Created timestamp cannot be null")
-    @PastOrPresent(message = "Created timestamp cannot be in the future")
+    @NotNull(message = "Created createdAt cannot be null")
+    @PastOrPresent(message = "Created createdAt cannot be in the future")
     private final LocalDateTime createdAt;
 
-    @NotNull(message = "Updated timestamp cannot be null")
-    @PastOrPresent(message = "Updated timestamp cannot be in the future")
+    @NotNull(message = "Updated createdAt cannot be null")
+    @PastOrPresent(message = "Updated createdAt cannot be in the future")
     private LocalDateTime updatedAt;
 
-    @PastOrPresent(message = "Checked-in timestamp cannot be in the future")
+    @PastOrPresent(message = "Checked-in createdAt cannot be in the future")
     private LocalDateTime checkedInAt;
 
-    @PastOrPresent(message = "In-progress timestamp cannot be in the future")
+    @PastOrPresent(message = "In-progress createdAt cannot be in the future")
     private LocalDateTime inProgressAt;
 
-    @PastOrPresent(message = "Completed timestamp cannot be in the future")
+    @PastOrPresent(message = "Completed createdAt cannot be in the future")
     private LocalDateTime completedAt;
 
-    @PastOrPresent(message = "Terminated timestamp cannot be in the future")
+    @PastOrPresent(message = "Terminated createdAt cannot be in the future")
     private LocalDateTime terminatedAt;
 
     // --- Audit Trail ---
@@ -165,9 +165,9 @@ public class Appointment {
         Assert.hasText(serviceType, "Service type cannot be null or blank");
         Assert.isTrue(serviceType.length() >= 3 && serviceType.length() <= 100,
                 "Service type must be between 3 and 100 characters");
-        // Appointment date
+        // Appointment dateOfSlots
         Assert.isTrue(dateTime !=null, "Appointment dateTime cannot be null");
-        Assert.isTrue(dateTime.isAfter(LocalDateTime.now()), "Appointment dateTime cannot be a past date");
+        Assert.isTrue(dateTime.isAfter(LocalDateTime.now()), "Appointment dateTime cannot be a past dateOfSlots");
     }
 
     // --- Business Methods (State Transitions) ---
@@ -442,7 +442,7 @@ public class Appointment {
 
     private String generateAppointmentReference() {
         if (this.dateTime == null) {
-            throw new IllegalStateException("Appointment date cannot be null");
+            throw new IllegalStateException("Appointment dateOfSlots cannot be null");
         }
 
         int year = this.dateTime.getYear();

@@ -18,7 +18,7 @@ public class GetDailySlotsQuery {
 
     /**
      * Retrieves all scheduled slots for a specific day.
-     * @param fromDay The date to query.
+     * @param fromDay The dateOfSlots to query.
      * @return A list of slots for the given day.
      */
     public List<Slot> execute(String branchId,LocalDate fromDay) {

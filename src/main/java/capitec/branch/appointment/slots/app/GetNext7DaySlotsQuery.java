@@ -20,9 +20,9 @@ public class GetNext7DaySlotsQuery {
     private final SlotService slotStorage;
 
     /**
-     * Retrieves all scheduled slots for the next 7 days starting from a given date.
-     * The results are grouped by date.
-     * @param fromDay The start date.
+     * Retrieves all scheduled slots for the next 7 days starting from a given dateOfSlots.
+     * The results are grouped by dateOfSlots.
+     * @param fromDay The start dateOfSlots.
      * @return A map of dates to a list of slots.
      */
     public Map<LocalDate, List<Slot>> execute(String branchId,LocalDate fromDay) {
@@ -32,7 +32,7 @@ public class GetNext7DaySlotsQuery {
 
     /**
      * Retrieves scheduled slots for the next 7 days, optionally filtering by status.
-     * @param fromDay The start date.
+     * @param fromDay The start dateOfSlots.
      * @param status The status to filter. True means the slot is booked. False means the slot is not booked(AVAILABLE)
      * @return A map of dates to a list of filtered slots.
      */

@@ -20,9 +20,9 @@ public class CheckHolidayQuery {
     private final HolidayClient holidayClient;
 
     /**
-     * Checks if a given date is a public holiday in the specified country.
-     * @param date The date to check.
-     * @return True if the date is a holiday, false otherwise.
+     * Checks if a given dateOfSlots is a public holiday in the specified country.
+     * @param date The dateOfSlots to check.
+     * @return True if the dateOfSlots is a holiday, false otherwise.
      */
     public boolean execute(LocalDate date) {
 

@@ -153,10 +153,14 @@ branch-slot:
 
 
 holidays-client:
-  baseurl: ${HOLIDAYS_CLIENT_API:https://date.nager.at}
+  baseurl: ${HOLIDAYS_CLIENT_API:https://dateOfSlots.nager.at}
 
 slot:
   rolling-window-days:
     init-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_INIT:7}
     daily-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_DAILY:1}
   cron: ${SLOT_SCHEDULAR_CRON:0 30 0 * * *}
+  generation-errors:
+    retryables: ${SLOT_GENERATION_ERRORS_RETRYABLES:[]}
+
+

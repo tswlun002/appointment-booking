@@ -22,8 +22,8 @@ public class GetLastestGeneratedSlotDate {
         try {
             return slotService.getLastestGeneratedSlotDate( fromDate);
         } catch (Exception e) {
-            log.error("Failed to get lasted date of slots.", e);
-            throw new RuntimeException("Failed to get lasted date of slots.",e);
+            log.error("Failed to get lasted dateOfSlots of slots.", e);
+            throw new RuntimeException("Failed to get lasted dateOfSlots of slots.",e);
         }
     }
 }

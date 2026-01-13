@@ -45,20 +45,23 @@ public class GenerateSlotsUseCase {
                 .stream().
                 filter(s->!s.equals(BranchSlotConfigs.DEFAULT_CONFIG_KEY))
                 .collect(Collectors.toSet());
-
+        List<Slot> allSlots  = new ArrayList<>();
         for (String branch : strings) {
             Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,date, rolling_window );
             List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
-            slotStorage.save(list);
+            allSlots.addAll(list);
         }
+        slotStorage.save(allSlots);
+
+
     }
 
     /**
-     * Generate Time Slots for a given date range.
+     * Generate Time Slots for a given dateOfSlots range.
      * @param branchId The id of the branch of slot to generate
-     * @param startDate The starting date.
+     * @param startDate The starting dateOfSlots.
      * @param days The bookingCount of days to generate slots for.
-     * @return A map of generated slots grouped by date.
+     * @return A map of generated slots grouped by dateOfSlots.
      */
     private Map<LocalDate, List<Slot>> generateTimeSlotsForRange(String branchId,LocalDate startDate, int days) {
 

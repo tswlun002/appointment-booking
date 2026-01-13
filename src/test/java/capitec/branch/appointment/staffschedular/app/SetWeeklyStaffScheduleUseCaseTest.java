@@ -49,7 +49,7 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
         // ASSERT 1: The use case reported successful addition
         assertThat(added).isTrue();
         
-   /*     // ASSERT 2: Verify the data was actually saved for today's date
+   /*     // ASSERT 2: Verify the data was actually saved for today's dateOfSlots
         BranchStaffAssignment assignment = originalStaffScheduleService.get(branchId1, now).orElse(null);
         assertThat(assignment).isNotNull();
         // Get the list of staff assigned to today
@@ -85,7 +85,7 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
         // ASSERT 1: The use case reported successful update (or add)
         assertThat(updated).isTrue();
         
-//        // ASSERT 2: Verify the data was overwritten for today's date
+//        // ASSERT 2: Verify the data was overwritten for today's dateOfSlots
 //        BranchStaffAssignment assignment = originalStaffScheduleService.get(branchId, today).orElseThrow();
 //        Set<String> assignedUsernames = assignment.getWeeklyStaff().get(today).stream().map(StaffRef::username).collect(Collectors.toSet());
 //

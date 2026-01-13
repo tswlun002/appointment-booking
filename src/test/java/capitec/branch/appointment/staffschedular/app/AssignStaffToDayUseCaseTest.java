@@ -109,7 +109,7 @@ class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
     @Test
     void testAssignStaffToParticularDay_ThrowsNotFoundIfScheduleDoesNotExist() {
 
-        // SETUP: Ensure no schedule exists for today's date (this is handled by the Base class tearDown)
+        // SETUP: Ensure no schedule exists for today's dateOfSlots (this is handled by the Base class tearDown)
 
         // ACT & ASSERT: Attempt to add staff
         BranchStaffAssignmentDTO assignmentDTO = new BranchStaffAssignmentDTO(staff.getFirst(), today);
