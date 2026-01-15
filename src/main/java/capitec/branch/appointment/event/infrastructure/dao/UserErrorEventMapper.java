@@ -4,6 +4,7 @@ package capitec.branch.appointment.event.infrastructure.dao;
 
 import capitec.branch.appointment.event.domain.UserErrorEvent;
 import capitec.branch.appointment.event.infrastructure.UserEventStatus;
+import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -13,11 +14,33 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
 @Mapper(componentModel = "spring")
  interface UserErrorEventMapper {
 
+    default UserErrorEvent toModel(UserErrorEventValueEntity entity){
+        String value = entity.status().status();
+        DEAD_LETTER_STATUS status = StringUtils.isBlank(value) ?null:DEAD_LETTER_STATUS.valueOf(value);
+        return  UserErrorEvent.reconstitute(
+                entity.eventId(),
+                entity.key(),
+                entity.topic(),
+                entity.value(),
+                entity.traceId(),
+                entity.publishTime(),
+                entity.exception(),
+                entity.exceptionClass(),
+                entity.exceptionCause(),
+                entity.stackTrace(),
+                entity.retryCount(),
+                entity.retryable(),
+                entity.nextRetryAt(),
+                status,
+                entity.partition(),
+                entity.offset(),
+                entity.fullname(),
+                entity.username(),
+                entity.email()
+        );
+    }
 
-    @Mapping(source = "status.status", target = "deadLetterStatus", qualifiedByName = "mapToDeadLetterStatus")
-    UserErrorEvent toModel(UserErrorEventValueEntity entity);
-
-    @Mapping(source = "deadLetterStatus", target = "status", qualifiedByName = "mapToStatus")
+    @Mapping(source = "status", target = "status", qualifiedByName = "mapToStatus")
     UserErrorEventValueEntity toEntity(UserErrorEvent model);
 
    default UserErrorEventValueEntity toEntityWithNullId(UserErrorEvent model){

@@ -78,6 +78,8 @@ public class UserErrorEvent {
     }
 
     // Reconstitution from persistence
+
+
     public static UserErrorEvent reconstitute(String eventId, String key, String topic, String value,
                                               String traceId, LocalDateTime timestamp, String exception,
                                               String exceptionClass,String exceptionCause, String stackTrace, int retryCount,

@@ -1,8 +1,8 @@
 package capitec.branch.appointment.notification.infrastructure.kafka;
 
 
-import capitec.branch.appointment.kafka.user.UserDefaultErrorEvent;
-import capitec.branch.appointment.kafka.user.UserMetadata;
+import capitec.branch.appointment.kafka.user.UserErrorEventValue;
+import capitec.branch.appointment.kafka.user.UserEventValue;
 import capitec.branch.appointment.notification.domain.ConfirmationEmail;
 import capitec.branch.appointment.notification.domain.Notification;
 import capitec.branch.appointment.notification.domain.OTPEmail;
@@ -20,30 +20,66 @@ public interface EventMapperToEmail {
     @Mapping(source = "value", target = "OTPCode")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventmapToOTPEmail(UserMetadata event);
+    OTPEmail userEventmapToOTPEmail(UserEventValue event);
+
+    @Mapping(source = "event.fullname",target = "fullname")
+    @Mapping(source = "event.email", target = "email")
+    @Mapping(source = "event.value", target = "OTPCode")
+    @Mapping(source = "event.traceId", target = "traceId")
+    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
+    OTPEmail userEventmapToOTPEmail(UserEventValue event, String originalTopic);
 
     @Mapping(source = "fullname",target = "fullname")
     @Mapping(source = "email", target = "email")
     @Mapping(source = "value", target = "OTPCode")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventmapToOTPEmail(UserDefaultErrorEvent event);
+    OTPEmail userEventmapToOTPEmail(UserErrorEventValue event);
+
+    @Mapping(source = "event.fullname",target = "fullname")
+    @Mapping(source = "event.email", target = "email")
+    @Mapping(source = "event.value", target = "OTPCode")
+    @Mapping(source = "event.traceId", target = "traceId")
+    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
+    OTPEmail userEventmapToOTPEmail(UserErrorEventValue event, String originalTopic);
 
     @Mapping(source = "fullname",target = "fullname")
     @Mapping(source = "email", target = "email")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    ConfirmationEmail userEventMapToConfirmationEmail(UserMetadata event);
+    ConfirmationEmail userEventMapToConfirmationEmail(UserEventValue event);
+    @Mapping(source = "event.fullname",target = "fullname")
+    @Mapping(source = "event.email", target = "email")
+    @Mapping(source = "event.traceId", target = "traceId")
+    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
+    ConfirmationEmail userEventMapToConfirmationEmail(UserEventValue event,String originalTopic);
 
     @Mapping(source = "fullname",target = "fullname")
     @Mapping(source = "email", target = "email")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventMapToConfirmationEmail(UserDefaultErrorEvent event);
+    OTPEmail userEventMapToConfirmationEmail(UserErrorEventValue event);
+    @Mapping(source = "event.fullname",target = "fullname")
+    @Mapping(source = "event.email", target = "email")
+    @Mapping(source = "event.traceId", target = "traceId")
+    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
+    OTPEmail userEventMapToConfirmationEmail(UserErrorEventValue event, String originalTopic);
 
     @Named("topicToEventType")
     default Notification.EventType topicToEventType(String topic) {
 
         return Notification.EventType.fromTopic(topic);
     }
+
+
+//    @Named("userMetadataToFullname")
+//    default String userMetadataToFullname(UserMetadata userMetadata) {
+//
+//        return userMetadata.fullname();
+//    }
+//    @Named("userMetadataToEmail")
+//    default String userMetadataToEmail(UserMetadata userMetadata) {
+//
+//        return userMetadata.email();
+//    }
 }

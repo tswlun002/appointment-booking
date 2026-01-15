@@ -5,7 +5,6 @@ import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.event.domain.RecordStatus;
 import capitec.branch.appointment.event.domain.UserDeadLetterService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.kafka.user.UserDefaultErrorEvent;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
@@ -18,15 +17,13 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
 
 
 class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
@@ -212,7 +209,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         otp = otpService.find(user.getUsername(),otp.getCode()).orElseThrow();
         assertThat(otp.getStatus()).isEqualTo(new OTPStatus(OTPSTATUSENUM.REVOKED.name()));
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE).stream().map(e->(UserDefaultErrorEvent)e);
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE).stream();
         assertThat(failedRecord.noneMatch(r -> r.getTraceId().equals(traceId) &&
                 r.getUsername().equals(String.valueOf(user.getUsername()))
                 && r.getEmail().equals(user.getEmail()))).isTrue();

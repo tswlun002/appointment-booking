@@ -1,10 +1,12 @@
 package capitec.branch.appointment.notification.infrastructure.kafka;
 
+import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
+import capitec.branch.appointment.kafka.user.UserErrorEventValue;
+import capitec.branch.appointment.kafka.user.UserEventValue;
 import capitec.branch.appointment.kafka.user.UserMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import capitec.branch.appointment.kafka.domain.EventValue;
-import capitec.branch.appointment.kafka.user.UserDefaultErrorEvent;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -28,38 +30,39 @@ public class EventConsumer {
             "#{T(capitec.branch.appointment.notification.domain.Notification).PASSWORD_RESET_REQUEST_EVENT}",
     },
             groupId = "otp-events",autoStartup = "${kafka.listen.auto.start:true}")
-    public  void OTPEvents(ConsumerRecord<String, EventValue> consumerRecord)  {
+    public  void OTPEvents(ConsumerRecord<String, ExtendedEventValue<UserMetadata>> consumerRecord)  {
 
-        EventValue value = consumerRecord.value();
+        var value = consumerRecord.value();
 
         log.info("Received otp type event: {}", value.getTraceId());
 
-        if(value instanceof UserMetadata userMetadata){
+        if(value instanceof UserEventValue eventValue){
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userMetadata));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(eventValue));
         }
-         else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
+         else if(value instanceof UserErrorEventValue userErrorEventValue) {
 
-             eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userDefaultErrorEvent));
+             eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userErrorEventValue));
         }
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.notification.domain.Notification).OTPEmailPattern()}",
             groupId = "otp-events",autoStartup = "${kafka.listen.auto.start:true}")
-    public void recoveryOTPEvents(ConsumerRecord<String, EventValue> consumerRecord) {
+    public void recoveryOTPEvents(ConsumerRecord<String, ExtendedEventValue<UserMetadata>> consumerRecord) {
 
-        EventValue value = consumerRecord.value();
+        var value = consumerRecord.value();
         log.info("Received recover otp type event: {}", value.getTraceId());
 
-        if(value instanceof UserMetadata userMetadata){
+        if(value instanceof UserEventValue eventValue){
 
-                      userMetadata.setTopic(getOriginalTopic.apply(userMetadata));
-            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userMetadata));
+            String originalTopic = getOriginalTopic.apply(eventValue);
+
+            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(eventValue, originalTopic));
         }
-        else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
-            userDefaultErrorEvent.setTopic(getOriginalTopic.apply(userDefaultErrorEvent));
+        else if(value instanceof UserErrorEventValue eventValue) {
+            String originalTopic = getOriginalTopic.apply(eventValue);
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userDefaultErrorEvent));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(eventValue, originalTopic));
         }
 
     }
@@ -72,38 +75,38 @@ public class EventConsumer {
             "#{T(capitec.branch.appointment.notification.domain.Notification).PASSWORD_UPDATED_EVENT}",
     },
             groupId = "confirmation-events",autoStartup = "${kafka.listen.auto.start:true}")
-    public void confirmationEvents(ConsumerRecord<String, EventValue> consumerRecord)  {
+    public void confirmationEvents(ConsumerRecord<String, ExtendedEventValue<UserMetadata>> consumerRecord)  {
 
-        EventValue value = consumerRecord.value();
+        var value = consumerRecord.value();
 
         log.info("Received confirmation type event: {}", value.getTraceId());
 
-        if(value instanceof UserMetadata userMetadata){
+        if(value instanceof UserEventValue eventValue){
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userMetadata));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(eventValue));
         }
-        else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
+        else if(value instanceof UserErrorEventValue userErrorEventValue) {
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userDefaultErrorEvent));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userErrorEventValue));
         }
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.notification.domain.Notification).confirmationEmailPattern()}",
             groupId = "confirmation-events",autoStartup = "${kafka.listen.auto.start:true}")
-    public void recoveryConfirmationEvents(ConsumerRecord<String, EventValue> consumerRecord) {
+    public void recoveryConfirmationEvents(ConsumerRecord<String, ExtendedEventValue<UserMetadata>> consumerRecord) {
 
-        EventValue value = consumerRecord.value();
+        var value = consumerRecord.value();
         log.info("Received recover confirmation type event: {}", value.getTraceId());
 
-        if(value instanceof UserMetadata userMetadata){
-            userMetadata.setTopic(getOriginalTopic.apply(userMetadata));
+        if(value instanceof UserEventValue eventValue){
+            String originalTopic = getOriginalTopic.apply(eventValue);
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userMetadata));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(eventValue, originalTopic));
         }
-        else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
-            userDefaultErrorEvent.setTopic(getOriginalTopic.apply(userDefaultErrorEvent));
+        else if(value instanceof UserErrorEventValue errorEventValue) {
+            String originalTopic = getOriginalTopic.apply(errorEventValue);
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userDefaultErrorEvent));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(errorEventValue,originalTopic));
         }
 
     }
