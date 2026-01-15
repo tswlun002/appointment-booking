@@ -1,15 +1,15 @@
-package capitec.branch.appointment.otp.domain;
+package capitec.branch.appointment.event.app.port;
 
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import capitec.branch.appointment.utils.OTPCode;
 import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 import java.util.concurrent.CompletableFuture;
 
-public interface OTPEventProducerService {
+public interface OTPEventProducerServicePort {
     CompletableFuture<Boolean> sendRegistrationEvent(@Username String Username, @NotBlank(message = Validator.EMAIL_MESS) @Email(message = Validator.EMAIL_MESS)  String email,
                                                      @NotBlank(message = Validator.FIRSTNAME+" "+Validator.LASTNAME)
                                    String fullname,

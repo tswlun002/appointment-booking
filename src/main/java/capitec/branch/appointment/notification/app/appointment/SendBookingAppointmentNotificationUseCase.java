@@ -1,4 +1,4 @@
-package capitec.branch.appointment.notification.app;
+package capitec.branch.appointment.notification.app.appointment;
 
 import capitec.branch.appointment.appointment.app.AppointmentBookedEvent;
 import capitec.branch.appointment.notification.app.port.BranchLookup;

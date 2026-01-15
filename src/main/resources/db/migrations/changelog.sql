@@ -330,7 +330,7 @@ CREATE TABLE user_dead_letter_event
     retry_count        INTEGER      NOT NULL DEFAULT 0,
     exception          TEXT         NOT NULL,
     exception_class    VARCHAR(255),
-    cause_class        VARCHAR(255),
+    exception_cause        VARCHAR(255),
     stack_trace        TEXT         NOT NULL,
     trace_id           VARCHAR(255) NOT NULL,
     status             VARCHAR(50)  NOT NULL,

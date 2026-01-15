@@ -3,7 +3,7 @@ package capitec.branch.appointment.event.infrastructure;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import capitec.branch.appointment.kafka.domain.DEAD_LETTER_STATUS;
+import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
 
 @Slf4j
 public record UserEventStatus(String  status) {

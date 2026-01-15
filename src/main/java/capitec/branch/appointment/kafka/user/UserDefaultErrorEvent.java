@@ -8,7 +8,6 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
-import capitec.branch.appointment.kafka.domain.DEAD_LETTER_STATUS;
 import capitec.branch.appointment.kafka.domain.DefaultErrorEventValue;
 import capitec.branch.appointment.kafka.domain.EventToJSONMapper;
 
@@ -43,13 +42,11 @@ public class UserDefaultErrorEvent extends DefaultErrorEventValue {
             @JsonProperty("causeClass") String causeClass,
             @JsonProperty("stackTrace") String stackTrace,
             @JsonProperty("retryable") boolean retryable,
-            @JsonProperty("retryCount") int retryCount,
-            @JsonProperty("deadLetterStatus") DEAD_LETTER_STATUS deadLetterStatus,
             @JsonProperty("fullname") String fullname,
             @JsonProperty("username") String username,
             @JsonProperty("email") String email) {
 
-        super(topic, value, traceId, eventId, publishTime, partition, offset, key, exception, exceptionClass, causeClass, stackTrace, retryable, retryCount, deadLetterStatus);
+        super(topic, value, traceId, eventId, publishTime, partition, offset, key, exception, exceptionClass, causeClass, stackTrace, retryable);
         this.fullname = fullname;
         this.username = username;
         this.email = email;

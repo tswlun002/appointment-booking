@@ -1,10 +1,10 @@
 package capitec.branch.appointment.notification.infrastructure.kafka;
 
+import capitec.branch.appointment.kafka.user.UserMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.kafka.user.UserDefaultErrorEvent;
-import capitec.branch.appointment.kafka.user.UserDefaultEvent;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -34,9 +34,9 @@ public class EventConsumer {
 
         log.info("Received otp type event: {}", value.getTraceId());
 
-        if(value instanceof UserDefaultEvent userDefaultEvent){
+        if(value instanceof UserMetadata userMetadata){
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userDefaultEvent));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userMetadata));
         }
          else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
 
@@ -51,10 +51,10 @@ public class EventConsumer {
         EventValue value = consumerRecord.value();
         log.info("Received recover otp type event: {}", value.getTraceId());
 
-        if(value instanceof UserDefaultEvent userDefaultEvent){
+        if(value instanceof UserMetadata userMetadata){
 
-                      userDefaultEvent.setTopic(getOriginalTopic.apply(userDefaultEvent));
-            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userDefaultEvent));
+                      userMetadata.setTopic(getOriginalTopic.apply(userMetadata));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventmapToOTPEmail(userMetadata));
         }
         else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
             userDefaultErrorEvent.setTopic(getOriginalTopic.apply(userDefaultErrorEvent));
@@ -78,9 +78,9 @@ public class EventConsumer {
 
         log.info("Received confirmation type event: {}", value.getTraceId());
 
-        if(value instanceof UserDefaultEvent userDefaultEvent){
+        if(value instanceof UserMetadata userMetadata){
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userDefaultEvent));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userMetadata));
         }
         else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
 
@@ -95,10 +95,10 @@ public class EventConsumer {
         EventValue value = consumerRecord.value();
         log.info("Received recover confirmation type event: {}", value.getTraceId());
 
-        if(value instanceof UserDefaultEvent userDefaultEvent){
-            userDefaultEvent.setTopic(getOriginalTopic.apply(userDefaultEvent));
+        if(value instanceof UserMetadata userMetadata){
+            userMetadata.setTopic(getOriginalTopic.apply(userMetadata));
 
-            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userDefaultEvent));
+            eventPublisher.publishEvent(eventMapperToEmail.userEventMapToConfirmationEmail(userMetadata));
         }
         else if(value instanceof UserDefaultErrorEvent userDefaultErrorEvent) {
             userDefaultErrorEvent.setTopic(getOriginalTopic.apply(userDefaultErrorEvent));

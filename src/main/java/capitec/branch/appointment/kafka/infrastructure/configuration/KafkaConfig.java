@@ -1,10 +1,11 @@
 package capitec.branch.appointment.kafka.infrastructure.configuration;
 
 
-import capitec.branch.appointment.kafka.domain.DEAD_LETTER_STATUS;
+
 import capitec.branch.appointment.kafka.domain.DefaultErrorEventValue;
 import capitec.branch.appointment.kafka.domain.ErrorEventValue;
 import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.kafka.domain.EventValueFactory;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.*;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.ConsumerProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,8 +31,6 @@ import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.BackOff;
 import org.springframework.util.backoff.FixedBackOff;
-import capitec.branch.appointment.kafka.infrastructure.configuration.properties.*;
-import capitec.branch.appointment.kafka.domain.*;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -39,7 +38,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import static capitec.branch.appointment.kafka.app.EventPublishUseCaseImpl.AnonymousDefaultErrorValue;
 import static capitec.branch.appointment.kafka.infrastructure.event.KafkaEventPublisher.isInstanceOfRetryableExceptions;
 
 @Configuration
@@ -48,18 +46,18 @@ import static capitec.branch.appointment.kafka.infrastructure.event.KafkaEventPu
 @EnableConfigurationProperties({ConsumerProperties.class, ProducerProperties.class, SchedulerProperties.class})
 public class KafkaConfig<K extends Serializable, V extends EventValue,E extends ErrorEventValue> {
 
-
     private final KafkaProperties kafkaProperties;
     private final ConsumerProperties consumerProperties;
     private final SecurityProperties securityProperties;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final Predicate<Exception> isRetryable;
     private final ProducerFactory<K, V> producerFactory;
+    private final EventValueFactory eventValueFactory;
 
     public KafkaConfig(KafkaProperties kafkaProperties, ConsumerProperties consumerProperties
             , SecurityProperties securityProperties, ApplicationEventPublisher applicationEventPublisher,
                        ProducerFactory<K, V> producerFactory,
-                       ProducerProperties producerProperties) {
+                       ProducerProperties producerProperties, EventValueFactory eventValueFactory) {
         this.kafkaProperties = kafkaProperties;
         this.consumerProperties = consumerProperties;
         this.producerFactory = producerFactory;
@@ -67,6 +65,7 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
         this.applicationEventPublisher = applicationEventPublisher;
         isRetryable = exception -> isInstanceOfRetryableExceptions().apply(exception, consumerProperties.getRetryableExceptions()) ||
                 isInstanceOfRetryableExceptions().apply(exception, producerProperties.getRetryableExceptions());
+        this.eventValueFactory = eventValueFactory;
     }
 
 
@@ -179,7 +178,7 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
 
     private void createRecordRecover(ConsumerRecord<K, V> record, Exception exception) {
 
-        DEAD_LETTER_STATUS status = DEAD_LETTER_STATUS.DEAD;
+
 
         try {
 
@@ -189,18 +188,18 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
 
                 log.info("Recoverable exception in the recovery: {}", exception.getMessage(), exception);
 
-                var event = getAnonymousDefaultErrorValue(record,record.value(),exception,true,0,status);
+                var event = getAnonymousDefaultErrorValue(record,record.value(),exception,true);
                 applicationEventPublisher.publishEvent(event);
 
             } else {
 
                 log.info("Non recoverable exception in the recovery: {}", exception.getMessage(), exception);
-                var event = getAnonymousDefaultErrorValue(record,record.value(),exception,false,0,status);
+                var event = getAnonymousDefaultErrorValue(record,record.value(),exception,false);
                 applicationEventPublisher.publishEvent(event);
             }
         } catch (final Exception e) {
             log.error("Failed to save dead letter to database", e);
-            var event = getAnonymousDefaultErrorValue(record,record.value(),e,false,0,status);
+            var event = getAnonymousDefaultErrorValue(record,record.value(),e,false);
             applicationEventPublisher.publishEvent(event);
         }
     }
@@ -215,7 +214,7 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
         return serializer;
     }
 
-    protected DefaultErrorEventValue getAnonymousDefaultErrorValue(ConsumerRecord< K , V> results, V event, Throwable throwable, boolean isRetryable, int retryCount, DEAD_LETTER_STATUS status) {
+    protected DefaultErrorEventValue getAnonymousDefaultErrorValue(ConsumerRecord< K , V> results, V event, Throwable throwable, boolean isRetryable) {
 
         Throwable cause = throwable.getCause();
         String exception = cause != null ? throwable.getMessage() : throwable.getMessage();
@@ -223,11 +222,11 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
         String stackTrace = throwable.getStackTrace()!=null&&throwable.getStackTrace().length!=0 ? Arrays.toString(throwable.getStackTrace()) :
                 throwable.fillInStackTrace().toString();
 
-        return AnonymousDefaultErrorValue(
+        return (DefaultErrorEventValue) eventValueFactory.createErrorEventValue(
                 event.getTopic(), event.getValue(),
                 event.getTraceId(), event.getEventId(), event.getPublishTime(),
                 (long)results.partition(), results.offset(), event.getKey(), exception,throwable.getClass().getName(),
-                causeClass,stackTrace,isRetryable,retryCount,status
+                causeClass,stackTrace,isRetryable
         );
     }
 

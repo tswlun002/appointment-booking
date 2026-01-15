@@ -29,6 +29,10 @@ public class SlotGeneratorScheduler {
     @Value("${slot.rolling-window-days.daily-value:1}")
     private int dailyRollingWindowDays;
 
+    /**
+     * ON DISTRIBUTED SYSTEMS, ENSURE ONLY ONE INSTANCE RUNS THIS SCHEDULED TASK AT A TIME
+     * source <a href='https://www.baeldung.com/shedlock-spring'/>
+     */
     @Scheduled(cron = "${slot.cron:0 30 0 * * *}", zone = "Africa/Johannesburg")
     public void execute() {
         log.info("Starting daily slot generation");

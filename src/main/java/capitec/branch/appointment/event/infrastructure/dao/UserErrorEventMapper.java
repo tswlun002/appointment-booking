@@ -2,32 +2,26 @@ package capitec.branch.appointment.event.infrastructure.dao;
 
 
 
+import capitec.branch.appointment.event.domain.UserErrorEvent;
 import capitec.branch.appointment.event.infrastructure.UserEventStatus;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
-import org.springframework.stereotype.Component;
-import capitec.branch.appointment.kafka.domain.DEAD_LETTER_STATUS;
-import capitec.branch.appointment.kafka.user.UserDefaultErrorEvent;
-@Component
+import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
+
+
 @Mapper(componentModel = "spring")
-public  interface UserErrorEventMapper {
+ interface UserErrorEventMapper {
 
 
-    // === ENTITY -> DOMAIN MODEL ===
     @Mapping(source = "status.status", target = "deadLetterStatus", qualifiedByName = "mapToDeadLetterStatus")
-    UserDefaultErrorEvent toModel(UserErrorEventValueEntity entity);
+    UserErrorEvent toModel(UserErrorEventValueEntity entity);
 
-    // === DOMAIN MODEL -> ENTITY ===
     @Mapping(source = "deadLetterStatus", target = "status", qualifiedByName = "mapToStatus")
-    UserErrorEventValueEntity toEntity(UserDefaultErrorEvent model);
+    UserErrorEventValueEntity toEntity(UserErrorEvent model);
 
- //   @Mapping(source = "deadLetterStatus", target = "status", qualifiedByName = "mapToStatus")
-   default UserErrorEventValueEntity toEntityWithNullId(UserDefaultErrorEvent model){
-        // First use the standard mapping
+   default UserErrorEventValueEntity toEntityWithNullId(UserErrorEvent model){
         UserErrorEventValueEntity entity = toEntity(model);
-
-        // Then create a new instance with null ID
         return new UserErrorEventValueEntity(
                 null, // explicitly set ID to null
                 entity.key(),
@@ -38,9 +32,10 @@ public  interface UserErrorEventMapper {
                 entity.headers(),
                 entity.retryable(),
                 entity.retryCount(),
+                entity.nextRetryAt(),
                 entity.exception(),
                 entity.exceptionClass(),
-                entity.causeClass(),
+                entity.exceptionCause(),
                 entity.stackTrace(),
                 entity.traceId(),
                 entity.status(),
@@ -49,16 +44,12 @@ public  interface UserErrorEventMapper {
                 entity.username(),
                 entity.email()
         );
-
     }
 
-    // === Helper: DEAD_LETTER_STATUS enum -> status record ===
     @Named("mapToStatus")
     static UserEventStatus mapToStatus(DEAD_LETTER_STATUS status) {
         return status != null ? new UserEventStatus(status.name()) : null;
     }
-
-    // === Helper: status record -> DEAD_LETTER_STATUS enum ===
     @Named("mapToDeadLetterStatus")
     static DEAD_LETTER_STATUS mapToDeadLetterStatus(String status) {
         try {

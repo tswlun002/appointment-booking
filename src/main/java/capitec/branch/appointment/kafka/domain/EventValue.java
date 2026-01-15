@@ -9,4 +9,7 @@ public interface EventValue {
       String getTopic();
       String getEventId();
       LocalDateTime getPublishTime();
+      default String getSchemaVersion() { return "1.0"; }
+      default String getSource() { return "unknown"; }
+      default String getEventType() { return this.getClass().getSimpleName(); }
 }

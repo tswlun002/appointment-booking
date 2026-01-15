@@ -7,24 +7,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
-@Setter
 public  abstract class DefaultEventValue implements EventValue, Serializable {
+    private static final ObjectMapper MAPPER = EventToJSONMapper.getMapper();
 
-        @NotBlank(message = "Topic name is required")
+
+    @NotBlank(message = "Topic name is required")
         private final String topic;
         @NotBlank(message = "Event must have purpose(values)")
         private final String value;
         @NotBlank(message = "Trace username is required for event")
         private final String traceId;
         private final String eventId;
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyy-MM-dd'T'HH:mm:ss")
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern="yyyy-MM-dd'T'HH:mm:ss")
         private final LocalDateTime publishTime;
         @JsonCreator
         public DefaultEventValue(
@@ -52,8 +52,8 @@ public  abstract class DefaultEventValue implements EventValue, Serializable {
         @Override
         public String toString() {
                 try {
-                        ObjectMapper mapper = EventToJSONMapper.getMapper();
-                        return mapper.writeValueAsString(this);
+
+                        return MAPPER.writeValueAsString(this);
                 } catch (Exception e) {
                         throw new RuntimeException("Error converting to JSON", e);
                 }

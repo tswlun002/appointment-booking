@@ -62,7 +62,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         var registeredUser = registrationUserCase.registerUser(userRegister, traceId);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE);
 
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
@@ -84,7 +84,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         wireMockGetHolidayByYearAndCountryCode(user, idNumber);
         var registeredUser = registrationUserCase.registerUser(userRegister, traceId);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE);
 
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
@@ -132,7 +132,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 .hasFieldOrPropertyWithValue("verified", true)
                 .hasFieldOrPropertyWithValue("enabled", true);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE);
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
             return r.getTraceId().equals(traceId) &&
@@ -167,7 +167,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 .hasFieldOrPropertyWithValue("verified", true)
                 .hasFieldOrPropertyWithValue("enabled", true);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD);
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE);
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
             return r.getTraceId().equals(traceId) &&
@@ -212,7 +212,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         otp = otpService.find(user.getUsername(),otp.getCode()).orElseThrow();
         assertThat(otp.getStatus()).isEqualTo(new OTPStatus(OTPSTATUSENUM.REVOKED.name()));
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD).stream().map(e->(UserDefaultErrorEvent)e);
+        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE).stream().map(e->(UserDefaultErrorEvent)e);
         assertThat(failedRecord.noneMatch(r -> r.getTraceId().equals(traceId) &&
                 r.getUsername().equals(String.valueOf(user.getUsername()))
                 && r.getEmail().equals(user.getEmail()))).isTrue();

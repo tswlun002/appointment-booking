@@ -6,16 +6,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-@Setter
 @Getter
 public abstract class DefaultErrorEventValue implements ErrorEventValue, Serializable {
-
+    public  static final ObjectMapper mapper = EventToJSONMapper.getMapper();
     private @NonNull String topic;
     private String value;
     private String traceId;
@@ -30,8 +28,6 @@ public abstract class DefaultErrorEventValue implements ErrorEventValue, Seriali
     private String causeClass;
     private String stackTrace;
     private boolean retryable;
-    private int retryCount;
-    private DEAD_LETTER_STATUS deadLetterStatus;
     @JsonCreator
     public DefaultErrorEventValue(
             @JsonProperty("topic") @NonNull String topic,
@@ -46,9 +42,8 @@ public abstract class DefaultErrorEventValue implements ErrorEventValue, Seriali
             @JsonProperty("exceptionClass") String exceptionClass,
             @JsonProperty("causeClass") String causeClass,
             @JsonProperty("stackTrace") String stackTrace,
-            @JsonProperty("retryable") boolean retryable,
-            @JsonProperty("retryCount") int retryCount,
-            @JsonProperty("deadLetterStatus") DEAD_LETTER_STATUS deadLetterStatus) {
+            @JsonProperty("retryable") boolean retryable
+    ) {
     this.topic = topic;
         this.value = value;
         this.traceId = traceId;
@@ -62,8 +57,6 @@ public abstract class DefaultErrorEventValue implements ErrorEventValue, Seriali
         this.causeClass = causeClass;
         this.stackTrace = stackTrace;
         this.retryable = retryable;
-        this.retryCount = retryCount;
-        this.deadLetterStatus = deadLetterStatus;
     }
 
     @Override
@@ -82,14 +75,13 @@ public abstract class DefaultErrorEventValue implements ErrorEventValue, Seriali
     @Override
     public int hashCode() {
 
-        return Objects.hash(topic, value, traceId, eventId, publishTime, partition, offset, key
-                , headers, exception, exceptionClass, causeClass, stackTrace, retryable, retryCount, deadLetterStatus);
+        return Objects.hash(eventId);
     }
 
     @Override
     public String toString() {
         try {
-            ObjectMapper mapper = EventToJSONMapper.getMapper();
+
             return mapper.writeValueAsString(this);
         } catch (Exception e) {
             throw new RuntimeException("Error converting to JSON", e);

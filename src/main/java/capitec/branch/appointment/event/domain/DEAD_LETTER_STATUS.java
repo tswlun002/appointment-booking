@@ -1,4 +1,4 @@
-package capitec.branch.appointment.kafka.domain;
+package capitec.branch.appointment.event.domain;
 
 public enum DEAD_LETTER_STATUS {
     RECOVERED,
