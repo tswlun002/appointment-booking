@@ -5,10 +5,11 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
+import capitec.branch.appointment.appointment.app.dto.AppointmentStateChangedEvent;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -25,7 +26,7 @@ import java.util.UUID;
 public class AttendAppointmentUseCase {
 
     private final AppointmentService appointmentService;
-    private final ApplicationEventPublisher publisher;
+    private final AppointmentEventService publisher;
 
     @Transactional
     public void execute(AttendingAppointmentStateTransitionAction action) {
@@ -79,9 +80,10 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             customerUsername,
+                            appointment.getBranchId(),
                             previousStatus,
                             AppointmentStatus.CHECKED_IN,
-                            customerUsername,
+                            EventTrigger.CUSTOMER,
                             Map.of()
                     );
             case AttendingAppointmentStateTransitionAction.StartService(_, String staffUsername) ->
@@ -89,9 +91,10 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
+                            appointment.getBranchId(),
                             previousStatus,
                             AppointmentStatus.IN_PROGRESS,
-                            staffUsername,
+                            EventTrigger.STAFF,
                             Map.of("staffUsername", staffUsername)
                     );
             case AttendingAppointmentStateTransitionAction.CompleteAttendingAppointment(_, _) ->
@@ -99,9 +102,10 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
+                            appointment.getBranchId(),
                             previousStatus,
                             AppointmentStatus.COMPLETED,
-                            "system",
+                            EventTrigger.STAFF,
                             Map.of()
                     );
             case AttendingAppointmentStateTransitionAction.CancelByStaff(String staffUsername, String reason, _) ->
@@ -109,9 +113,10 @@ public class AttendAppointmentUseCase {
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
+                            appointment.getBranchId(),
                             previousStatus,
                             AppointmentStatus.CANCELLED,
-                            staffUsername,
+                            EventTrigger.STAFF,
                             Map.of("reason", reason, "staffUsername", staffUsername)
                     );
         };

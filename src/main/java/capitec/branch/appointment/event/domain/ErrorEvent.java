@@ -1,11 +1,13 @@
 package capitec.branch.appointment.event.domain;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.util.Asserts;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-public class UserErrorEvent {
+public class ErrorEvent {
 
     private final String eventId;
     private final String key;
@@ -23,16 +25,14 @@ public class UserErrorEvent {
     private DEAD_LETTER_STATUS status;
     private Long recoveredPartition;
     private Long recoveredOffset;
-    private final String fullname;
-    private final String email;
-    private final String username;
+    private final  String data;
 
-    private UserErrorEvent(String eventId, String key, String topic, String value,
-                           String traceId, LocalDateTime timestamp, String exception,
-                           String exceptionClass,String exceptionCause, String stackTrace, int retryCount,
-                           boolean retryable, LocalDateTime nextRetryAt,
-                           DEAD_LETTER_STATUS status, Long recoveredPartition,
-                           Long recoveredOffset, String fullname, String email, String username) {
+    private ErrorEvent(String eventId, String key, String topic, String value,
+                       String traceId, LocalDateTime timestamp, String exception,
+                       String exceptionClass, String exceptionCause, String stackTrace, int retryCount,
+                       boolean retryable, LocalDateTime nextRetryAt,
+                       DEAD_LETTER_STATUS status, Long recoveredPartition,
+                       Long recoveredOffset, String data) {
         Asserts.notBlank(eventId, "eventId");
         Asserts.notBlank(key, "key");
         Asserts.notBlank(topic, "topic");
@@ -40,9 +40,6 @@ public class UserErrorEvent {
         Asserts.notNull(timestamp, "timestamp");
         Asserts.notBlank(exception, "exception");
         Asserts.notNull(status, "status");
-        Asserts.notBlank(fullname, "fullname");
-        Asserts.notBlank(email, "email");
-        Asserts.notBlank(username, "username");
 
         this.eventId = eventId;
         this.key = key;
@@ -59,37 +56,32 @@ public class UserErrorEvent {
         this.status = status;
         this.recoveredPartition = recoveredPartition;
         this.recoveredOffset = recoveredOffset;
-        this.fullname = fullname;
-        this.email = email;
-        this.username = username;
-        validateEmail(this.email);
+        this.data = data;
         this.exceptionCause = exceptionCause;
     }
 
     // Factory for new events (with optional partition/offset)
-    public static UserErrorEvent create(String eventId, String key, String topic, String value,
-                                        String traceId, LocalDateTime timestamp, String exception,
-                                        String exceptionClass,String exceptionCause, String stackTrace, boolean retryable,
-                                        Long partition, Long offset,
-                                        String fullname, String email, String username) {
-        return new UserErrorEvent(eventId, key, topic, value, traceId, timestamp,
+    public static  ErrorEvent create(String eventId, String key, String topic, String value,
+                                    String traceId, LocalDateTime timestamp, String exception,
+                                    String exceptionClass, String exceptionCause, String stackTrace, boolean retryable,
+                                    Long partition, Long offset, String data) {
+        return new ErrorEvent(eventId, key, topic, value, traceId, timestamp,
                 exception, exceptionClass,  exceptionCause,stackTrace, 0, retryable, null,
-                DEAD_LETTER_STATUS.DEAD, partition, offset, fullname, email, username);
+                DEAD_LETTER_STATUS.DEAD, partition, offset, data);
     }
 
     // Reconstitution from persistence
 
 
-    public static UserErrorEvent reconstitute(String eventId, String key, String topic, String value,
-                                              String traceId, LocalDateTime timestamp, String exception,
-                                              String exceptionClass,String exceptionCause, String stackTrace, int retryCount,
-                                              boolean retryable, LocalDateTime nextRetryAt,
-                                              DEAD_LETTER_STATUS status, Long recoveredPartition,
-                                              Long recoveredOffset, String fullname, String email,
-                                              String username) {
-        return new UserErrorEvent(eventId, key, topic, value, traceId, timestamp,
+    public static ErrorEvent reconstitute(String eventId, String key, String topic, String value,
+                                          String traceId, LocalDateTime timestamp, String exception,
+                                          String exceptionClass, String exceptionCause, String stackTrace, int retryCount,
+                                          boolean retryable, LocalDateTime nextRetryAt,
+                                          DEAD_LETTER_STATUS status, Long recoveredPartition,
+                                          Long recoveredOffset, String data) {
+        return new ErrorEvent(eventId, key, topic, value, traceId, timestamp,
                 exception, exceptionClass,exceptionCause, stackTrace, retryCount, retryable, nextRetryAt,
-                status, recoveredPartition, recoveredOffset, fullname, email, username);
+                status, recoveredPartition, recoveredOffset,data);
     }
 
     // Domain behavior
@@ -129,8 +121,8 @@ public class UserErrorEvent {
         return retryable && retryCount > 0;
     }
 
-    private void validateEmail(String email) {
-        Asserts.check(email.matches("^[A-Za-z0-9+_.-]+@(.+)$"), "Invalid email format: " + email);
+    public <R> R parseData(Class<R> clazz, ObjectMapper mapper) throws JsonProcessingException {
+        return mapper.readValue(data, clazz);
     }
 
     // Getters
@@ -149,9 +141,7 @@ public class UserErrorEvent {
     public DEAD_LETTER_STATUS getStatus() { return status; }
     public Long getRecoveredPartition() { return recoveredPartition; }
     public Long getRecoveredOffset() { return recoveredOffset; }
-    public String getFullname() { return fullname; }
-    public String getEmail() { return email; }
-    public String getUsername() { return username; }
+    public String getData(){return data;}
 
     public String getExceptionCause() {
         return exceptionCause;
@@ -159,7 +149,7 @@ public class UserErrorEvent {
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof UserErrorEvent that)) return false;
+        if (!(o instanceof ErrorEvent that)) return false;
         return Objects.equals(eventId, that.eventId) && Objects.equals(key, that.key);
     }
 
@@ -170,7 +160,7 @@ public class UserErrorEvent {
 
     @Override
     public String toString() {
-        return "UserErrorEvent{" +
+        return "ErrorEvent{" +
                 "eventId='" + eventId + '\'' +
                 ", key='" + key + '\'' +
                 ", topic='" + topic + '\'' +
@@ -187,9 +177,7 @@ public class UserErrorEvent {
                 ", status=" + status +
                 ", recoveredPartition=" + recoveredPartition +
                 ", recoveredOffset=" + recoveredOffset +
-                ", fullname='" + fullname + '\'' +
-                ", email='" + email + '\'' +
-                ", username='" + username + '\'' +
+                ", data='" + data.toString() + '\'' +
                 '}';
     }
 }

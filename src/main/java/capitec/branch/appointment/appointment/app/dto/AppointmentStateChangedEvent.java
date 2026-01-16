@@ -1,9 +1,9 @@
-package capitec.branch.appointment.appointment.app;
+package capitec.branch.appointment.appointment.app.dto;
 
+import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.utils.Username;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,10 +20,12 @@ public record AppointmentStateChangedEvent(
         String appointmentReference,
         @Username
         String customerUsername,
+        @NotBlank
+        String branchId,
         AppointmentStatus fromState,
         @NotNull
         AppointmentStatus toState,
-        String triggeredBy,
+        EventTrigger triggeredBy,
         @NotNull
         LocalDateTime occurredAt,
         Map<String, Object> metadata
@@ -36,22 +38,22 @@ public record AppointmentStateChangedEvent(
             LocalDate day,
             LocalTime startTime,
             LocalTime endTime,
-            String branchName,
+            String branchId,
             Address address
     ) {
         return new AppointmentStateChangedEvent(
                 appointmentId,
                 appointmentReference,
                 customerUsername,
+                branchId,
                 null,
                 AppointmentStatus.BOOKED,
-                customerUsername,
+                EventTrigger.CUSTOMER,
                 LocalDateTime.now(),
                 Map.of(
                         "day", day,
                         "startTime", startTime,
                         "endTime", endTime,
-                        "branchName", branchName,
                         "address", address
                 )
         );
@@ -61,15 +63,17 @@ public record AppointmentStateChangedEvent(
             UUID appointmentId,
             String appointmentReference,
             String customerUsername,
+            String branchId,
             AppointmentStatus fromState,
             AppointmentStatus toState,
-            String triggeredBy,
+            EventTrigger triggeredBy,
             Map<String, Object> metadata
     ) {
         return new AppointmentStateChangedEvent(
                 appointmentId,
                 appointmentReference,
                 customerUsername,
+                branchId,
                 fromState,
                 toState,
                 triggeredBy,

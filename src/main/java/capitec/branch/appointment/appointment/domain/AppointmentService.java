@@ -10,18 +10,12 @@ import java.util.UUID;
 public interface AppointmentService {
 
     Appointment book(@Valid Appointment appointment);
+    Collection<Appointment> getUnAttendedAppointments( LocalDate appointmentDate,  UUID lastProcessedId, int limit);
     Appointment update(@Valid Appointment appointment);
-    boolean checkIn(UUID appointmentId);
-    boolean startService(String staffRef,UUID appointmentId);
-    boolean complete(UUID appointmentId);
-    Appointment  cancelByCustomer(@Valid Appointment  appointment);
-    boolean cancelByStaff(String staffRef,String reason,UUID appointmentId);
-    boolean reschedule(UUID appointmentId,UUID newSlotId);
-    boolean markAsNoShow(UUID appointmentId);
-    Optional<Appointment> findById(UUID appointmentId);
-    Collection<Appointment> customerAppointments(String username,AppointmentStatus status);
-    boolean deleteAppointment(UUID appointmentId);
+    Collection<Appointment> update( Collection<Appointment> appointment);
 
+    Optional<Appointment> findById(UUID appointmentId);
+    boolean deleteAppointment(UUID appointmentId);
     Collection<Appointment> branchAppointments(String branchId, int pageNumber, int pageSize);
 
     Optional<Appointment> getUserActiveAppointment(String branchId, LocalDate day, String customerUsername);

@@ -5,6 +5,7 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.appointment.app.dto.AppointmentStateChangedEvent;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;

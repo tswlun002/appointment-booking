@@ -7,6 +7,6 @@ public record ConfirmationEmail(
         String email,
         String fullname,
         String traceId,
-        Notification.EventType eventType)  implements Email{
+        Notification.UserEventType userEventType)  implements Email{
 
 }

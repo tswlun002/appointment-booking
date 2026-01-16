@@ -6,10 +6,12 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
+import capitec.branch.appointment.appointment.app.dto.CustomerCanceledAppointmentEvent;
+import capitec.branch.appointment.appointment.app.dto.CustomerRescheduledAppointmentEvent;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -25,7 +27,7 @@ public class CustomerUpdateAppointmentUseCase {
 
     private final AppointmentService appointmentService;
     private final UpdateSlotStatePort updateSlotStatePort;
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final AppointmentEventService appointmentEventService;
 
 
     @Transactional
@@ -67,29 +69,43 @@ public class CustomerUpdateAppointmentUseCase {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.",e);
         }
 
-        var event = switch (action) {
-            case CustomerUpdateAppointmentAction.Reschedule ignored -> new CustomerRescheduledAppointmentEvent(
-                    appointment.getId(),
-                    appointment.getReference(),
-                    appointment.getCustomerUsername(),
-                    previousState,
-                    AppointmentStatus.RESCHEDULED,
-                    appointment.getBranchId()
-            );
+        switch (action) {
+            case CustomerUpdateAppointmentAction.Reschedule ignored -> {
+                var event = new CustomerRescheduledAppointmentEvent(
+                        appointment.getId(),
+                        appointment.getReference(),
+                        appointment.getCustomerUsername(),
+                        previousState,
+                        AppointmentStatus.RESCHEDULED,
+                        appointment.getBranchId(),
+                        EventTrigger.CUSTOMER,
+                        LocalDateTime.now()
+
+                );
+                log.info("Customer {} appointment  event:{}.",action.getEventName(), event);
+                appointmentEventService.publishEvent(event);
+            }
 
 
-            case CustomerUpdateAppointmentAction.Cancel ignored -> new CustomerCanceledAppointmentEvent(
-                    appointment.getId(),
-                    appointment.getReference(),
-                    appointment.getCustomerUsername(),
-                    previousState,
-                    AppointmentStatus.CANCELLED
-            );
+            case CustomerUpdateAppointmentAction.Cancel ignored ->{
+                var event = new CustomerCanceledAppointmentEvent(
+                        appointment.getId(),
+                        appointment.getReference(),
+                        appointment.getCustomerUsername(),
+                        appointment.getBranchId(),
+                        previousState,
+                        AppointmentStatus.CANCELLED,
+                        EventTrigger.CUSTOMER,
+                        LocalDateTime.now()
+                );
+                log.info("Customer {} appointment  event:{}.",action.getEventName(), event);
+                appointmentEventService.publishEvent(event);
+            }
+
 
         };
 
-        log.info("Customer {} appointment  event:{}.",action.getEventName(), event);
-        applicationEventPublisher.publishEvent(event);
+
 
         return appointment;
 

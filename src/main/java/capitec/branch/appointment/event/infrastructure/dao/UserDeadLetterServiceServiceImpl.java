@@ -1,8 +1,8 @@
 package capitec.branch.appointment.event.infrastructure.dao;
 
 
-import capitec.branch.appointment.event.domain.UserErrorEvent;
-import capitec.branch.appointment.utils.IdStore;
+import capitec.branch.appointment.event.domain.ErrorEvent;
+import capitec.branch.appointment.utils.sharekernel.id.IdStore;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +33,7 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
     private final UserErrorEventMapper userErrorEventMapper;
 
     @Override
-    public void saveDeadLetter( UserErrorEvent errorEventValue) {
+    public void saveDeadLetter( ErrorEvent errorEventValue) {
 
         try {
                 idStore.setId(errorEventValue.getEventId());
@@ -50,14 +50,14 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
     }
 
     @Override
-    public Set<UserErrorEvent> findByStatus(RecordStatus recordStatus, int offset, int limit) {
+    public Set<ErrorEvent> findByStatus(RecordStatus recordStatus, int offset, int limit) {
 
         return repository.findAllByStatus(recordStatus.name(), offset, limit)
                 .stream().map(userErrorEventMapper::toModel).collect(Collectors.toSet());
     }
 
     @Override
-    public void updateStatus( UserErrorEvent errorEventValue) {
+    public void updateStatus( ErrorEvent errorEventValue) {
 
         if (errorEventValue == null) throw new InternalServerErrorException("Invalid FailedRecord can not be updated");
 
@@ -79,7 +79,7 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
 
 
     @Override
-    public List<UserErrorEvent> recoverDeadLetter(boolean isRetryable, DEAD_LETTER_STATUS status, int offset, int limit, int maxRetry) {
+    public List<ErrorEvent> recoverDeadLetter(boolean isRetryable, DEAD_LETTER_STATUS status, int offset, int limit, int maxRetry) {
         return repository
                 .recoverDeadLetter(isRetryable, status.name(), offset,limit, maxRetry)
                 .stream()
@@ -88,7 +88,7 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
     }
 
     @Override
-    public Optional<UserErrorEvent> findById(String eventId) {
+    public Optional<ErrorEvent> findById(String eventId) {
         return repository.findById(eventId).map(userErrorEventMapper::toModel);
     }
 

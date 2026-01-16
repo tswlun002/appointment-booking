@@ -1,10 +1,7 @@
 package capitec.branch.appointment.event.infrastructure.kafka.consumer;
 
 import capitec.branch.appointment.event.app.port.OTPPort;
-import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
-import capitec.branch.appointment.kafka.user.UserErrorEventValue;
-import capitec.branch.appointment.kafka.user.UserEventValue;
 import capitec.branch.appointment.kafka.user.UserMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @RequiredArgsConstructor
 @Component
-public class ConsumerUserOTPVerifications {
+public class EventConsumerForOTPVerification {
 
     private final OTPPort otpPort;
 

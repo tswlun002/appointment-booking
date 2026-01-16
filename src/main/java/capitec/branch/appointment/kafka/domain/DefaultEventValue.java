@@ -1,5 +1,6 @@
 package capitec.branch.appointment.kafka.domain;
 
+import capitec.branch.appointment.utils.EventToJSONMapper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;

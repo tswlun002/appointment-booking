@@ -1,6 +1,7 @@
 package capitec.branch.appointment.kafka.infrastructure.configuration.properties;
 
 
+import capitec.branch.appointment.exeption.MailSenderException;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.kafka.common.errors.NotEnoughReplicasException;
@@ -59,7 +60,9 @@ public class ConsumerProperties {
 
     private Set<Class<? extends Exception>> retryableExceptions=Set.of(
             SocketException.class, TransactionTimedOutException.class,
-            ConnectException.class, UnknownHostException.class, IOException.class, TimeoutException.class, NotEnoughReplicasException.class, DeserializationException.class
+            ConnectException.class, UnknownHostException.class, IOException.class,
+            TimeoutException.class, NotEnoughReplicasException.class, DeserializationException.class,
+            MailSenderException.class
 
     );
 

@@ -1,4 +1,4 @@
-package capitec.branch.appointment.kafka.domain;
+package capitec.branch.appointment.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 

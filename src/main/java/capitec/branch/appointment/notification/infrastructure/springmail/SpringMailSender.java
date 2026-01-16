@@ -1,12 +1,5 @@
 package capitec.branch.appointment.notification.infrastructure.springmail;
 
-
-
-import capitec.branch.appointment.appointment.app.AppointmentBookedEvent;
-import capitec.branch.appointment.appointment.app.AppointmentStateChangedEvent;
-import capitec.branch.appointment.appointment.app.CustomerRescheduledAppointmentEvent;
-import capitec.branch.appointment.notification.app.port.BranchDetails;
-import capitec.branch.appointment.notification.app.port.CustomerDetails;
 import jakarta.mail.Message;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
@@ -32,9 +25,9 @@ public class SpringMailSender  implements NotificationService {
     private final JavaMailSender mailSender;
 
     @Override
-    public void sendOTPEmail(String hostEmail, Set<String> recipients, String subject, String emailTemplate, String traceId) throws MailSenderException{
+    public void sendEmail(String hostEmail, Set<String> recipients, String subject, String emailTemplate, String traceId) throws MailSenderException{
 
-        try {
+         try {
 
             MimeMessage message = mailSender.createMimeMessage();
             message.setFrom(new InternetAddress(hostEmail));
@@ -57,22 +50,7 @@ public class SpringMailSender  implements NotificationService {
             }
             log.info("Failed to send email from event:{}, traceId:{}. /nDeadException is thrown : {}", subject, traceId, e.getMessage(), e);
 
-            throw new RuntimeException("Dead for mail sender exception", e);
+            throw new RuntimeException("Dead letter for mail sender exception", e);
         }
-    }
-
-    @Override
-    public void sendAttendanceStateTransitionEmail(CustomerDetails user, AppointmentStateChangedEvent event) {
-
-    }
-
-    @Override
-    public void sendBookingConfirmation(BranchDetails branch, CustomerDetails user, AppointmentBookedEvent event) {
-
-    }
-
-    @Override
-    public void sendAppointmentRescheduled(BranchDetails branch, CustomerDetails user, CustomerRescheduledAppointmentEvent event) {
-
     }
 }

@@ -1,17 +1,31 @@
-package capitec.branch.appointment.event.infrastructure.kafka;
+package capitec.branch.appointment.event.infrastructure.kafka.producer.appointment;
 
-import capitec.branch.appointment.event.domain.UserErrorEvent;
-import capitec.branch.appointment.kafka.user.UserErrorEventValue;
-import capitec.branch.appointment.kafka.user.UserMetadata;
+import capitec.branch.appointment.event.domain.ErrorEvent;
+import capitec.branch.appointment.kafka.appointment.AppointmentErrorEventValue;
+import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
+import capitec.branch.appointment.utils.EventToJSONMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.time.LocalDateTime;
 
-public record UserErrorEventValueImpl(
-        UserErrorEvent event
-) implements UserErrorEventValue {
+public record AppointmentErrorEventValueImpl(
+        ErrorEvent event
+) implements AppointmentErrorEventValue {
     @Override
-    public UserMetadata getMetadata() {
-        return new UserMetadata(event.getFullname(),event.getUsername(),event.getEmail());
+    public AppointmentMetadata getMetadata() {
+        try {
+            var data = event.parseData(AppointmentMetadata.class, EventToJSONMapper.getMapper());
+            return new AppointmentMetadata(
+                    data.id(),
+                    data.reference(),
+                    data.branchId(),
+                    data.customerUsername(),
+                    data.createdAt(),
+                    data.otherData()
+            );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

@@ -10,14 +10,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -57,6 +55,27 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
     }
 
+    @Override
+    public Collection<Appointment> update(Collection<Appointment> appointment) {
+        try {
+
+            var list = appointment.stream().map(appointmentMapper::toEntity).toList();
+            Iterable<AppointmentEntity> appointmentEntities = appointmentRepository.saveAll(list);
+            return ((Collection<AppointmentEntity>) appointmentEntities).stream()
+                    .map(appointmentMapper::toDomain)
+                    .collect(Collectors.toSet());
+
+        } catch (OptimisticLockingFailureException e) {
+            log.error("Failed to update or save appointment to DB.\n", e);
+            throw new OptimisticLockConflictException(e.getMessage(),e);
+        }
+        catch (Exception e) {
+
+            log.error("Failed to update or save appointment to DB.\n", e);
+            throw e;
+        }
+    }
+
     private Appointment save(Appointment appointment) {
         try {
 
@@ -73,55 +92,8 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
     }
 
-    @Override
-    public boolean checkIn(UUID appointmentId) {
-        return false;
-    }
 
-    @Override
-    public boolean startService(String staffRef, UUID appointmentId) {
-        return false;
-    }
 
-    @Override
-    public boolean complete(UUID appointmentId) {
-        return false;
-    }
-
-    @Override
-    public Appointment cancelByCustomer(@Valid Appointment appointment) {
-        try {
-
-            var entity = appointmentMapper.toEntity(appointment);
-            entity = appointmentRepository.save(entity);
-
-            return appointmentMapper.toDomain(entity);
-        }
-        catch (OptimisticLockingFailureException e) {
-            log.error("Failed to update or save appointment to DB.\n", e);
-            throw new OptimisticLockConflictException(e.getMessage(),e);
-        }
-        catch (Exception e) {
-
-            log.error("Failed to update appointment status to cancel on DB.",e);
-            throw e;
-        }
-    }
-
-    @Override
-    public boolean cancelByStaff(String staffRef, String reason, UUID appointmentId) {
-        return false;
-    }
-
-    @Override
-    public boolean reschedule(UUID appointmentId, UUID newSlotId) {
-        return false;
-    }
-
-    @Override
-    public boolean markAsNoShow(UUID appointmentId) {
-        return false;
-    }
 
     @Override
     public Optional<Appointment> findById(UUID appointmentId) {
@@ -134,10 +106,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     }
 
-    @Override
-    public Collection<Appointment> customerAppointments(String username, AppointmentStatus status) {
-        return List.of();
-    }
+
 
     @Override
     public boolean deleteAppointment(UUID appointmentId) {
@@ -179,4 +148,15 @@ public class AppointmentServiceImpl implements AppointmentService {
             throw e;
         }
     }
+    @Override
+    public Collection<Appointment> getUnAttendedAppointments( LocalDate appointmentDate,  UUID lastProcessedId, int limit){
+        try {
+            Collection<AppointmentEntity> appointments = appointmentRepository.getUnAttendedAppointments(appointmentDate,lastProcessedId,limit);
+            return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("Failed to get appointment from DB.\n", e);
+            throw e;
+        }
+    }
+
 }

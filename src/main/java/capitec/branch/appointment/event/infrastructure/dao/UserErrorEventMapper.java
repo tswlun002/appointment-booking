@@ -2,7 +2,7 @@ package capitec.branch.appointment.event.infrastructure.dao;
 
 
 
-import capitec.branch.appointment.event.domain.UserErrorEvent;
+import capitec.branch.appointment.event.domain.ErrorEvent;
 import capitec.branch.appointment.event.infrastructure.UserEventStatus;
 import org.apache.commons.lang3.StringUtils;
 import org.mapstruct.Mapper;
@@ -11,13 +11,15 @@ import org.mapstruct.Named;
 import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
 
 
+
 @Mapper(componentModel = "spring")
  interface UserErrorEventMapper {
 
-    default UserErrorEvent toModel(UserErrorEventValueEntity entity){
+
+    default  ErrorEvent toModel(UserErrorEventValueEntity entity){
         String value = entity.status().status();
         DEAD_LETTER_STATUS status = StringUtils.isBlank(value) ?null:DEAD_LETTER_STATUS.valueOf(value);
-        return  UserErrorEvent.reconstitute(
+        return  ErrorEvent.reconstitute(
                 entity.eventId(),
                 entity.key(),
                 entity.topic(),
@@ -34,16 +36,14 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
                 status,
                 entity.partition(),
                 entity.offset(),
-                entity.fullname(),
-                entity.username(),
-                entity.email()
+                entity.data()
         );
     }
 
     @Mapping(source = "status", target = "status", qualifiedByName = "mapToStatus")
-    UserErrorEventValueEntity toEntity(UserErrorEvent model);
+    UserErrorEventValueEntity toEntity(ErrorEvent model);
 
-   default UserErrorEventValueEntity toEntityWithNullId(UserErrorEvent model){
+   default UserErrorEventValueEntity toEntityWithNullId(ErrorEvent model){
         UserErrorEventValueEntity entity = toEntity(model);
         return new UserErrorEventValueEntity(
                 null, // explicitly set ID to null
@@ -63,11 +63,11 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
                 entity.traceId(),
                 entity.status(),
                 entity.publishTime(),
-                entity.fullname(),
-                entity.username(),
-                entity.email()
+                entity.data()
         );
     }
+
+
 
     @Named("mapToStatus")
     static UserEventStatus mapToStatus(DEAD_LETTER_STATUS status) {

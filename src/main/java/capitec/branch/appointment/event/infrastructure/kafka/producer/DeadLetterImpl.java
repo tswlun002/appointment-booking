@@ -1,13 +1,19 @@
-package capitec.branch.appointment.event.infrastructure.kafka;
+package capitec.branch.appointment.event.infrastructure.kafka.producer;
 
 import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
+import capitec.branch.appointment.event.domain.ErrorEvent;
 import capitec.branch.appointment.event.domain.UserDeadLetterService;
-import capitec.branch.appointment.event.domain.UserErrorEvent;
+import capitec.branch.appointment.event.infrastructure.kafka.producer.appointment.AppointmentErrorEventMapper;
+import capitec.branch.appointment.event.infrastructure.kafka.producer.user.UserErrorEventMapper;
+import capitec.branch.appointment.event.infrastructure.kafka.producer.user.UserErrorEventValueImpl;
 import capitec.branch.appointment.kafka.app.RetryEventPublisherSchedulerUseCase;
+import capitec.branch.appointment.kafka.appointment.AppointmentErrorEventValue;
 import capitec.branch.appointment.kafka.domain.DeadLetterService;
 import capitec.branch.appointment.kafka.domain.ErrorEventValue;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.errors.SerializationException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -21,7 +27,7 @@ public class DeadLetterImpl implements DeadLetterService<ErrorEventValue> {
 
     @Override
     public void saveDeadLetter(ErrorEventValue value) {
-        UserErrorEvent event = mapToDomain(value);
+        var event = mapToDomain(value);
         userDeadLetterService.saveDeadLetter(event);
     }
 
@@ -36,13 +42,13 @@ public class DeadLetterImpl implements DeadLetterService<ErrorEventValue> {
 
     @Override
     public void updateStatus(ErrorEventValue value) {
-        UserErrorEvent event = mapToDomain(value);
+        var event = mapToDomain(value);
         userDeadLetterService.updateStatus(event);
     }
 
     @Override
     public void markRecovered(ErrorEventValue errorEventValue, Long partition, Long offset) {
-        UserErrorEvent event = mapToDomain(errorEventValue);
+        var event = mapToDomain(errorEventValue);
         event.markRecovered(partition, offset);
         userDeadLetterService.updateStatus(event);
     }
@@ -64,11 +70,19 @@ public class DeadLetterImpl implements DeadLetterService<ErrorEventValue> {
                 });
     }
 
-    private UserErrorEvent mapToDomain(ErrorEventValue value) {
-        if (value instanceof UserErrorEventValueImpl port) {
-            return UserErrorEventMapper.toKafkaErrorEventValue(port);
+    private ErrorEvent mapToDomain(ErrorEventValue value) {
+
+        try {
+            if (value instanceof UserErrorEventValueImpl err) {
+                return UserErrorEventMapper.toKafkaErrorEventValue(err);
+            }
+            if(value instanceof AppointmentErrorEventValue err){
+                return AppointmentErrorEventMapper.toKafkaErrorEventValue(err);
+            }
+            throw new IllegalArgumentException("Unsupported ErrorEventValue type: " + value.getClass());
+        } catch (JsonProcessingException e) {
+                throw new SerializationException("Error converting to ErrorEvent", e);
         }
-        throw new IllegalArgumentException("Unsupported ErrorEventValue type: " + value.getClass());
     }
 
 }

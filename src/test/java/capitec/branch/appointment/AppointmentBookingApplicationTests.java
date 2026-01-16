@@ -192,7 +192,8 @@ public class AppointmentBookingApplicationTests {
             registry.add("spring.kafka.streams.bootstrap-servers", () -> bootstrapServers);
             registry.add("kafka.producer-config.linger-ms", () -> 0);
             registry.add("kafka.error.persistence.enabled", () -> "false");
-            registry.add("kafka.common-config.topic-names", () -> "email-verified-event,registration-event,password-reset-request-event,deleted-user-account-event,deleted-user-account-request-event,complete-registration-event");
+            registry.add("kafka.common-config.topic-names", () -> "email-verified-event,registration-event,password-reset-request-event,deleted-user-account-event,deleted-user-account-request-event,complete-registration-event," +
+                    "appointment-rescheduled,appointment-booked,appointment-canceled,attended-appointment,password-updated-event");
             registry.add("kafka.common-config.replicas", () -> 1);
 
             //Security

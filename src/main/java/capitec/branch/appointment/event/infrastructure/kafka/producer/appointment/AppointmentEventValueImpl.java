@@ -1,28 +1,28 @@
-package capitec.branch.appointment.event.infrastructure.kafka;
+package capitec.branch.appointment.event.infrastructure.kafka.producer.appointment;
 
-import capitec.branch.appointment.kafka.user.UserEventValue;
-import capitec.branch.appointment.kafka.user.UserMetadata;
+import capitec.branch.appointment.kafka.appointment.AppointmentEventValue;
+import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
 
 import java.time.LocalDateTime;
 
-public record UserEventValueImpl(
+public record AppointmentEventValueImpl(
         String eventId,
         String topic,
         String value,
          String traceId,
          LocalDateTime publishTime,
-        UserMetadata metadata
-) implements UserEventValue {
+        AppointmentMetadata metadata
+) implements AppointmentEventValue {
 
     @Override
-    public UserMetadata getMetadata() {
+    public AppointmentMetadata getMetadata() {
         return metadata;
     }
 
 
     @Override
     public String getKey() {
-        return metadata.username();
+        return metadata.id().toString();
     }
 
     @Override

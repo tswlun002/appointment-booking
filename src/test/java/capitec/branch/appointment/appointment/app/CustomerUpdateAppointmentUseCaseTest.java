@@ -4,6 +4,8 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.appointment.app.dto.CustomerCanceledAppointmentEvent;
+import capitec.branch.appointment.appointment.app.dto.CustomerRescheduledAppointmentEvent;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.SlotStatus;

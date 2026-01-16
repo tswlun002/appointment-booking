@@ -38,57 +38,13 @@ record UserErrorEventValueEntity(
     UserEventStatus status,
     @Column("published_time")
     LocalDateTime publishTime,
-    String fullname,
-    String username,
-    String email
+    String data
 
     
 ){
     public  UserErrorEventValueEntity (String entityId, UserErrorEventValueEntity entity){
         this(entityId,entity.key(),entity.value(),entity.topic(),entity.partition(),entity.offset(),entity.headers(),
                 entity.retryable(),entity.retryCount(),entity.nextRetryAt(),entity.exception(),entity.exceptionClass(),entity.exceptionCause(),
-                entity.stackTrace(),entity.traceId(),entity.status(),entity.publishTime(),entity.fullname(),entity.username(),
-                entity.email());
+                entity.stackTrace(),entity.traceId(),entity.status(),entity.publishTime(),entity.data);
     }
-//
-//    public void setRetryCount(int count) {
-//        Assert.isTrue(count >= 0, "Retry count must be non-negative");
-//        this.retryCount = count;
-//    }
-//
-//    public void markRecovered(Long partition, Long offset) {
-//        Assert.notNull(partition, "Partition must not be null when marking as recovered");
-//        Assert.notNull(offset, "Offset must not be null when marking as recovered");
-//        Assert.isTrue(partition >= 0, "Partition must be non-negative");
-//        Assert.isTrue(offset >= 0, "Offset must be non-negative");
-//
-//        this.status = new UserEventStatus(DEAD_LETTER_STATUS.RECOVERED.name());
-//        this.partition = partition;
-//        this.offset = offset;
-//    }
-//
-//    public void markFailed() {
-//        this.retryable = false;
-//        this.status = new UserEventStatus(DEAD_LETTER_STATUS.DEAD.name());
-//    }
-//
-//    public void markPending(LocalDateTime nextRetryAt) {
-//        Assert.notNull(nextRetryAt, "Next retry time must not be null");
-//        Assert.isTrue(nextRetryAt.isAfter(LocalDateTime.now()),
-//                "Next retry time must be in the future");
-//
-//        this.nextRetryAt = nextRetryAt;
-//    }
-//
-//    public void scheduleNextRetry(LocalDateTime nextRetryAt) {
-//        Assert.notNull(nextRetryAt, "Next retry time must not be null");
-//
-//        incrementRetry();
-//        markPending(nextRetryAt);
-//    }
-
-    // Copy constructor
-
-
-
 }

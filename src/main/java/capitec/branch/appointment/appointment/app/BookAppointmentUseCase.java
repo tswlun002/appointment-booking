@@ -4,11 +4,11 @@ import capitec.branch.appointment.appointment.app.port.UpdateSlotStatePort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
+import capitec.branch.appointment.appointment.app.dto.AppointmentBookedEvent;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
@@ -23,8 +23,8 @@ import java.time.LocalDateTime;
 public class BookAppointmentUseCase {
 
     private final AppointmentService appointmentService;
-    private final ApplicationEventPublisher publisher;
     private final UpdateSlotStatePort updateSlotStatePort;
+    private final AppointmentEventService appointmentEventService;
 
 
     @Transactional
@@ -75,10 +75,11 @@ public class BookAppointmentUseCase {
                 appointment.getCustomerUsername(),
                 dto.day(),
                 dto.startTime(),
-                dto.endTime()
+                dto.endTime(),
+                LocalDateTime.now()
         );
         log.info("Appointment booked: {}", event);
-        publisher.publishEvent(event);
+        appointmentEventService.publishEvent(event);
 
     }
 

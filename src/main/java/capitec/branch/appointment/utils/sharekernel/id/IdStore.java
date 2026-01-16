@@ -1,4 +1,4 @@
-package capitec.branch.appointment.utils;
+package capitec.branch.appointment.utils.sharekernel.id;
 
 import lombok.Getter;
 import lombok.Setter;

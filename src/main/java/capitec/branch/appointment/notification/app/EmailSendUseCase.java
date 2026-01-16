@@ -41,7 +41,7 @@ public class EmailSendUseCase   {
 
         var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(), event.OTPCode(), hostEmail);
         String subject = getSubject(event.eventType());
-        notificationService.sendOTPEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
+        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
 
     }
     private final Function<String,String> readFile =(path)->{
@@ -55,16 +55,16 @@ public class EmailSendUseCase   {
 
         log.info("Sending confirmation email, traceId:{}", event.traceId());
 
-        var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(),null, hostEmail);
-        String subject = getSubject(event.eventType());
-        notificationService.sendOTPEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
+        var emailTemplateHTML = getEmailTemplate(event.userEventType(), event.fullname(),null, hostEmail);
+        String subject = getSubject(event.userEventType());
+        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
 
 
     }
 
-    private  String getSubject(Notification.EventType eventType) {
+    private  String getSubject(Notification.UserEventType userEventType) {
 
-        return   switch (eventType){
+        return   switch (userEventType){
             case REGISTRATION_EVENT -> "Verification email";
             case  EMAIL_VERIFIED_EVENT ->"Email verified";
             case COMPLETE_REGISTRATION_EVENT -> "Welcome VarsityBlock";
@@ -80,9 +80,9 @@ public class EmailSendUseCase   {
      *  Replace the placeholder string with value.
      *  Use replacement on otp placeholder because it might have a regex pattern that causes error.
      */
-    private  String getEmailTemplate(Notification.EventType eventType, String fullname, String value, String hostEmail) throws MessagingException {
+    private  String getEmailTemplate(Notification.UserEventType userEventType, String fullname, String value, String hostEmail) throws MessagingException {
 
-      return   switch (eventType){
+      return   switch (userEventType){
           case REGISTRATION_EVENT -> {
                 String emailTemplate = readFile.apply("/email/registration.html");
                 yield  emailTemplate.replaceAll("user_full_name",fullname).replace("block_otp_var",value).replaceAll("block_email_var", hostEmail) ;

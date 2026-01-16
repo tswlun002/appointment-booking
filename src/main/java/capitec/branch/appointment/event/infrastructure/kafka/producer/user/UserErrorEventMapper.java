@@ -1,17 +1,19 @@
-package capitec.branch.appointment.event.infrastructure.kafka;
+package capitec.branch.appointment.event.infrastructure.kafka.producer.user;
 
-import capitec.branch.appointment.event.domain.UserErrorEvent;
+import capitec.branch.appointment.event.domain.ErrorEvent;
 import capitec.branch.appointment.kafka.domain.ErrorEventValue;
 import capitec.branch.appointment.kafka.user.UserErrorEventValue;
+import capitec.branch.appointment.utils.EventToJSONMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 public class UserErrorEventMapper {
 
 
-    public static ErrorEventValue toKafkaErrorEventValue(UserErrorEvent event) {
+    public static ErrorEventValue toKafkaErrorEventValue(ErrorEvent event) {
         return  new UserErrorEventValueImpl(event);
     }
-    public static UserErrorEvent toKafkaErrorEventValue(UserErrorEventValue event) {
-        return  UserErrorEvent.create(
+    public static ErrorEvent toKafkaErrorEventValue(UserErrorEventValue event) throws JsonProcessingException {
+        return  ErrorEvent.create(
                 event.getEventId(),
                 event.getKey(),
                 event.getTopic(),
@@ -25,9 +27,7 @@ public class UserErrorEventMapper {
                 event.isRetryable(),
                 event.getPartition(),
                 event.getOffset(),
-                event.getFullname(),
-                event.getUsername(),
-                event.getEmail()
+                EventToJSONMapper.getMapper().writeValueAsString(event.getMetadata())
         );
     }
 }
