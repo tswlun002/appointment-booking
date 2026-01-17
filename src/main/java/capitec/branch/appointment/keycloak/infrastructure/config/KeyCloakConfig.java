@@ -1,4 +1,4 @@
-package capitec.branch.appointment.keycloak.config;
+package capitec.branch.appointment.keycloak.infrastructure.config;
 
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
@@ -99,15 +99,9 @@ public class KeyCloakConfig {
     @Bean
     public RestClient restClient() {
 
-
         return RestClient.builder()
                 .requestFactory(new HttpComponentsClientHttpRequestFactory())
-                // .messageConverters(converters -> converters.add(new MyCustomMessageConverter()))
                 .baseUrl(authServerUrl)
-                //.defaultUriVariables(Map.of("variable", "foo"))
-                //.defaultHeader("bearer", adminClientSecret)
-                //.requestInterceptor(myCustomInterceptor)
-                //.requestInitializer(myCustomInitializer)
                 .build();
     }
 
@@ -116,11 +110,6 @@ public class KeyCloakConfig {
     public RestClient restClient1() {
         return RestClient.builder()
                 .requestFactory(new HttpComponentsClientHttpRequestFactory())
-                // .messageConverters(converters -> converters.add(new MyCustomMessageConverter()))
-                //.defaultUriVariables(Map.of("variable", "foo"))
-                //.defaultHeader("bearer", adminClientSecret)
-                //.requestInterceptor(myCustomInterceptor)
-                //.requestInitializer(myCustomInitializer)
                 .build();
     }
 
