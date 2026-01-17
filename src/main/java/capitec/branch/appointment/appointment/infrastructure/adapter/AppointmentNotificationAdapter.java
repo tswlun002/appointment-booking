@@ -1,6 +1,7 @@
 package capitec.branch.appointment.appointment.infrastructure.adapter;
 
 import capitec.branch.appointment.appointment.app.AppointmentEventService;
+import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.event.app.port.AppointmentEventPort;
 import capitec.branch.appointment.appointment.app.dto.AppointmentBookedEvent;
 import capitec.branch.appointment.appointment.app.dto.AppointmentStateChangedEvent;
@@ -8,6 +9,8 @@ import capitec.branch.appointment.appointment.app.dto.CustomerCanceledAppointmen
 import capitec.branch.appointment.appointment.app.dto.CustomerRescheduledAppointmentEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -31,16 +34,30 @@ public class AppointmentNotificationAdapter implements AppointmentEventService {
 
     @Override
     public void publishEvent(AppointmentStateChangedEvent event) {
-        appointmentEventPort.publishEventAttendAppointment(
-                event.appointmentId(),
-                event.appointmentReference(),
-                event.customerUsername(),
-                event.branchId(),
-                event.fromState(),
-                event.toState(),
-                event.triggeredBy().name(),
-                event.occurredAt()
-        );
+        if (event.toState() == AppointmentStatus.CANCELLED) {
+            appointmentEventPort.publishEventCustomerCancelAppointment(
+                    event.appointmentId(),
+                    event.appointmentReference(),
+                    event.customerUsername(),
+                    event.branchId(),
+                    event.fromState(),
+                    event.toState(),
+                    event.triggeredBy().name(),
+                    event.occurredAt()
+            );
+        }
+        else {
+            appointmentEventPort.publishEventAttendAppointment(
+                    event.appointmentId(),
+                    event.appointmentReference(),
+                    event.customerUsername(),
+                    event.branchId(),
+                    event.fromState(),
+                    event.toState(),
+                    event.triggeredBy().name(),
+                    event.occurredAt()
+            );
+        }
     }
 
     @Override

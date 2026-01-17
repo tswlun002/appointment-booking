@@ -55,8 +55,8 @@ public class EmailSendUseCase   {
 
         log.info("Sending confirmation email, traceId:{}", event.traceId());
 
-        var emailTemplateHTML = getEmailTemplate(event.userEventType(), event.fullname(),null, hostEmail);
-        String subject = getSubject(event.userEventType());
+        var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(),null, hostEmail);
+        String subject = getSubject(event.eventType());
         notificationService.sendEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
 
 

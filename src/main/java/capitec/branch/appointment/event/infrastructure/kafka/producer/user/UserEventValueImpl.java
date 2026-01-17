@@ -50,5 +50,10 @@ public record UserEventValueImpl(
         return publishTime();
     }
 
+    @Override
+    public String getSource() {
+        return "User context";
+    }
+
 
 }

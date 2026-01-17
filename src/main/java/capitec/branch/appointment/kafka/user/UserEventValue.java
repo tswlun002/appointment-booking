@@ -11,6 +11,6 @@ public interface UserEventValue extends ExtendedEventValue<UserMetadata> {
        return getMetadata().email();
    }
     default String getUsername(){
-       return getMetadata().fullname();
+       return getMetadata().username();
     }
 }

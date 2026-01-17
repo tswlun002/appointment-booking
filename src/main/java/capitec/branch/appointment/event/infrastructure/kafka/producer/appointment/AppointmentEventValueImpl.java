@@ -2,9 +2,11 @@ package capitec.branch.appointment.event.infrastructure.kafka.producer.appointme
 
 import capitec.branch.appointment.kafka.appointment.AppointmentEventValue;
 import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import java.time.LocalDateTime;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record AppointmentEventValueImpl(
         String eventId,
         String topic,
@@ -16,13 +18,13 @@ public record AppointmentEventValueImpl(
 
     @Override
     public AppointmentMetadata getMetadata() {
-        return metadata;
+        return metadata();
     }
 
 
     @Override
     public String getKey() {
-        return metadata.id().toString();
+        return metadata().id().toString();
     }
 
     @Override
@@ -42,12 +44,16 @@ public record AppointmentEventValueImpl(
 
     @Override
     public String getEventId() {
-        return traceId();
+        return eventId();
     }
 
     @Override
     public LocalDateTime getPublishTime() {
         return publishTime();
+    }
+    @Override
+    public  String getSource() {
+        return "Appointment context";
     }
 
 

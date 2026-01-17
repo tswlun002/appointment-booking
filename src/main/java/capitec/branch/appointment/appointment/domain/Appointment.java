@@ -368,6 +368,10 @@ public class Appointment {
 
     // --- Query Methods ---
 
+    public  boolean isRescheduled() {
+        return getPreviousSlotId() !=null ;
+    }
+
     public boolean canBeCancelledByCustomer(LocalDateTime currentTime) {
         if (currentTime == null) {
             throw new IllegalArgumentException("Current time cannot be null");

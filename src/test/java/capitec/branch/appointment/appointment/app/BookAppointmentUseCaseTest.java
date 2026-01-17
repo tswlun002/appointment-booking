@@ -1,20 +1,43 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.event.app.Topics;
+import capitec.branch.appointment.event.infrastructure.kafka.producer.appointment.AppointmentEventValueImpl;
+import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
+import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
 import capitec.branch.appointment.slots.app.GetSlotQuery;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
@@ -28,16 +51,42 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     private BookAppointmentUseCase bookAppointmentUseCase;
     @Autowired
     private GetUserQuery getUserQuery;
-    @Autowired
-    private AppointEventListenerTest appointmentEventListenerTest;
     private AppointmentDTO validAppointmentDTO;
     @Autowired
     private GetSlotQuery getSlotQuery;
+    private Consumer<String, String> testConsumer;
+
+
+
+    @BeforeEach
+    void setup() {
+        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(
+                kafkaContainer.getBootstrapServers(), "test-group", "true");
+
+        // Explicitly set deserializers to String
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class);
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class);
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        DefaultKafkaConsumerFactory<String, String> cf =
+                new DefaultKafkaConsumerFactory<>(consumerProps);
+        testConsumer = cf.createConsumer();
+        testConsumer.subscribe(List.of(Topics.APPOINTMENT_BOOKED));
+    }
+    @AfterEach
+    void tearDown() {
+        if (testConsumer != null) {
+            testConsumer.close();
+        }
+    }
+
 
 
     @Test
     @DisplayName("Should execute successfully and publish event with real beans")
-    void shouldExecuteSuccessfullyAndPublishEvent() {
+    void shouldExecuteSuccessfullyAndPublishEvent() throws JsonProcessingException {
 
         List<Slot> ListOneSlotADay = slots.stream().collect(Collectors.groupingBy(Slot::getDay)).values().stream().map(List::getFirst).toList();
         for (Slot slot : ListOneSlotADay) {
@@ -49,22 +98,51 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
             String serviceType = "Deposit";
 
-            validAppointmentDTO = new AppointmentDTO(slot.getId(), branchId, user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
+            validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
 
             // 2. Execute the Use Case
-            boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
+            var result = bookAppointmentUseCase.execute(validAppointmentDTO) ;
 
             // 3. Assertions
-            assertTrue(result, "The execution should return true on successful event publication.");
+            assertNotNull(result, "The execution should return true on successful event publication.");
 
-            var bookedEvent = appointmentEventListenerTest.bookedEvent2;
-            assertThat(bookedEvent).isNotNull();
-            assertThat(bookedEvent.reference()).isNotNull();
-            assertThat(bookedEvent.day()).isEqualTo(slot.getDay());
-            assertThat(bookedEvent.startTime()).isEqualTo(slot.getStartTime());
-            assertThat(bookedEvent.endTime()).isEqualTo(slot.getEndTime());
-            assertThat(bookedEvent.branchId()).isEqualTo(branch.getBranchId());
-            assertThat(bookedEvent.customerUsername()).isEqualTo(user.getUsername());
+            // Poll for Kafka event (CORRECT TOPIC)
+            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+                    testConsumer,
+                    Duration.ofSeconds(10)
+            );
+            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
+                    .reduce((first, second) ->
+                            second.key().equals(result.getId().toString()) &&  second.timestamp()>first.timestamp()?second:first)
+                    .orElseThrow(() -> new AssertionError("No records found"));
+
+            // Assertions on Kafka event
+            assertThat(received).isNotNull();
+            assertThat(received.key()).isNotNull();
+            String value = received.value();
+            assertThat(value).isNotNull();
+
+            ObjectMapper mapper = EventToJSONMapper.getMapper();
+
+            ExtendedEventValue<AppointmentMetadata> extendedEventValue = mapper.readValue(value, AppointmentEventValueImpl.class);
+            assertThat(extendedEventValue).isNotNull();
+            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            assertThat(metadata).isNotNull();
+            assertThat(metadata.branchId()).isEqualTo(branch.getBranchId());
+            assertThat(metadata.customerUsername()).isEqualTo(user.getUsername());
+            Map<String, Object> stringObjectMap = metadata.otherData();
+
+            var startTime =  mapper.convertValue( stringObjectMap.get("startTime"),LocalTime.class);
+            assertThat(startTime).isNotNull().isEqualTo(slot.getStartTime());
+            var endTime =  mapper.convertValue( stringObjectMap.get("endTime"),LocalTime.class);
+            assertThat(endTime).isNotNull().isEqualTo(slot.getEndTime());
+            var day =  mapper.convertValue(stringObjectMap.get("day"), LocalDate.class);
+            assertThat(day).isNotNull().isEqualTo(slot.getDay());
+            Optional<Appointment> byId = appointmentService.findById(metadata.id());
+            assertThat(byId).isPresent();
+            assertThat(byId.get().getReference()).isEqualTo(metadata.reference());
+            assertThat(extendedEventValue.getSource()).isNotNull().isEqualTo("Appointment context");
+
 
             //VERIFY slot booking
             Slot bookedSlot = getSlotQuery.execute(slot.getId());
@@ -89,32 +167,40 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
 
         // 2. Execute the Use Case
-        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
-        assertThat(result).isTrue();
-        var bookedEvent = appointmentEventListenerTest.bookedEvent2;
-        assertThat(bookedEvent).isNotNull();
-        assertThat(bookedEvent.reference()).isNotNull();
-        assertThat(bookedEvent.day()).isEqualTo(slot.getDay());
-        assertThat(bookedEvent.startTime()).isEqualTo(slot.getStartTime());
-        assertThat(bookedEvent.endTime()).isEqualTo(slot.getEndTime());
-        assertThat(bookedEvent.branchId()).isEqualTo(branch.getBranchId());
-        assertThat(bookedEvent.customerUsername()).isEqualTo(user.getUsername());
+        var result = bookAppointmentUseCase.execute(validAppointmentDTO);
+        assertThat(result).isNotNull();
+        // 2. Poll for records (wait up to 10 seconds)
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+                testConsumer,
+                Duration.ofSeconds(10)
+        );
+        Appointment finalResult = result;
+        ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
+                .reduce((first, second) ->
+                        second.key().equals(finalResult.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
+                .orElseThrow(() -> new AssertionError("No records found"));
+        // 3. Assertions
+        assertThat(received).isNotNull();
+        assertThat(received.key()).isNotNull();
+        String value = received.value();
+        assertThat(value).isNotNull();
 
 
         // Another user pick same slot
         AppointmentDTO appointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        result = bookAppointmentUseCase.execute(appointmentDTO) !=null;
+        result = bookAppointmentUseCase.execute(appointmentDTO) ;
         user = getUserQuery.execute(new UsernameCommand(guestClients.get(1)));
-        assertThat(result).isTrue();
-         bookedEvent = appointmentEventListenerTest.bookedEvent2;
-        assertThat(bookedEvent).isNotNull();
-        assertThat(bookedEvent.reference()).isNotNull();
-        assertThat(bookedEvent.day()).isEqualTo(slot.getDay());
-        assertThat(bookedEvent.startTime()).isEqualTo(slot.getStartTime());
-        assertThat(bookedEvent.endTime()).isEqualTo(slot.getEndTime());
-        assertThat(bookedEvent.branchId()).isEqualTo(branch.getBranchId());
-        assertThat(bookedEvent.customerUsername()).isEqualTo(user.getUsername());
-
+        assertThat(result).isNotNull();
+        Appointment finalResult1 = result;
+        received = StreamSupport.stream(records.spliterator(), false)
+                .reduce((first, second) ->
+                        second.key().equals(finalResult1.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
+                .orElseThrow(() -> new AssertionError("No records found"));
+        // 3. Assertions
+        assertThat(received).isNotNull();
+        assertThat(received.key()).isNotNull();
+         value = received.value();
+        assertThat(value).isNotNull();
         //VERIFY slot booking
         Slot bookedSlot = getSlotQuery.execute(slot.getId());
         assertThat(bookedSlot).isNotNull();
@@ -139,17 +225,41 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
         // 1. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
-        assertThat(result).isTrue();
-        var bookedEvent = appointmentEventListenerTest.bookedEvent;
-        assertThat(bookedEvent).isNotNull();
+        var result = bookAppointmentUseCase.execute(validAppointmentDTO) ;
+        assertThat(result).isNotNull();
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+                testConsumer,
+                Duration.ofSeconds(10)
+        );
+        Appointment finalResult1 = result;
+        ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
+                .reduce((first, second) ->
+                        second.key().equals(finalResult1.getId().toString()) && second.timestamp()>first.timestamp()?second:first)
+                .orElseThrow(() -> new AssertionError("No records found"));
+        // 3. Assertions
+        assertThat(received).isNotNull();
+        assertThat(received.key()).isNotNull();
+        String value = received.value();
+        assertThat(value).isNotNull();
 
         // 2. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
-        assertThat(result).isTrue();
-        bookedEvent = appointmentEventListenerTest.bookedEvent;
-        assertThat(bookedEvent).isNotNull();
+        result = bookAppointmentUseCase.execute(validAppointmentDTO);
+        assertThat(result).isNotNull();
+        records = KafkaTestUtils.getRecords(
+                testConsumer,
+                Duration.ofSeconds(10)
+        );
+        Appointment finalResult = result;
+        received = StreamSupport.stream(records.spliterator(), false)
+                .reduce((first, second) ->
+                        second.key().equals(finalResult.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
+                .orElseThrow(() -> new AssertionError("No records found"));
+        // 3. Assertions
+        assertThat(received).isNotNull();
+        assertThat(received.key()).isNotNull();
+         value = received.value();
+        assertThat(value).isNotNull();
 
         // 3. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(2), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
@@ -182,10 +292,21 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
         // 1. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
-        boolean result = bookAppointmentUseCase.execute(validAppointmentDTO) !=null;
-        assertThat(result).isTrue();
-        var bookedEvent = appointmentEventListenerTest.bookedEvent;
-        assertThat(bookedEvent).isNotNull();
+        var bookedAppointment = bookAppointmentUseCase.execute(validAppointmentDTO) ;
+        assertThat(bookedAppointment).isNotNull();
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+                testConsumer,
+                Duration.ofSeconds(10)
+        );
+        ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
+                .reduce((first, second) ->
+                        second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
+                .orElseThrow(() -> new AssertionError("No records found"));
+        // 3. Assertions
+        assertThat(received).isNotNull();
+        assertThat(received.key()).isNotNull();
+        String value = received.value();
+        assertThat(value).isNotNull();
 
         // 2. Execute the Use Case
         Slot secondSlotToBookAtSameDay = slots.get(1);

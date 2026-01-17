@@ -4,24 +4,39 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.appointment.app.dto.CustomerCanceledAppointmentEvent;
-import capitec.branch.appointment.appointment.app.dto.CustomerRescheduledAppointmentEvent;
+import capitec.branch.appointment.event.app.Topics;
+import capitec.branch.appointment.event.infrastructure.kafka.producer.appointment.AppointmentEventValueImpl;
+import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
+import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
+import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
+import capitec.branch.appointment.utils.sharekernel.EventTrigger;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.assertj.core.api.AssertionsForClassTypes;
+import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.web.server.ResponseStatusException;
-
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 
 import static capitec.branch.appointment.appointment.domain.AppointmentStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,14 +58,12 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
     private AppointmentService appointmentService;
 
     @Autowired
-    private AppointEventListenerTest appointmentEventListenerTest;
-
-    @Autowired
     private SlotService slotService;
 
     private Appointment bookedAppointment;
     private User customer;
     private Slot slot;
+    private Consumer<String, String> testConsumer;
 
     @BeforeEach
     void setUpAppointment() {
@@ -75,7 +88,29 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
                 slot.getDay(),
                 customer.getUsername()
         ).orElseThrow();
+
+        Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(
+                kafkaContainer.getBootstrapServers(), "test-group", "true");
+
+        // Explicitly set deserializers to String
+        consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class);
+        consumerProps.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class);
+        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        DefaultKafkaConsumerFactory<String, String> cf =
+                new DefaultKafkaConsumerFactory<>(consumerProps);
+        testConsumer = cf.createConsumer();
+        testConsumer.subscribe(List.of(Topics.APPOINTMENT_RESCHEDULED,Topics.APPOINTMENT_CANCELED));
     }
+    @AfterEach
+    void tearDown() {
+        if (testConsumer != null) {
+            testConsumer.close();
+        }
+    }
+
 
     @Nested
     @DisplayName("Cancel Appointment Tests")
@@ -105,7 +140,7 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should publish CustomerCanceledAppointmentEvent on cancel")
-        void shouldPublishCanceledEvent() {
+        void shouldPublishCanceledEvent() throws JsonProcessingException {
             var action = new CustomerUpdateAppointmentAction.Cancel(
                     bookedAppointment.getId(),
                     customer.getUsername()
@@ -113,10 +148,43 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
             customerUpdateAppointmentUseCase.execute(action);
 
-            CustomerCanceledAppointmentEvent event = appointmentEventListenerTest.canceledEvent;
-            assertThat(event).isNotNull();
-            assertThat(event.appointmentId()).isEqualTo(bookedAppointment.getId());
-            assertThat(event.customerUsername()).isEqualTo(customer.getUsername());
+//
+            // Poll for Kafka event (CORRECT TOPIC)
+            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+                    testConsumer,
+                    Duration.ofSeconds(10)
+            );
+            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
+                    .reduce((first, second) ->
+                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
+                    .orElseThrow(() -> new AssertionError("No records found"));
+
+            // Assertions on Kafka event
+            AssertionsForClassTypes.assertThat(received).isNotNull();
+            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
+            String value = received.value();
+            AssertionsForClassTypes.assertThat(value).isNotNull();
+
+            ObjectMapper mapper = EventToJSONMapper.getMapper();
+
+            ExtendedEventValue<AppointmentMetadata> extendedEventValue = mapper.readValue(value, AppointmentEventValueImpl.class);
+            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
+            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            AssertionsForClassTypes.assertThat(metadata).isNotNull();
+            assertThat(metadata.id()).isEqualTo(bookedAppointment.getId());
+            AssertionsForClassTypes.assertThat(metadata.branchId()).isEqualTo(bookedAppointment.getBranchId());
+            AssertionsForClassTypes.assertThat(metadata.customerUsername()).isEqualTo(bookedAppointment.getCustomerUsername());
+            assertThat(metadata.createdAt().toLocalDate()).isEqualTo(LocalDate.now());
+            Map<String, Object> stringObjectMap = metadata.otherData();
+            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggerBy"), String.class);
+            assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.CUSTOMER.name());
+            var fromState =  mapper.convertValue(stringObjectMap.get("fromState"), String.class);
+            assertThat(fromState).isNotNull().isEqualTo(BOOKED.name());
+            var toState =  mapper.convertValue(stringObjectMap.get("toState"), String.class);
+            assertThat(toState).isNotNull().isEqualTo(CANCELLED.name());
+            AssertionsForClassTypes.assertThat(bookedAppointment.getReference()).isEqualTo(metadata.reference());
+            AssertionsForClassTypes.assertThat(extendedEventValue.getSource()).isNotNull().isEqualTo("Appointment context");
+
         }
 
         @Test
@@ -230,7 +298,7 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should publish CustomerRescheduledAppointmentEvent on reschedule")
-        void shouldPublishRescheduledEvent() {
+        void shouldPublishRescheduledEvent() throws JsonProcessingException {
             Slot newSlot = slots.get(1);
             LocalDateTime newDateTime = LocalDateTime.of(newSlot.getDay(), newSlot.getStartTime());
 
@@ -243,9 +311,43 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
             customerUpdateAppointmentUseCase.execute(action);
 
-            CustomerRescheduledAppointmentEvent event = appointmentEventListenerTest.rescheduledEvent;
-            assertThat(event).isNotNull();
-            assertThat(event.appointmentId()).isEqualTo(bookedAppointment.getId());
+
+            // Poll for Kafka event (CORRECT TOPIC)
+            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+                    testConsumer,
+                    Duration.ofSeconds(10)
+            );
+            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
+                    .reduce((first, second) ->
+                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
+                    .orElseThrow(() -> new AssertionError("No records found"));
+
+            // Assertions on Kafka event
+            AssertionsForClassTypes.assertThat(received).isNotNull();
+            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
+            String value = received.value();
+            AssertionsForClassTypes.assertThat(value).isNotNull();
+
+            ObjectMapper mapper = EventToJSONMapper.getMapper();
+
+            ExtendedEventValue<AppointmentMetadata> extendedEventValue = mapper.readValue(value, AppointmentEventValueImpl.class);
+            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
+            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            AssertionsForClassTypes.assertThat(metadata).isNotNull();
+            assertThat(metadata.id()).isEqualTo(bookedAppointment.getId());
+            AssertionsForClassTypes.assertThat(metadata.branchId()).isEqualTo(bookedAppointment.getBranchId());
+            AssertionsForClassTypes.assertThat(metadata.customerUsername()).isEqualTo(bookedAppointment.getCustomerUsername());
+            assertThat(metadata.createdAt().toLocalDate()).isEqualTo(LocalDate.now());
+            Map<String, Object> stringObjectMap = metadata.otherData();
+            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggerBy"), String.class);
+            assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.CUSTOMER.name());
+            var fromState =  mapper.convertValue(stringObjectMap.get("fromState"), String.class);
+            assertThat(fromState).isNotNull().isEqualTo(BOOKED.name());
+            var toState =  mapper.convertValue(stringObjectMap.get("toState"), String.class);
+            assertThat(toState).isNotNull().isEqualTo(BOOKED.name());
+            AssertionsForClassTypes.assertThat(bookedAppointment.getReference()).isEqualTo(metadata.reference());
+            AssertionsForClassTypes.assertThat(extendedEventValue.getSource()).isNotNull().isEqualTo("Appointment context");
+
         }
 
         @Test

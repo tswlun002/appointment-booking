@@ -8,24 +8,23 @@ import java.util.Map;
 import java.util.UUID;
 
 public interface AppointmentEventValue extends ExtendedEventValue<AppointmentMetadata> {
-    default UUID id() {
+    default UUID getId() {
         return getMetadata().id();
     }
 
-    default String branchId() {
+    default String getBranchId() {
         return getMetadata().branchId();
     }
 
-    default String customerUsername() {
+    default String getCustomerUsername() {
         return getMetadata().customerUsername();
     }
 
-    default LocalDateTime createdAt(){
+    default LocalDateTime getCreatedAt(){
         return getMetadata().createdAt();
     }
 
-    default String reference(){
+    default String getReference(){
         return getMetadata().reference();
     }
-    default Map<String, Object> otherData(){return getMetadata().otherData();}
 }

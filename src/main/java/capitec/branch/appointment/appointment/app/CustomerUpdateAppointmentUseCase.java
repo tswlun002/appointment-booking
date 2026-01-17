@@ -76,7 +76,7 @@ public class CustomerUpdateAppointmentUseCase {
                         appointment.getReference(),
                         appointment.getCustomerUsername(),
                         previousState,
-                        AppointmentStatus.RESCHEDULED,
+                        AppointmentStatus.BOOKED,
                         appointment.getBranchId(),
                         EventTrigger.CUSTOMER,
                         LocalDateTime.now()

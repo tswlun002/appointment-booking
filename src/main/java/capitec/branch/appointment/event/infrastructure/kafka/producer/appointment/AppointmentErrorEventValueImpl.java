@@ -3,7 +3,7 @@ package capitec.branch.appointment.event.infrastructure.kafka.producer.appointme
 import capitec.branch.appointment.event.domain.ErrorEvent;
 import capitec.branch.appointment.kafka.appointment.AppointmentErrorEventValue;
 import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
-import capitec.branch.appointment.utils.EventToJSONMapper;
+import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.time.LocalDateTime;

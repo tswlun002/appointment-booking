@@ -7,5 +7,4 @@ public enum AppointmentStatus {
     COMPLETED,        // Service completed
     CANCELLED,        // Appointment cancelled by customer or staff
     NO_SHOW,          // Customer did not arrive
-    RESCHEDULED       // Customer rescheduled to another slot
 }

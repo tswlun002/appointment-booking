@@ -57,6 +57,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     protected List<Slot> slots;
     protected  String branchId;
 
+
     //SLOT
     protected final LocalDate TODAY = LocalDate.now().plusDays(1);
     protected final LocalDate TOMORROW = LocalDate.now().plusDays(2);

@@ -5,6 +5,7 @@ import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.event.domain.RecordStatus;
 import capitec.branch.appointment.event.domain.UserDeadLetterService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
+import capitec.branch.appointment.kafka.user.UserErrorEventValue;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
@@ -210,7 +211,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         otp = otpService.find(user.getUsername(),otp.getCode()).orElseThrow();
         assertThat(otp.getStatus()).isEqualTo(new OTPStatus(OTPSTATUSENUM.REVOKED.name()));
         var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE).stream();
-        assertThat(failedRecord.noneMatch(r -> r.getTraceId().equals(traceId) &&
+        assertThat(failedRecord.map(r->(UserErrorEventValue)r).noneMatch(r -> r.getTraceId().equals(traceId) &&
                 r.getUsername().equals(String.valueOf(user.getUsername()))
                 && r.getEmail().equals(user.getEmail()))).isTrue();
     }
