@@ -150,14 +150,11 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
 //
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
 
             // Assertions on Kafka event
             AssertionsForClassTypes.assertThat(received).isNotNull();
@@ -313,14 +310,11 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
 
             // Assertions on Kafka event
             AssertionsForClassTypes.assertThat(received).isNotNull();

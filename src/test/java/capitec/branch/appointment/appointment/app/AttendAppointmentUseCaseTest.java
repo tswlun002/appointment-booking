@@ -133,14 +133,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(updated.getStatus()).isEqualTo(CHECKED_IN);
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
 
             // Assertions on Kafka event
             AssertionsForClassTypes.assertThat(received).isNotNull();
@@ -229,14 +226,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(updated.getStatus()).isEqualTo(IN_PROGRESS);
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
 
 
             assertThat(records).isNotEmpty();
@@ -329,16 +323,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
-
-
 
             // Assertions on Kafka event
             AssertionsForClassTypes.assertThat(received).isNotNull();
@@ -379,15 +368,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
-
 
             // Assertions on Kafka event
             AssertionsForClassTypes.assertThat(received).isNotNull();
@@ -436,15 +421,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
              updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    bookedAppointment.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) -> second.key().equals(bookedAppointment.getId().toString()) && second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
-
-
             // Assertions on Kafka event
             AssertionsForClassTypes.assertThat(received).isNotNull();
             AssertionsForClassTypes.assertThat(received.key()).isNotNull();

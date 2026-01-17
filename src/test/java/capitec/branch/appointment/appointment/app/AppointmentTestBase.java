@@ -17,20 +17,26 @@ import capitec.branch.appointment.staff.domain.StaffService;
 import capitec.branch.appointment.staff.domain.StaffStatus;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UsernameGenerator;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-
+import org.springframework.kafka.test.utils.KafkaTestUtils;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Base class for all Slot Use Case tests.
@@ -223,4 +229,18 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
 
     }
+
+    protected ConsumerRecord<String, String> getLatestRecordForKey(
+            Consumer<String, String> consumer,
+            String key,
+            Duration timeout) {
+
+        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, timeout);
+
+        return StreamSupport.stream(records.spliterator(), false)
+                .filter(record -> key.equals(record.key()))
+                .max(Comparator.comparingLong(ConsumerRecord::timestamp))
+                .orElseThrow(() -> new AssertionError("No matching record found for key: " + key));
+    }
+
 }

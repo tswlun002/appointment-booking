@@ -107,14 +107,11 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             assertNotNull(result, "The execution should return true on successful event publication.");
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+            ConsumerRecord<String, String> received = getLatestRecordForKey(
                     testConsumer,
+                    result.getId().toString(),
                     Duration.ofSeconds(10)
             );
-            ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                    .reduce((first, second) ->
-                            second.key().equals(result.getId().toString()) &&  second.timestamp()>first.timestamp()?second:first)
-                    .orElseThrow(() -> new AssertionError("No records found"));
 
             // Assertions on Kafka event
             assertThat(received).isNotNull();
@@ -170,15 +167,11 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         var result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isNotNull();
         // 2. Poll for records (wait up to 10 seconds)
-        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+        ConsumerRecord<String, String> received = getLatestRecordForKey(
                 testConsumer,
+                result.getId().toString(),
                 Duration.ofSeconds(10)
         );
-        Appointment finalResult = result;
-        ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                .reduce((first, second) ->
-                        second.key().equals(finalResult.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                .orElseThrow(() -> new AssertionError("No records found"));
         // 3. Assertions
         assertThat(received).isNotNull();
         assertThat(received.key()).isNotNull();
@@ -192,10 +185,11 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         user = getUserQuery.execute(new UsernameCommand(guestClients.get(1)));
         assertThat(result).isNotNull();
         Appointment finalResult1 = result;
-        received = StreamSupport.stream(records.spliterator(), false)
-                .reduce((first, second) ->
-                        second.key().equals(finalResult1.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                .orElseThrow(() -> new AssertionError("No records found"));
+         received = getLatestRecordForKey(
+                testConsumer,
+                result.getId().toString(),
+                Duration.ofSeconds(10)
+        );
         // 3. Assertions
         assertThat(received).isNotNull();
         assertThat(received.key()).isNotNull();
@@ -227,15 +221,11 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         var result = bookAppointmentUseCase.execute(validAppointmentDTO) ;
         assertThat(result).isNotNull();
-        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+        ConsumerRecord<String, String> received = getLatestRecordForKey(
                 testConsumer,
+                result.getId().toString(),
                 Duration.ofSeconds(10)
         );
-        Appointment finalResult1 = result;
-        ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                .reduce((first, second) ->
-                        second.key().equals(finalResult1.getId().toString()) && second.timestamp()>first.timestamp()?second:first)
-                .orElseThrow(() -> new AssertionError("No records found"));
         // 3. Assertions
         assertThat(received).isNotNull();
         assertThat(received.key()).isNotNull();
@@ -246,15 +236,11 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isNotNull();
-        records = KafkaTestUtils.getRecords(
+        received = getLatestRecordForKey(
                 testConsumer,
+                result.getId().toString(),
                 Duration.ofSeconds(10)
         );
-        Appointment finalResult = result;
-        received = StreamSupport.stream(records.spliterator(), false)
-                .reduce((first, second) ->
-                        second.key().equals(finalResult.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                .orElseThrow(() -> new AssertionError("No records found"));
         // 3. Assertions
         assertThat(received).isNotNull();
         assertThat(received.key()).isNotNull();
@@ -294,14 +280,11 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         var bookedAppointment = bookAppointmentUseCase.execute(validAppointmentDTO) ;
         assertThat(bookedAppointment).isNotNull();
-        ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(
+        ConsumerRecord<String, String> received = getLatestRecordForKey(
                 testConsumer,
+                result.getId().toString(),
                 Duration.ofSeconds(10)
         );
-        ConsumerRecord<String, String> received = StreamSupport.stream(records.spliterator(), false)
-                .reduce((first, second) ->
-                        second.key().equals(bookedAppointment.getId().toString()) &&second.timestamp()>first.timestamp()?second:first)
-                .orElseThrow(() -> new AssertionError("No records found"));
         // 3. Assertions
         assertThat(received).isNotNull();
         assertThat(received.key()).isNotNull();
