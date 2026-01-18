@@ -5,13 +5,15 @@ import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.event.domain.RecordStatus;
 import capitec.branch.appointment.event.domain.UserDeadLetterService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.kafka.user.UserErrorEventValue;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
 import capitec.branch.appointment.otp.domain.OTPService;
 import capitec.branch.appointment.otp.domain.OTPStatus;
 import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
+import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -179,7 +181,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @CsvSource(delimiter = ';', value = {"dorismia@myuct.ac.za;Doris;Mia;@KrVgfjl65;2b1d5b0d-59e2-47ec-94f1-24505ef2abbd",
             "davidchong@cput.ac.za;David;Chong;1wcB2OsQFV6_;03289819-bcf4-4fef-8747-cfaf4d1e808a"})
     void testVerifyRegisteredUserUntilOTPRevoked(String email, String firstname, String lastname,
-                                                 String password, String traceId) {
+                                                 String password, String traceId) throws JsonProcessingException {
 
         var registerDTO = new NewUserDtO(email, firstname, lastname,password);
         User user = registrationUserCase.registerUser(registerDTO, traceId);
@@ -211,9 +213,17 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         otp = otpService.find(user.getUsername(),otp.getCode()).orElseThrow();
         assertThat(otp.getStatus()).isEqualTo(new OTPStatus(OTPSTATUSENUM.REVOKED.name()));
         var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD,0, Integer.MAX_VALUE).stream();
-        assertThat(failedRecord.map(r->(UserErrorEventValue)r).noneMatch(r -> r.getTraceId().equals(traceId) &&
-                r.getUsername().equals(String.valueOf(user.getUsername()))
-                && r.getEmail().equals(user.getEmail()))).isTrue();
+        assertThat(failedRecord.noneMatch(r ->{
+
+            try {
+                OTPMetadata otpMetadata = r.parseData(OTPMetadata.class, EventToJSONMapper.getMapper());
+               return r.getTraceId().equals(traceId) &&
+                        otpMetadata.username().equals(String.valueOf(user.getUsername()))
+                    && otpMetadata.email().equals(user.getEmail());
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        })).isTrue();
     }
 
 

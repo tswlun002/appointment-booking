@@ -23,42 +23,42 @@ import java.util.function.BiFunction;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E extends ErrorEventValue>
-        implements EventPublisher<K, V>, CallbackEventPublisher<K, V, E> {
+public class KafkaEventPublisher<K extends Serializable, V extends Serializable>
+        implements EventPublisher<K,V>, CallbackEventPublisher<K,V> {
 
-    private final KafkaTemplate<K, V> kafkaTemplate;
+    private final KafkaTemplate<K, EventValue<K,V>> kafkaTemplate;
     private final ProducerProperties producerProperties;
-    private final EventValueFactory eventValueFactory;
 
     @Override
-    public CompletableFuture<PublisherResults<K, V>> publishAsync(K key, V event) {
-        CompletableFuture<PublisherResults<K, V>> publisherResults;
+    public CompletableFuture<PublisherResults<K,V>> publishAsync(K key, EventValue<K,V> event) {
+        CompletableFuture<PublisherResults<K,V>> publisherResults;
 
         try {
             var future = sendToKafka(key, event);
             publisherResults = future.handleAsync((res, err) -> toPublisherResults(key, event, res, err));
         } catch (TimeoutException | KafkaException e) {
-            PublisherResults<K, V> publisherResultsError = new PublisherResults<>(event, key, null, null, e);
+            PublisherResults<K,V> publisherResultsError = new PublisherResults<>(event, key, null, null, e);
             publisherResults = CompletableFuture.completedFuture(publisherResultsError);
         }
 
         return publisherResults;
     }
 
-    private CompletableFuture<SendResult<K, V>> sendToKafka(K key, V event) {
+    private CompletableFuture<SendResult<K, EventValue<K,V>>> sendToKafka(K key, EventValue<K,V> event) {
         return getPartition(event)
-                .map(partition -> kafkaTemplate.send(event.getTopic(), Math.toIntExact(partition), key, event))
-                .orElseGet(() -> kafkaTemplate.send(event.getTopic(), key, event));
+                .map(partition -> kafkaTemplate.send(event.topic(), Math.toIntExact(partition), key, event))
+                .orElseGet(() -> kafkaTemplate.send(event.topic(), key, event));
     }
 
-    private Optional<Long> getPartition(V event) {
-        if (event instanceof ErrorEventValue errorEventValue) {
-            return Optional.ofNullable(errorEventValue.getPartition());
-        }
-        return Optional.empty();
+
+    private  Optional<Long> getPartition(EventValue<K,V> event) {
+        return switch (event) {
+            case EventValue.OriginEventValue<K,V> ignore -> Optional.empty();
+            case EventValue.EventError<K,V> e ->  Optional.ofNullable(e.partition());
+        };
     }
 
-    private PublisherResults<K, V> toPublisherResults(K key, V event, SendResult<K, V> result, Throwable throwable) {
+    private PublisherResults<K,V> toPublisherResults(K key, EventValue<K,V> event, SendResult<K, EventValue<K,V>> result, Throwable throwable) {
         if (result == null) {
             return new PublisherResults<>(event, key, null, null, throwable);
         }
@@ -68,7 +68,7 @@ public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E
     }
 
     @Override
-    public PublisherResults<K, V> publish(K key, V event) throws ExecutionException, InterruptedException {
+    public PublisherResults<K,V> publish(K key, EventValue<K,V> event) throws ExecutionException, InterruptedException {
         try {
             return publishAsync(key, event).get(producerProperties.getDeliverTimeOutMs(), TimeUnit.MILLISECONDS);
         } catch (java.util.concurrent.TimeoutException e) {
@@ -77,7 +77,7 @@ public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E
     }
 
     @Override
-    public List<PublisherResults<K, V>> publishBatch(List<KeyValue<K, V>> events) {
+    public List<PublisherResults<K,V>> publishBatch(List<KeyValue<K, EventValue<K,V>>> events) {
         try {
             return publishBatchAsync(events).get(producerProperties.getDeliverTimeOutMs(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | java.util.concurrent.TimeoutException e) {
@@ -88,12 +88,12 @@ public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E
     }
 
     @Override
-    public CompletableFuture<List<PublisherResults<K, V>>> publishBatchAsync(List<KeyValue<K, V>> events) {
+    public CompletableFuture<List<PublisherResults<K,V>>> publishBatchAsync(List<KeyValue<K, EventValue<K,V>>> events) {
         if (events == null || events.isEmpty()) {
             return CompletableFuture.completedFuture(List.of());
         }
 
-        List<CompletableFuture<PublisherResults<K, V>>> futures = events.stream()
+        List<CompletableFuture<PublisherResults<K,V>>> futures = events.stream()
                 .map(kv -> publishAsync(kv.key(), kv.value()))
                 .toList();
 
@@ -111,8 +111,8 @@ public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E
     }
 
     @Override
-    public <I extends Serializable, T extends EventValue> PublisherResults<I, T> callback(final PublisherResults<K, V> results) {
-        V event = results.event();
+    public  PublisherResults<K,V> callback(final PublisherResults<K,V> results) {
+        EventValue<K,V> event = results.event();
         Throwable throwable = results.exception();
 
         if (throwable == null) {
@@ -122,51 +122,47 @@ public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E
     }
 
     @SuppressWarnings("unchecked")
-    private <I extends Serializable, T extends EventValue> PublisherResults<I, T> handleSuccess(
-            PublisherResults<K, V> results, V event) {
+    private PublisherResults<K,V> handleSuccess(PublisherResults<K,V> results, EventValue<K,V> event) {
 
-        if (event instanceof ErrorEventValue errorEventValue) {
-            return new PublisherResults<>(
-                    (T) errorEventValue,
-                    (I) errorEventValue.getKey(),
-                    results.partition(),
-                    results.offset(),
-                    null
-            );
-        }
-        return new PublisherResults<>((T) event, (I) event.getKey(), results.partition(), results.offset(), null);
+       return switch (event) {
+            case EventValue.OriginEventValue<K,V> ori -> new PublisherResults<>(ori, (K)ori.key(), results.partition(), results.offset(), null);
+            case EventValue.EventError<K,V> err -> new PublisherResults<>(err,(K)err.key(), results.partition(), results.offset(), null);
+        };
     }
 
-    @SuppressWarnings("unchecked")
-    private <I extends Serializable, T extends EventValue> PublisherResults<I, T> handleFailure(
-            PublisherResults<K, V> results, V event, Throwable throwable) {
+    private  PublisherResults<K,V> handleFailure(PublisherResults<K,V> results, EventValue<K,V> event, Throwable throwable) {
 
-        if (event instanceof ErrorEventValue errorEventValue) {
-            return new PublisherResults<>(
-                    (T) errorEventValue,
-                    (I) errorEventValue.getKey(),
-                    errorEventValue.getPartition(),
-                    errorEventValue.getOffset(),
+        return switch (event){
+            case EventValue.OriginEventValue<K,V> originEventValue->{
+
+                boolean isRetryable = isInstanceOfRetryableExceptions()
+                        .apply(throwable, producerProperties.getRetryableExceptions());
+
+                EventValue.EventError<K,V> errorEvent = createErrorEvent(results, originEventValue, throwable, isRetryable);
+
+                yield new PublisherResults<>(
+                        errorEvent,
+                        errorEvent.key(),
+                        errorEvent.partition(),
+                        errorEvent.offset(),
+                        throwable
+                );
+            }
+            case EventValue.EventError<K,V> err -> new PublisherResults<>(
+                     err,
+                    err.key(),
+                    err.partition(),
+                    err.offset(),
                     throwable
             );
-        }
+        };
 
-        boolean isRetryable = isInstanceOfRetryableExceptions()
-                .apply(throwable, producerProperties.getRetryableExceptions());
 
-        DefaultErrorEventValue errorEvent = createErrorEvent(results, event, throwable, isRetryable);
 
-        return new PublisherResults<>(
-                (T) errorEvent,
-                (I) errorEvent.getKey(),
-                errorEvent.getPartition(),
-                errorEvent.getOffset(),
-                throwable
-        );
     }
 
-    private DefaultErrorEventValue createErrorEvent(
-            PublisherResults<K, V> results, V event, Throwable throwable, boolean isRetryable) {
+    private EventValue.EventError<K,V> createErrorEvent(
+            PublisherResults<K,V> results, EventValue.OriginEventValue<K,V> event, Throwable throwable, boolean isRetryable) {
 
         Throwable cause = throwable.getCause();
         String exception = cause != null ? cause.getMessage() : throwable.getMessage();
@@ -175,12 +171,20 @@ public class KafkaEventPublisher<K extends Serializable, V extends EventValue, E
                 ? Arrays.toString(throwable.getStackTrace())
                 : throwable.fillInStackTrace().toString();
 
-        return (DefaultErrorEventValue) eventValueFactory.createErrorEventValue(
-                event.getTopic(), event.getValue(),
-                event.getTraceId(), event.getEventId(), event.getPublishTime(),
-                results.partition(), results.offset(), event.getKey(),
-                exception, throwable.getClass().getName(),
-                causeClass, stackTrace, isRetryable
+        return new EventValue.EventError<>(
+                event.key(),
+                event.value(),
+                event.traceId(),
+                event.topic(),
+                event.eventId(),
+                event.publishTime(),
+                results.partition(),
+                results.offset(),
+                exception,
+                throwable.getClass().getName(),
+                causeClass,
+                stackTrace,
+                isRetryable
         );
     }
 }

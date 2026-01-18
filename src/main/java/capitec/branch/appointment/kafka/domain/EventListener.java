@@ -1,9 +1,10 @@
 package capitec.branch.appointment.kafka.domain;
 
+import java.io.Serializable;
 import java.util.Set;
 
-public interface EventListener <T extends EventValue> {
+public interface EventListener <K extends  Serializable,V extends Serializable> {
 
-    void receive(T event) throws Exception;
-    void receive(Set<T> connectEvent,Set<String> keys, Set<String> partitions, Set<Integer> offsets);
+    void receive(EventValue<K,V> event) throws Exception;
+    void receive(Set<EventValue<K,V>> connectEvent, Set<String> keys, Set<String> partitions, Set<Integer> offsets);
 }

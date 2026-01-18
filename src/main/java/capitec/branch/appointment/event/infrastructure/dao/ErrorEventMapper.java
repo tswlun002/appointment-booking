@@ -13,7 +13,7 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
 
 
 @Mapper(componentModel = "spring")
- interface UserErrorEventMapper {
+ interface ErrorEventMapper {
 
 
     default  ErrorEvent toModel(UserErrorEventValueEntity entity){
@@ -35,8 +35,7 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
                 entity.nextRetryAt(),
                 status,
                 entity.partition(),
-                entity.offset(),
-                entity.data()
+                entity.offset()
         );
     }
 

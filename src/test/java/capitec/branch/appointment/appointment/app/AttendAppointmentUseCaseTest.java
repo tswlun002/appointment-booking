@@ -5,11 +5,9 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.appointment.app.dto.AppointmentStateChangedEvent;
 import capitec.branch.appointment.event.app.Topics;
-import capitec.branch.appointment.event.infrastructure.kafka.producer.appointment.AppointmentEventValueImpl;
-import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
-import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
+import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
@@ -20,8 +18,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.*;
@@ -33,13 +29,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.StreamSupport;
 
 import static capitec.branch.appointment.appointment.domain.AppointmentStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +58,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
     private User customer;
     private String staffUsername;
     private Consumer<String, String> testConsumer;
+
 
 
     @BeforeEach
@@ -120,7 +114,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should check in successfully and publish event")
-        void shouldCheckInSuccessfully() throws JsonProcessingException {
+        void shouldCheckInSuccessfully() {
             var action = new AttendingAppointmentStateTransitionAction.CheckIn(
                     bookedAppointment.getBranchId(),
                     bookedAppointment.getDateTime().toLocalDate(),
@@ -130,26 +124,26 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             attendAppointmentUseCase.execute(action);
 
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
-            assertThat(updated.getStatus()).isEqualTo(CHECKED_IN);
+            assertThat(updated.getStatus()).isEqualTo( CHECKED_IN);
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecord<String, String> received = getLatestRecordForKey(
+            Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                     testConsumer,
-                    bookedAppointment.getId().toString(),
+                    bookedAppointment.getId().toString()+bookedAppointment.getReference(),
                     Duration.ofSeconds(10)
             );
-
+            assertThat(eventValueOptional).isPresent();
             // Assertions on Kafka event
-            AssertionsForClassTypes.assertThat(received).isNotNull();
+           /* AssertionsForClassTypes.assertThat(received).isNotNull();
             AssertionsForClassTypes.assertThat(received.key()).isNotNull();
             String value = received.value();
             AssertionsForClassTypes.assertThat(value).isNotNull();
 
+            ;*/
             ObjectMapper mapper = EventToJSONMapper.getMapper();
-
-            ExtendedEventValue<AppointmentMetadata> extendedEventValue = mapper.readValue(value, AppointmentEventValueImpl.class);
-            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
-            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            var eventValue = eventValueOptional.get();
+            AssertionsForClassTypes.assertThat(eventValue).isNotNull();
+            AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             assertThat(metadata.id()).isEqualTo(bookedAppointment.getId());
             AssertionsForClassTypes.assertThat(metadata.branchId()).isEqualTo(bookedAppointment.getBranchId());
@@ -163,7 +157,6 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             var toState =  mapper.convertValue(stringObjectMap.get("toState"), String.class);
             assertThat(toState).isNotNull().isEqualTo(CHECKED_IN.name());
             AssertionsForClassTypes.assertThat(bookedAppointment.getReference()).isEqualTo(metadata.reference());
-            AssertionsForClassTypes.assertThat(extendedEventValue.getSource()).isNotNull().isEqualTo("Appointment context");
 
         }
 
@@ -214,7 +207,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should start service successfully and publish event")
-        void shouldStartServiceSuccessfully() throws JsonProcessingException {
+        void shouldStartServiceSuccessfully()  {
             var action = new AttendingAppointmentStateTransitionAction.StartService(
                     bookedAppointment.getId(),
                     staffUsername
@@ -226,23 +219,15 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(updated.getStatus()).isEqualTo(IN_PROGRESS);
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecord<String, String> received = getLatestRecordForKey(
+            Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                     testConsumer,
-                    bookedAppointment.getId().toString(),
+                    bookedAppointment.getId().toString()+bookedAppointment.getReference(),
                     Duration.ofSeconds(10)
             );
-
-
-            assertThat(records).isNotEmpty();
-
-            // Assertions on Kafka event
-            AssertionsForClassTypes.assertThat(received).isNotNull();
-            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
-            String value = received.value();
-            AssertionsForClassTypes.assertThat(value).isNotNull();
-            ExtendedEventValue<AppointmentMetadata> extendedEventValue = EventToJSONMapper.getMapper().readValue(value, AppointmentEventValueImpl.class);
-            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
-            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            assertThat(eventValueOptional).isPresent();
+            EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+            AssertionsForClassTypes.assertThat(eventValue).isNotNull();
+            AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
             var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
@@ -323,20 +308,15 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecord<String, String> received = getLatestRecordForKey(
+            Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                     testConsumer,
-                    bookedAppointment.getId().toString(),
+                    bookedAppointment.getId().toString()+bookedAppointment.getReference(),
                     Duration.ofSeconds(10)
             );
-
-            // Assertions on Kafka event
-            AssertionsForClassTypes.assertThat(received).isNotNull();
-            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
-            String value = received.value();
-            AssertionsForClassTypes.assertThat(value).isNotNull();
-            ExtendedEventValue<AppointmentMetadata> extendedEventValue = EventToJSONMapper.getMapper().readValue(value, AppointmentEventValueImpl.class);
-            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
-            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            assertThat(eventValueOptional).isPresent();
+            EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+            AssertionsForClassTypes.assertThat(eventValue).isNotNull();
+            AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
             var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
@@ -368,20 +348,15 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecord<String, String> received = getLatestRecordForKey(
+            Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                     testConsumer,
-                    bookedAppointment.getId().toString(),
+                    bookedAppointment.getId().toString()+bookedAppointment.getReference(),
                     Duration.ofSeconds(10)
             );
-
-            // Assertions on Kafka event
-            AssertionsForClassTypes.assertThat(received).isNotNull();
-            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
-            String value = received.value();
-            AssertionsForClassTypes.assertThat(value).isNotNull();
-            ExtendedEventValue<AppointmentMetadata> extendedEventValue = EventToJSONMapper.getMapper().readValue(value, AppointmentEventValueImpl.class);
-            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
-            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            assertThat(eventValueOptional).isPresent();
+            EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+            AssertionsForClassTypes.assertThat(eventValue).isNotNull();
+            AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
             var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
@@ -396,7 +371,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should cancel CHECKED_IN appointment by staff")
-        void shouldCancelCheckedInAppointment() throws JsonProcessingException {
+        void shouldCancelCheckedInAppointment()  {
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
                     bookedAppointment.getBranchId(),
                     bookedAppointment.getDateTime().toLocalDate(),
@@ -421,19 +396,15 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
              updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecord<String, String> received = getLatestRecordForKey(
+            Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                     testConsumer,
-                    bookedAppointment.getId().toString(),
+                    bookedAppointment.getId().toString()+bookedAppointment.getReference(),
                     Duration.ofSeconds(10)
             );
-            // Assertions on Kafka event
-            AssertionsForClassTypes.assertThat(received).isNotNull();
-            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
-            String value = received.value();
-            AssertionsForClassTypes.assertThat(value).isNotNull();
-            ExtendedEventValue<AppointmentMetadata> extendedEventValue = EventToJSONMapper.getMapper().readValue(value, AppointmentEventValueImpl.class);
-            AssertionsForClassTypes.assertThat(extendedEventValue).isNotNull();
-            AppointmentMetadata metadata = extendedEventValue.getMetadata();
+            assertThat(eventValueOptional).isPresent();
+            EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+            AssertionsForClassTypes.assertThat(eventValue).isNotNull();
+            AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
             var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);

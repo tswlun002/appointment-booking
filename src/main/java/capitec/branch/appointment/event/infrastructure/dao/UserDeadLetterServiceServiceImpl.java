@@ -30,14 +30,14 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
 
     private final IdStore idStore;
 
-    private final UserErrorEventMapper userErrorEventMapper;
+    private final ErrorEventMapper errorEventMapper;
 
     @Override
     public void saveDeadLetter( ErrorEvent errorEventValue) {
 
         try {
                 idStore.setId(errorEventValue.getEventId());
-                var entity = userErrorEventMapper.toEntityWithNullId(errorEventValue);
+                var entity = errorEventMapper.toEntityWithNullId(errorEventValue);
                 repository.save(entity);
 
                 log.info("Saved FailedRecord, traceId: {}",errorEventValue.getTraceId());
@@ -53,7 +53,7 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
     public Set<ErrorEvent> findByStatus(RecordStatus recordStatus, int offset, int limit) {
 
         return repository.findAllByStatus(recordStatus.name(), offset, limit)
-                .stream().map(userErrorEventMapper::toModel).collect(Collectors.toSet());
+                .stream().map(errorEventMapper::toModel).collect(Collectors.toSet());
     }
 
     @Override
@@ -64,7 +64,7 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
 
         try {
 
-            var entity = userErrorEventMapper.toEntity( errorEventValue);
+            var entity = errorEventMapper.toEntity( errorEventValue);
 
             repository.save(entity);
 
@@ -83,13 +83,13 @@ public class UserDeadLetterServiceServiceImpl implements UserDeadLetterService {
         return repository
                 .recoverDeadLetter(isRetryable, status.name(), offset,limit, maxRetry)
                 .stream()
-                .map(userErrorEventMapper::toModel)
+                .map(errorEventMapper::toModel)
                 .toList();
     }
 
     @Override
     public Optional<ErrorEvent> findById(String eventId) {
-        return repository.findById(eventId).map(userErrorEventMapper::toModel);
+        return repository.findById(eventId).map(errorEventMapper::toModel);
     }
 
 

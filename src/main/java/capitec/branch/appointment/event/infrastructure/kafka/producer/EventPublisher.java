@@ -1,19 +1,16 @@
 package capitec.branch.appointment.event.infrastructure.kafka.producer;
 
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
-import capitec.branch.appointment.event.app.RetryEventPublisherSchedulerService;
 import capitec.branch.appointment.event.app.Topics;
 import capitec.branch.appointment.event.app.port.AppointmentEventPort;
 import capitec.branch.appointment.event.app.port.OTPEventProducerServicePort;
 import capitec.branch.appointment.event.app.port.UserEventListenerPort;
-import capitec.branch.appointment.event.infrastructure.kafka.producer.appointment.AppointmentEventValueImpl;
-import capitec.branch.appointment.event.infrastructure.kafka.producer.user.UserEventValueImpl;
 import capitec.branch.appointment.kafka.app.EventPublishUseCase;
-import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
-import capitec.branch.appointment.kafka.domain.ErrorEventValue;
+import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.KafkaProperties;
-import capitec.branch.appointment.kafka.user.UserMetadata;
+import capitec.branch.appointment.utils.sharekernel.metadata.MetaData;
+import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
 import capitec.branch.appointment.utils.OTPCode;
 import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;
@@ -23,10 +20,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.util.Asserts;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -39,11 +34,10 @@ import java.util.function.BiConsumer;
 @RequiredArgsConstructor
 @Component
 @Validated
-public class EventPublisher implements OTPEventProducerServicePort, RetryEventPublisherSchedulerService,
-        UserEventListenerPort, AppointmentEventPort {
+public class EventPublisher implements OTPEventProducerServicePort, UserEventListenerPort, AppointmentEventPort {
 
     private final KafkaProperties kafkaProperties;
-    private final EventPublishUseCase eventPublishUseCase;
+    private final EventPublishUseCase<String, MetaData> eventPublishUseCase;
 
     @Override
     public CompletableFuture<Boolean> sendRegistrationEvent(@Username String username,
@@ -51,34 +45,47 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
                                                             @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME) String fullname,
                                                             @OTPCode String otpCode,
                                                             @NotBlank(message = Validator.EVENT_TRACE_ID_MESS) String traceId) {
-        validateTopic(Topics.REGISTRATION_EVENT, traceId);
-        var event = createUserKafEventPort(Topics.REGISTRATION_EVENT, otpCode, traceId,
-                new UserMetadata(fullname, username, email));
-        return publishAsync(event);
+        String topic = Topics.REGISTRATION_EVENT;
+        validateTopic(topic, traceId);
+        var metadata = new OTPMetadata(fullname, username, email, otpCode);
+        String key = username + otpCode;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
+        return publishAsync(eventValue);
     }
 
     @Override
-    public void handleUserVerifiedEvent(String username, String email, String fullName, String traceId) {
-        validateTopic(Topics.EMAIL_VERIFIED_EVENT, traceId);
-        var kafkaEvent = createUserKafEventPort(Topics.EMAIL_VERIFIED_EVENT, fullName,
-                traceId, new UserMetadata(fullName, username, email));
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+    public void handleUserVerifiedEvent(String username, String email, String fullName,String otp, String traceId) {
+        String topic = Topics.EMAIL_VERIFIED_EVENT;
+        validateTopic(topic, traceId);
+        var metadata = new OTPMetadata(fullName, username, email,otp);
+        LocalDateTime now = LocalDateTime.now();
+        var key = username + now;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, now);
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
     @Override
     public void handleDeleteUserEvent(String username, String email, String fullname, String otp, String traceId) {
-        validateTopic(Topics.DELETE_USER_ACCOUNT_EVENT, traceId);
-        var kafkaEvent = createUserKafEventPort(Topics.DELETE_USER_ACCOUNT_EVENT, otp,
-                traceId, new UserMetadata(fullname, username, email));
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+        String topic = Topics.DELETE_USER_ACCOUNT_EVENT;
+        validateTopic(topic, traceId);
+        var metadata = new OTPMetadata(fullname, username, email, otp);
+        var key = username + otp;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
     @Override
     public void handlePasswordUpdatedEvent(String username, String email, String fullname, String otp, String traceId) {
-        validateTopic(Topics.PASSWORD_UPDATED_EVENT, traceId);
-        var kafkaEvent = createUserKafEventPort(Topics.PASSWORD_UPDATED_EVENT, otp,
-                traceId, new UserMetadata(fullname, username, email));
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+        String topic = Topics.PASSWORD_UPDATED_EVENT;
+        validateTopic(topic, traceId);
+
+        var metadata = new OTPMetadata(fullname, username, email, otp);
+        var key = username + otp;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
     @Override
@@ -87,10 +94,13 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
                                                                     @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME) String fullname,
                                                                     @OTPCode String OTP,
                                                                     @NotBlank(message = Validator.EVENT_TRACE_ID_MESS) String traceId) {
-        validateTopic(Topics.PASSWORD_RESET_REQUEST_EVENT, traceId);
-        var event = createUserKafEventPort(Topics.PASSWORD_RESET_REQUEST_EVENT, OTP, traceId,
-                new UserMetadata(fullname, username, email));
-        return publishAsync(event);
+        String topic = Topics.PASSWORD_RESET_REQUEST_EVENT;
+        validateTopic(topic, traceId);
+        var metadata = new OTPMetadata(fullname, username, email, OTP);
+        var key = username + OTP;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
+
+        return publishAsync(eventValue);
     }
 
     @Override
@@ -99,10 +109,14 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
                                                              @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME) String fullname,
                                                              @OTPCode String OTP,
                                                              @NotBlank(message = Validator.EVENT_TRACE_ID_MESS) String traceId) {
-        validateTopic(Topics.DELETE_USER_ACCOUNT_REQUEST_EVENT, traceId);
-        var event = createUserKafEventPort(Topics.DELETE_USER_ACCOUNT_REQUEST_EVENT, OTP, traceId,
-                new UserMetadata(fullname, username, email));
-        return publishAsync(event);
+        String topic = Topics.DELETE_USER_ACCOUNT_REQUEST_EVENT;
+        validateTopic(topic, traceId);
+        var metadata = new OTPMetadata(fullname, username, email, OTP);
+        var key = username + OTP;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
+
+
+        return publishAsync(eventValue);
     }
 
 
@@ -116,8 +130,10 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
 
         Map<String, Object> map = Map.of("day", day, "startTime", startTime, "endTime", endTime);
         var appointmentMetadata = new AppointmentMetadata(id, reference, branchId, customerUsername,occurredAt , map);
-        var kafkaEvent = new AppointmentEventValueImpl(id.toString(), topic, "appointment booked", traceId, occurredAt, appointmentMetadata);
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+        String key = id + reference;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
 
     }
 
@@ -139,12 +155,11 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
                 appointmentId, appointmentReference,
                 branchId, customerUsername, occurredAt, map
         );
-        var kafkaEvent = new AppointmentEventValueImpl(
-                appointmentId.toString(), topic,
-                "appointment booked", traceId, occurredAt,
-                appointmentMetadata
-        );
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+
+        String key = appointmentId + appointmentReference;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
     @Override
@@ -165,11 +180,11 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
                 appointmentId, reference, branchId,
                 customerUsername, occurredAt, map
         );
-        var kafkaEvent = new AppointmentEventValueImpl(
-                appointmentId.toString(), topic, "appointment booked",
-                traceId, occurredAt, appointmentMetadata
-        );
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+        String key = appointmentId + reference;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
+
     }
 
     @Override
@@ -188,21 +203,15 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
         var appointmentMetadata = new AppointmentMetadata(
                 appointmentId, reference, branchId, customerUsername, occurredAt, map
         );
-        var kafkaEvent = new AppointmentEventValueImpl(
-                appointmentId.toString(), topic, "appointment booked",
-                traceId, occurredAt, appointmentMetadata
-        );
-        sendMessage().accept(publishAsync(kafkaEvent), kafkaEvent);
+        String key = appointmentId + reference;
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
+
+        sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
-    @Override
-    public CompletableFuture<Boolean> republishEvent(ErrorEventValue userEvent) {
-        Asserts.notNull(userEvent, "userEvent");
-        return publishAsync(userEvent);
-    }
 
-    public CompletableFuture<Boolean> publishAsync(EventValue userEventValue) {
-        return eventPublishUseCase.publishEventAsync(userEventValue);
+    public  CompletableFuture<Boolean> publishAsync(EventValue<String,MetaData> eventValue) {
+        return eventPublishUseCase.publishEventAsync(eventValue);
     }
 
     private void validateTopic(String topic, String traceId) {
@@ -212,16 +221,12 @@ public class EventPublisher implements OTPEventProducerServicePort, RetryEventPu
         }
     }
 
-    private UserEventValueImpl createUserKafEventPort(String topic, String key, String traceId, UserMetadata metadata) {
-        return new UserEventValueImpl(UUID.randomUUID().toString(), topic, key, traceId, LocalDateTime.now(), metadata);
-    }
-
-    private BiConsumer<CompletableFuture<Boolean>, EventValue> sendMessage() {
+    private BiConsumer<CompletableFuture<Boolean>, EventValue<String,MetaData>> sendMessage() {
         return (future, value) -> future.whenComplete((result, error) -> {
             if (error != null || !Boolean.TRUE.equals(result)) {
-                log.error("Failed to publish {}, traceId: {}", value.getTopic(), value.getTraceId());
+                log.error("Failed to publish {}, traceId: {}", value.topic(), value.traceId());
             } else {
-                log.info("Published {} successfully, traceId: {}", value.getTopic(), value.getTraceId());
+                log.info("Published {} successfully, traceId: {}", value.topic(), value.traceId());
             }
         });
     }

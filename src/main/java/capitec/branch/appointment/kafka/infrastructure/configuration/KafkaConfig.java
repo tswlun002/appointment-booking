@@ -2,10 +2,10 @@ package capitec.branch.appointment.kafka.infrastructure.configuration;
 
 
 
-import capitec.branch.appointment.kafka.domain.DefaultErrorEventValue;
-import capitec.branch.appointment.kafka.domain.ErrorEventValue;
+
+
+
 import capitec.branch.appointment.kafka.domain.EventValue;
-import capitec.branch.appointment.kafka.domain.EventValueFactory;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.*;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.ConsumerProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -44,7 +44,7 @@ import static capitec.branch.appointment.kafka.infrastructure.event.KafkaEventPu
 @EnableKafka
 @Slf4j
 @EnableConfigurationProperties({ConsumerProperties.class, ProducerProperties.class, SchedulerProperties.class})
-public class KafkaConfig<K extends Serializable, V extends EventValue,E extends ErrorEventValue> {
+public class KafkaConfig<K extends Serializable, V extends Serializable> {
 
     private final KafkaProperties kafkaProperties;
     private final ConsumerProperties consumerProperties;
@@ -52,12 +52,11 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
     private final ApplicationEventPublisher applicationEventPublisher;
     private final Predicate<Exception> isRetryable;
     private final ProducerFactory<K, V> producerFactory;
-    private final EventValueFactory eventValueFactory;
 
     public KafkaConfig(KafkaProperties kafkaProperties, ConsumerProperties consumerProperties
             , SecurityProperties securityProperties, ApplicationEventPublisher applicationEventPublisher,
                        ProducerFactory<K, V> producerFactory,
-                       ProducerProperties producerProperties, EventValueFactory eventValueFactory) {
+                       ProducerProperties producerProperties) {
         this.kafkaProperties = kafkaProperties;
         this.consumerProperties = consumerProperties;
         this.producerFactory = producerFactory;
@@ -65,7 +64,6 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
         this.applicationEventPublisher = applicationEventPublisher;
         isRetryable = exception -> isInstanceOfRetryableExceptions().apply(exception, consumerProperties.getRetryableExceptions()) ||
                 isInstanceOfRetryableExceptions().apply(exception, producerProperties.getRetryableExceptions());
-        this.eventValueFactory = eventValueFactory;
     }
 
 
@@ -145,7 +143,7 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
 
         BackOff backOff = getBackOff();
 
-        DefaultErrorHandler defaultErrorHandler = new DefaultErrorHandler((r,e)->createRecordRecover((ConsumerRecord<K, V>) r,e), backOff);
+        DefaultErrorHandler defaultErrorHandler = new DefaultErrorHandler((r,e)->createRecordRecover((ConsumerRecord<K, EventValue<K, V>>) r,e), backOff);
 
         defaultErrorHandler.setSeekAfterError(consumerProperties.getSeekAfterError());
 
@@ -176,7 +174,7 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
                 });
     }
 
-    private void createRecordRecover(ConsumerRecord<K, V> record, Exception exception) {
+    private void createRecordRecover(ConsumerRecord<K, EventValue<K,V>> record, Exception exception) {
 
 
 
@@ -214,7 +212,7 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
         return serializer;
     }
 
-    protected DefaultErrorEventValue getAnonymousDefaultErrorValue(ConsumerRecord< K , V> results, V event, Throwable throwable, boolean isRetryable) {
+    protected EventValue<K,V> getAnonymousDefaultErrorValue(ConsumerRecord< K , EventValue<K,V>> results, EventValue<K,V> event, Throwable throwable, boolean isRetryable) {
 
         Throwable cause = throwable.getCause();
         String exception = cause != null ? throwable.getMessage() : throwable.getMessage();
@@ -222,11 +220,19 @@ public class KafkaConfig<K extends Serializable, V extends EventValue,E extends 
         String stackTrace = throwable.getStackTrace()!=null&&throwable.getStackTrace().length!=0 ? Arrays.toString(throwable.getStackTrace()) :
                 throwable.fillInStackTrace().toString();
 
-        return (DefaultErrorEventValue) eventValueFactory.createErrorEventValue(
-                event.getTopic(), event.getValue(),
-                event.getTraceId(), event.getEventId(), event.getPublishTime(),
-                (long)results.partition(), results.offset(), event.getKey(), exception,throwable.getClass().getName(),
-                causeClass,stackTrace,isRetryable
+        return new EventValue.EventError<K,V>(
+                event.key(),
+                event.value(),
+                event.traceId(),
+                event.topic(),
+                event.eventId(),
+                event.publishTime(),
+                (long)results.partition(),
+                results.offset(),
+                exception,
+                throwable.getClass().getName(),
+                causeClass,stackTrace,
+                isRetryable
         );
     }
 

@@ -1,7 +1,6 @@
 package capitec.branch.appointment.kafka.app;
 
 import capitec.branch.appointment.kafka.domain.EventValue;
-import capitec.branch.appointment.kafka.domain.KeyValue;
 import capitec.branch.appointment.kafka.domain.PublisherResults;
 
 import java.io.Serializable;
@@ -10,9 +9,9 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-public interface EventPublishUseCase {
-    CompletableFuture<Boolean> publishEventAsync(EventValue event) ;
-    CompletableFuture<Map<String, Boolean>> publishBatchAsync(List<EventValue> events);
+public interface EventPublishUseCase<K extends  Serializable, V extends  Serializable> {
+    CompletableFuture<Boolean> publishEventAsync(EventValue<K,V> event) ;
+    CompletableFuture<Map<K, Boolean>> publishBatchAsync(List<EventValue<K,V>> events);
 
-    Function<PublisherResults<Serializable, EventValue>, Boolean> callback();
+    Function<PublisherResults<K,V>, Boolean> callback();
 }

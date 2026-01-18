@@ -1,13 +1,14 @@
 package capitec.branch.appointment.kafka.app;
 
+
 import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.utils.sharekernel.metadata.MetaData;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.util.Assert;
 import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
 import capitec.branch.appointment.kafka.domain.DeadLetterService;
-import capitec.branch.appointment.kafka.domain.ErrorEventValue;
 import capitec.branch.appointment.kafka.domain.RetryEventPublisher;
 
 import java.time.LocalDateTime;
@@ -26,8 +27,8 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
     public static final int MAX_RETRY = 5;
     private static final int CIRCUIT_BREAKER_THRESHOLD = 3;
 
-    private final EventPublishUseCase eventPublishUseCase;
-    private final DeadLetterService<ErrorEventValue> deadLetterService;
+    private final EventPublishUseCase<String,MetaData> eventPublishUseCase;
+    private final DeadLetterService<String, MetaData> deadLetterService;
 
     private final AtomicBoolean isRunning = new AtomicBoolean(false);
     private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
@@ -67,7 +68,7 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
         resetBatchCounters();
 
         while (true) {
-            List<ErrorEventValue> batch = deadLetterService.recoverDeadLetter(
+            List<EventValue.EventError<String,MetaData>> batch = deadLetterService.recoverDeadLetter(
                     true,
                     DEAD_LETTER_STATUS.DEAD,
                     offset,
@@ -81,7 +82,8 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
             }
 
             log.info("Publishing batch of {} dead letters, offset: {}", batch.size(), offset);
-            publishBatchAndHandleResults(batch);
+            var list = batch.stream().map(s -> (EventValue<String, MetaData>) s).toList();
+            publishBatchAndHandleResults(list);
             processedTotal += batch.size();
 
             if (batch.size() < BATCH_SIZE) {
@@ -93,38 +95,39 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
         evaluateBatchResults(processedTotal);
     }
 
-    private void publishBatchAndHandleResults(List<ErrorEventValue> batch) {
-        Assert.notEmpty(batch, "Batch must not be empty");
+    private void publishBatchAndHandleResults(List<EventValue<String,MetaData>> batches) {
+        Assert.notEmpty(batches, "Batch must not be empty");
 
-        var  list = batch.stream().map(s -> (EventValue) s).toList();
+        //var  list = batch.stream().map(s -> (EventValue) s).toList();
 
-        eventPublishUseCase.publishBatchAsync(list)
+        eventPublishUseCase.publishBatchAsync(batches)
                 .whenComplete((results, batchException) -> {
                     if (batchException != null) {
                         log.error("Entire batch publish failed", batchException);
-                        batch.forEach(event -> {
+                        batches.forEach(event -> {
                             batchFailureCount.incrementAndGet();
-                            deadLetterService.handleRetryFailure(event);
+                            deadLetterService.handleRetryFailure((EventValue.EventError<String, MetaData>) event);
                         });
                         return;
                     }
 
-                    handleBatchResults(batch, results);
+                    var list = batches.stream().map(s -> (EventValue.EventError<String, MetaData>) s).toList();
+                    handleBatchResults(list, results);
                 })
                 .join(); // Wait for batch completion before processing next batch
     }
 
-    private void handleBatchResults(List<ErrorEventValue> batch, Map<String, Boolean> results) {
-        for (ErrorEventValue event : batch) {
-            Boolean success = results.getOrDefault(event.getEventId(), false);
+    private void handleBatchResults(List<EventValue.EventError<String,MetaData>> batch, Map<String, Boolean> results) {
+        for (var event : batch) {
+            Boolean success = results.getOrDefault(event.eventId(), false);
 
             if (Boolean.TRUE.equals(success)) {
                 log.info("Dead letter event {} successfully republished, traceId:{}",
-                        event.getEventId(), event.getTraceId());
+                        event.eventId(), event.traceId());
                 batchSuccessCount.incrementAndGet();
-                deadLetterService.markRecovered(event, event.getPartition(), event.getOffset());
+                deadLetterService.markRecovered(event, event.partition(), event.offset());
             } else {
-                log.error("Failed to republish dead letter event:{}", event.getEventId());
+                log.error("Failed to republish dead letter event:{}", event.eventId(), event.traceId());
                 batchFailureCount.incrementAndGet();
                 deadLetterService.handleRetryFailure(event);
             }

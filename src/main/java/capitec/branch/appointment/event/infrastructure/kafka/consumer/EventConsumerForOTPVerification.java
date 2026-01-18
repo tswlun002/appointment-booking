@@ -1,8 +1,8 @@
 package capitec.branch.appointment.event.infrastructure.kafka.consumer;
 
 import capitec.branch.appointment.event.app.port.OTPPort;
-import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
-import capitec.branch.appointment.kafka.user.UserMetadata;
+import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -22,12 +22,13 @@ public class EventConsumerForOTPVerification {
             "#{T(capitec.branch.appointment.event.app.Topics).DELETE_USER_ACCOUNT_EVENT}",
     },
             groupId = "user-otp-verification", autoStartup = "${kafka.listen.auto.start:true}")
-    public void onVerifiedUserOTP(ConsumerRecord<String, ExtendedEventValue<UserMetadata>> consumerRecord) {
+    public void onVerifiedUserOTP(ConsumerRecord<String, EventValue<String, OTPMetadata>> consumerRecord) {
         var event = consumerRecord.value();
-        String username = event.getMetadata().username();
+        var metadata = event.value();
+        String username = metadata.username();
 
-        log.info("Verified events listener, traceId:{}", event.getTraceId());
-        otpPort.verifyOTP(event.getValue(), username);
-        log.info("Verified events listener was successful, traceId:{}", event.getTraceId());
+        log.info("Verified events listener, traceId:{}", event.traceId());
+        otpPort.verifyOTP(metadata.otpCode(), username);
+        log.info("Verified events listener was successful, traceId:{}", event.traceId());
     }
 }

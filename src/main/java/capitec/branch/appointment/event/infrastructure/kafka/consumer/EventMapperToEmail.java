@@ -1,11 +1,10 @@
 package capitec.branch.appointment.event.infrastructure.kafka.consumer;
 
 
-import capitec.branch.appointment.kafka.appointment.AppointmentErrorEventValue;
-import capitec.branch.appointment.kafka.appointment.AppointmentEventValue;
-import capitec.branch.appointment.kafka.user.UserErrorEventValue;
-import capitec.branch.appointment.kafka.user.UserEventValue;
+import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.notification.domain.*;
+import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
+import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
@@ -19,150 +18,43 @@ import java.util.Map;
 public interface EventMapperToEmail {
 
     //---------------------------------------User Email---------------------------------------
-    @Mapping(source = "fullname",target = "fullname")
-    @Mapping(source = "email", target = "email")
-    @Mapping(source = "value", target = "OTPCode")
+    @Mapping(source = "event.fullname",target = "fullname")
+    @Mapping(source = "event.email", target = "email")
+    @Mapping(source = "event.otpCode", target = "OTPCode")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventmapToOTPEmail(UserEventValue event);
+    OTPEmail eventmapToOTPEmail(OTPMetadata event, String topic, String traceId);
 
     @Mapping(source = "event.fullname",target = "fullname")
     @Mapping(source = "event.email", target = "email")
-    @Mapping(source = "event.value", target = "OTPCode")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventmapToOTPEmail(UserEventValue event, String originalTopic);
-
-    @Mapping(source = "fullname",target = "fullname")
-    @Mapping(source = "email", target = "email")
-    @Mapping(source = "value", target = "OTPCode")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventmapToOTPEmail(UserErrorEventValue event);
-
-    @Mapping(source = "event.fullname",target = "fullname")
-    @Mapping(source = "event.email", target = "email")
-    @Mapping(source = "event.value", target = "OTPCode")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventmapToOTPEmail(UserErrorEventValue event, String originalTopic);
-
-    @Mapping(source = "fullname",target = "fullname")
-    @Mapping(source = "email", target = "email")
-    @Mapping(source = "traceId", target = "traceId")
-    @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    ConfirmationEmail userEventMapToConfirmationEmail(UserEventValue event);
-    @Mapping(source = "event.fullname",target = "fullname")
-    @Mapping(source = "event.email", target = "email")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
-    ConfirmationEmail userEventMapToConfirmationEmail(UserEventValue event,String originalTopic);
-
-    @Mapping(source = "fullname",target = "fullname")
-    @Mapping(source = "email", target = "email")
-    @Mapping(source = "traceId", target = "traceId")
-    @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventMapToConfirmationEmail(UserErrorEventValue event);
-    @Mapping(source = "event.fullname",target = "fullname")
-    @Mapping(source = "event.email", target = "email")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToEventType")
-    OTPEmail userEventMapToConfirmationEmail(UserErrorEventValue event, String originalTopic);
-
+    ConfirmationEmail eventToConfirmationEmail(OTPMetadata event, String topic, String traceId);
 
     //---------------------------------------Appointment Email---------------------------------------
     @Mapping(target = "fullname", ignore = true)
     @Mapping( target = "email", ignore = true)
     @Mapping(source = "event.customerUsername", target = "customerUsername")
     @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "event.topic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "day", qualifiedByName = "appointmentDay")
-    @Mapping(source = "event.metadata.otherData", target = "startTime", qualifiedByName = "appointmentStartTime")
-    @Mapping(source = "event.metadata.otherData", target = "endTime", qualifiedByName = "appointmentEndTime")
+    @Mapping(source = "traceId", target = "traceId")
+    @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
+    @Mapping(source = "event.otherData", target = "day", qualifiedByName = "appointmentDay")
+    @Mapping(source = "event.otherData", target = "startTime", qualifiedByName = "appointmentStartTime")
+    @Mapping(source = "event.otherData", target = "endTime", qualifiedByName = "appointmentEndTime")
     @Mapping(source = "event.branchId", target = "branchId")
-    AppointmentBookedEmail appointmentBookedEmail(AppointmentEventValue event);
-    @Mapping(target = "fullname", ignore = true)
-    @Mapping( target = "email", ignore = true)
-    @Mapping(source = "event.customerUsername", target = "customerUsername")
-    @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "day", qualifiedByName = "appointmentDay")
-    @Mapping(source = "event.metadata.otherData", target = "startTime", qualifiedByName = "appointmentStartTime")
-    @Mapping(source = "event.metadata.otherData.", target = "endTime", qualifiedByName = "appointmentEndTime")
-    @Mapping(source = "event.branchId", target = "branchId")
-    AppointmentBookedEmail appointmentBookedEmail(AppointmentEventValue event,String originalTopic);
-    @Mapping(target = "fullname", ignore = true)
-    @Mapping( target = "email", ignore = true)
-    @Mapping(source = "event.customerUsername", target = "customerUsername")
-    @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "event.topic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "day", qualifiedByName = "appointmentDay")
-    @Mapping(source = "event.metadata.otherData", target = "startTime", qualifiedByName = "appointmentStartTime")
-    @Mapping(source = "event.metadata.otherData", target = "endTime", qualifiedByName = "appointmentEndTime")
-    @Mapping(source = "event.branchId", target = "branchId")
-    AppointmentBookedEmail appointmentBookedEmail(AppointmentErrorEventValue event);
-    @Mapping(target = "fullname", ignore = true)
-    @Mapping( target = "email", ignore = true)
-    @Mapping(source = "event.customerUsername", target = "customerUsername")
-    @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "day", qualifiedByName = "appointmentDay")
-    @Mapping(source = "event.metadata.otherData", target = "startTime", qualifiedByName = "appointmentStartTime")
-    @Mapping(source = "event.metadata.otherData", target = "endTime", qualifiedByName = "appointmentEndTime")
-    @Mapping(source = "event.branchId", target = "branchId")
-    AppointmentBookedEmail appointmentBookedEmail(AppointmentErrorEventValue event, String originalTopic);
+    AppointmentBookedEmail appointmentBookedEmail(AppointmentMetadata event, String topic, String traceId);
     @Mapping(target = "fullname", ignore = true)
     @Mapping( target = "email", ignore = true)
     @Mapping(source = "event.customerUsername", target = "customerUsername")
     @Mapping(source = "event.branchId", target = "branchId")
     @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "event.topic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "fromState", qualifiedByName = "appointmentFromState")
-    @Mapping(source = "event.metadata.otherData", target = "toState", qualifiedByName = "appointmentToState")
+    @Mapping(source = "traceId", target = "traceId")
+    @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
+    @Mapping(source = "event.otherData", target = "fromState", qualifiedByName = "appointmentFromState")
+    @Mapping(source = "event.otherData", target = "toState", qualifiedByName = "appointmentToState")
     @Mapping(source = "event.createdAt", target = "createdAt")
-    @Mapping(source = "event.metadata.otherData", target = "triggeredBy", qualifiedByName = "appointmentUpdateTriggeredBy")
-    AppointmentStatusUpdatesEmail appointmentStatusUpdatesEmail(AppointmentEventValue event);
-    @Mapping(target = "fullname", ignore = true)
-    @Mapping( target = "email", ignore = true)
-    @Mapping(source = "event.customerUsername", target = "customerUsername")
-    @Mapping(source = "event.branchId", target = "branchId")
-    @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "fromState", qualifiedByName = "appointmentFromState")
-    @Mapping(source = "event.metadata.otherData", target = "toState", qualifiedByName = "appointmentToState")
-    @Mapping(source = "event.createdAt", target = "createdAt")
-    @Mapping(source = "event.metadata.otherData", target = "triggeredBy", qualifiedByName = "appointmentUpdateTriggeredBy")
-    AppointmentStatusUpdatesEmail appointmentStatusUpdatesEmail(AppointmentEventValue event,String originalTopic);
-    @Mapping(target = "fullname", ignore = true)
-    @Mapping( target = "email", ignore = true)
-    @Mapping(source = "event.customerUsername", target = "customerUsername")
-    @Mapping(source = "event.branchId", target = "branchId")
-    @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "event.topic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "fromState", qualifiedByName = "appointmentFromState")
-    @Mapping(source = "event.metadata.otherData", target = "toState", qualifiedByName = "appointmentToState")
-    @Mapping(source = "event.createdAt", target = "createdAt")
-    @Mapping(source = "event.metadata.otherData", target = "triggeredBy", qualifiedByName = "appointmentUpdateTriggeredBy")
-    AppointmentStatusUpdatesEmail appointmentStatusUpdatesEmail(AppointmentErrorEventValue event);
-    @Mapping(target = "fullname", ignore = true)
-    @Mapping( target = "email", ignore = true)
-    @Mapping(source = "event.customerUsername", target = "customerUsername")
-    @Mapping(source = "event.branchId", target = "branchId")
-    @Mapping(source = "event.reference", target = "reference")
-    @Mapping(source = "event.traceId", target = "traceId")
-    @Mapping(source = "originalTopic", target = "eventType",qualifiedByName = "topicToAppointmentEventType")
-    @Mapping(source = "event.metadata.otherData", target = "fromState", qualifiedByName = "appointmentFromState")
-    @Mapping(source = "event.metadata.otherData", target = "toState", qualifiedByName = "appointmentToState")
-    @Mapping(source = "event.createdAt", target = "createdAt")
-    @Mapping(source = "event.metadata.otherData", target = "triggeredBy", qualifiedByName = "appointmentUpdateTriggeredBy")
-    AppointmentStatusUpdatesEmail appointmentStatusUpdatesEmail(AppointmentErrorEventValue event, String originalTopic);
+    @Mapping(source = "event.otherData", target = "triggeredBy", qualifiedByName = "appointmentUpdateTriggeredBy")
+    AppointmentStatusUpdatesEmail appointmentStatusUpdatesEmail(AppointmentMetadata event, String topic, String traceId);
 
     @Named("topicToEventType")
     default Notification.UserEventType topicToEventType(String topic) {
@@ -228,15 +120,4 @@ public interface EventMapperToEmail {
         }
     }
 
-
-//    @Named("userMetadataToFullname")
-//    default String userMetadataToFullname(AppointmentMetadata userMetadata) {
-//
-//        return userMetadata.fullname();
-//    }
-//    @Named("userMetadataToEmail")
-//    default String userMetadataToEmail(AppointmentMetadata userMetadata) {
-//
-//        return userMetadata.email();
-//    }
 }

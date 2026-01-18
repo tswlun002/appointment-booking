@@ -3,9 +3,8 @@ package capitec.branch.appointment.appointment.app;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.event.app.Topics;
-import capitec.branch.appointment.event.infrastructure.kafka.producer.appointment.AppointmentEventValueImpl;
-import capitec.branch.appointment.kafka.appointment.AppointmentMetadata;
-import capitec.branch.appointment.kafka.domain.ExtendedEventValue;
+import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.slots.app.GetSlotQuery;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
@@ -17,9 +16,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatExceptionOfType;
@@ -107,27 +105,21 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             assertNotNull(result, "The execution should return true on successful event publication.");
 
             // Poll for Kafka event (CORRECT TOPIC)
-            ConsumerRecord<String, String> received = getLatestRecordForKey(
+            Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                     testConsumer,
-                    result.getId().toString(),
+                    result.getId().toString()+result.getReference(),
                     Duration.ofSeconds(10)
             );
+            Assertions.assertThat(eventValueOptional).isPresent();
+            EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+            AssertionsForClassTypes.assertThat(eventValue).isNotNull();
+            AppointmentMetadata metadata = eventValue.value();
 
-            // Assertions on Kafka event
-            assertThat(received).isNotNull();
-            assertThat(received.key()).isNotNull();
-            String value = received.value();
-            assertThat(value).isNotNull();
-
-            ObjectMapper mapper = EventToJSONMapper.getMapper();
-
-            ExtendedEventValue<AppointmentMetadata> extendedEventValue = mapper.readValue(value, AppointmentEventValueImpl.class);
-            assertThat(extendedEventValue).isNotNull();
-            AppointmentMetadata metadata = extendedEventValue.getMetadata();
             assertThat(metadata).isNotNull();
             assertThat(metadata.branchId()).isEqualTo(branch.getBranchId());
             assertThat(metadata.customerUsername()).isEqualTo(user.getUsername());
             Map<String, Object> stringObjectMap = metadata.otherData();
+            ObjectMapper mapper = EventToJSONMapper.getMapper();
 
             var startTime =  mapper.convertValue( stringObjectMap.get("startTime"),LocalTime.class);
             assertThat(startTime).isNotNull().isEqualTo(slot.getStartTime());
@@ -138,7 +130,6 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             Optional<Appointment> byId = appointmentService.findById(metadata.id());
             assertThat(byId).isPresent();
             assertThat(byId.get().getReference()).isEqualTo(metadata.reference());
-            assertThat(extendedEventValue.getSource()).isNotNull().isEqualTo("Appointment context");
 
 
             //VERIFY slot booking
@@ -167,16 +158,12 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         var result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isNotNull();
         // 2. Poll for records (wait up to 10 seconds)
-        ConsumerRecord<String, String> received = getLatestRecordForKey(
+        Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                 testConsumer,
-                result.getId().toString(),
+                result.getId().toString()+result.getReference(),
                 Duration.ofSeconds(10)
         );
-        // 3. Assertions
-        assertThat(received).isNotNull();
-        assertThat(received.key()).isNotNull();
-        String value = received.value();
-        assertThat(value).isNotNull();
+        Assertions.assertThat(eventValueOptional).isPresent();
 
 
         // Another user pick same slot
@@ -184,17 +171,14 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         result = bookAppointmentUseCase.execute(appointmentDTO) ;
         user = getUserQuery.execute(new UsernameCommand(guestClients.get(1)));
         assertThat(result).isNotNull();
-        Appointment finalResult1 = result;
-         received = getLatestRecordForKey(
+        eventValueOptional = getLatestRecordForKey(
                 testConsumer,
-                result.getId().toString(),
+                result.getId().toString()+result.getReference(),
                 Duration.ofSeconds(10)
         );
-        // 3. Assertions
-        assertThat(received).isNotNull();
-        assertThat(received.key()).isNotNull();
-         value = received.value();
-        assertThat(value).isNotNull();
+        Assertions.assertThat(eventValueOptional).isPresent();
+        EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+        AssertionsForClassTypes.assertThat(eventValue).isNotNull();
         //VERIFY slot booking
         Slot bookedSlot = getSlotQuery.execute(slot.getId());
         assertThat(bookedSlot).isNotNull();
@@ -221,31 +205,27 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         var result = bookAppointmentUseCase.execute(validAppointmentDTO) ;
         assertThat(result).isNotNull();
-        ConsumerRecord<String, String> received = getLatestRecordForKey(
+        Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                 testConsumer,
-                result.getId().toString(),
+                result.getId().toString()+result.getReference(),
                 Duration.ofSeconds(10)
         );
-        // 3. Assertions
-        assertThat(received).isNotNull();
-        assertThat(received.key()).isNotNull();
-        String value = received.value();
-        assertThat(value).isNotNull();
+        Assertions.assertThat(eventValueOptional).isPresent();
+        EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+        AssertionsForClassTypes.assertThat(eventValue).isNotNull();
 
         // 2. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         result = bookAppointmentUseCase.execute(validAppointmentDTO);
         assertThat(result).isNotNull();
-        received = getLatestRecordForKey(
+         eventValueOptional = getLatestRecordForKey(
                 testConsumer,
-                result.getId().toString(),
+                result.getId().toString()+result.getReference(),
                 Duration.ofSeconds(10)
         );
-        // 3. Assertions
-        assertThat(received).isNotNull();
-        assertThat(received.key()).isNotNull();
-         value = received.value();
-        assertThat(value).isNotNull();
+        Assertions.assertThat(eventValueOptional).isPresent();
+        eventValue = eventValueOptional.get();
+        AssertionsForClassTypes.assertThat(eventValue).isNotNull();
 
         // 3. Execute the Use Case
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(2), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
@@ -280,16 +260,14 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         validAppointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), user.getUsername(), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         var bookedAppointment = bookAppointmentUseCase.execute(validAppointmentDTO) ;
         assertThat(bookedAppointment).isNotNull();
-        ConsumerRecord<String, String> received = getLatestRecordForKey(
+        Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
                 testConsumer,
-                result.getId().toString(),
+                bookedAppointment.getId().toString()+bookedAppointment.getReference(),
                 Duration.ofSeconds(10)
         );
-        // 3. Assertions
-        assertThat(received).isNotNull();
-        assertThat(received.key()).isNotNull();
-        String value = received.value();
-        assertThat(value).isNotNull();
+        Assertions.assertThat(eventValueOptional).isPresent();
+        EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
+        AssertionsForClassTypes.assertThat(eventValue).isNotNull();
 
         // 2. Execute the Use Case
         Slot secondSlotToBookAtSameDay = slots.get(1);

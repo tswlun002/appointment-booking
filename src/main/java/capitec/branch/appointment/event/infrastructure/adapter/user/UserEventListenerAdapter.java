@@ -23,7 +23,8 @@ public class UserEventListenerAdapter {
     @EventListener(UserVerifiedEvent.class)
     public void onUserVerified(@Valid UserVerifiedEvent event) {
         log.info("Received user verified event, traceId: {}", event.traceId());
-        userEventListenerPort.handleUserVerifiedEvent(event.username(), event.email(),event.fullName(), event.traceId());
+
+        userEventListenerPort.handleUserVerifiedEvent(event.username(), event.email(),event.fullName(),event.otp(), event.traceId());
     }
 
     @EventListener(DeleteUserEvent.class)

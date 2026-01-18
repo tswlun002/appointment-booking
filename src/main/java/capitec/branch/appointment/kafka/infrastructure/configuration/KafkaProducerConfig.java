@@ -1,6 +1,5 @@
 package capitec.branch.appointment.kafka.infrastructure.configuration;
 
-import capitec.branch.appointment.kafka.domain.EventValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -23,7 +22,7 @@ import java.util.Map;
 @Configuration
 @EnableKafka
 @RequiredArgsConstructor
-public class KafkaProducerConfig<K extends Serializable, V extends EventValue> {
+public class KafkaProducerConfig<K extends Serializable, V extends Serializable> {
 
     private final KafkaProperties kafkaProperties;
     private final ProducerProperties producerProperties;

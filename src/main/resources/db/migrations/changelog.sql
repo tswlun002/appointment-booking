@@ -320,7 +320,7 @@ ALTER TABLE otp
 CREATE TABLE user_dead_letter_event
 (
     event_id           VARCHAR(255) PRIMARY KEY,
-    key                VARCHAR(255) NOT NULL,
+    key                TEXT NOT NULL,
     value              TEXT         NOT NULL,
     topic              VARCHAR(255) NOT NULL,
     partition          INTEGER,
@@ -337,7 +337,6 @@ CREATE TABLE user_dead_letter_event
     published_time     TIMESTAMP    NOT NULL,
     created_date       TIMESTAMP    NOT NULL DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP    NOT NULL DEFAULT LOCALTIMESTAMP,
-    data           TEXT ,
     CONSTRAINT unique_key_trace_id UNIQUE (key, trace_id),
     CONSTRAINT check_retry_count_non_negative CHECK (retry_count >= 0),
     CONSTRAINT check_partition_non_negative CHECK (partition IS NULL OR partition >= 0),

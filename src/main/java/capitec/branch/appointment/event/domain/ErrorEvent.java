@@ -25,14 +25,13 @@ public class ErrorEvent {
     private DEAD_LETTER_STATUS status;
     private Long recoveredPartition;
     private Long recoveredOffset;
-    private final  String data;
 
     private ErrorEvent(String eventId, String key, String topic, String value,
                        String traceId, LocalDateTime timestamp, String exception,
                        String exceptionClass, String exceptionCause, String stackTrace, int retryCount,
                        boolean retryable, LocalDateTime nextRetryAt,
                        DEAD_LETTER_STATUS status, Long recoveredPartition,
-                       Long recoveredOffset, String data) {
+                       Long recoveredOffset) {
         Asserts.notBlank(eventId, "eventId");
         Asserts.notBlank(key, "key");
         Asserts.notBlank(topic, "topic");
@@ -56,7 +55,6 @@ public class ErrorEvent {
         this.status = status;
         this.recoveredPartition = recoveredPartition;
         this.recoveredOffset = recoveredOffset;
-        this.data = data;
         this.exceptionCause = exceptionCause;
     }
 
@@ -64,10 +62,10 @@ public class ErrorEvent {
     public static  ErrorEvent create(String eventId, String key, String topic, String value,
                                     String traceId, LocalDateTime timestamp, String exception,
                                     String exceptionClass, String exceptionCause, String stackTrace, boolean retryable,
-                                    Long partition, Long offset, String data) {
+                                    Long partition, Long offset) {
         return new ErrorEvent(eventId, key, topic, value, traceId, timestamp,
                 exception, exceptionClass,  exceptionCause,stackTrace, 0, retryable, null,
-                DEAD_LETTER_STATUS.DEAD, partition, offset, data);
+                DEAD_LETTER_STATUS.DEAD, partition, offset);
     }
 
     // Reconstitution from persistence
@@ -78,10 +76,10 @@ public class ErrorEvent {
                                           String exceptionClass, String exceptionCause, String stackTrace, int retryCount,
                                           boolean retryable, LocalDateTime nextRetryAt,
                                           DEAD_LETTER_STATUS status, Long recoveredPartition,
-                                          Long recoveredOffset, String data) {
+                                          Long recoveredOffset) {
         return new ErrorEvent(eventId, key, topic, value, traceId, timestamp,
                 exception, exceptionClass,exceptionCause, stackTrace, retryCount, retryable, nextRetryAt,
-                status, recoveredPartition, recoveredOffset,data);
+                status, recoveredPartition, recoveredOffset);
     }
 
     // Domain behavior
@@ -122,7 +120,7 @@ public class ErrorEvent {
     }
 
     public <R> R parseData(Class<R> clazz, ObjectMapper mapper) throws JsonProcessingException {
-        return mapper.readValue(data, clazz);
+        return mapper.readValue(value, clazz);
     }
 
     // Getters
@@ -141,7 +139,6 @@ public class ErrorEvent {
     public DEAD_LETTER_STATUS getStatus() { return status; }
     public Long getRecoveredPartition() { return recoveredPartition; }
     public Long getRecoveredOffset() { return recoveredOffset; }
-    public String getData(){return data;}
 
     public String getExceptionCause() {
         return exceptionCause;
@@ -177,7 +174,6 @@ public class ErrorEvent {
                 ", status=" + status +
                 ", recoveredPartition=" + recoveredPartition +
                 ", recoveredOffset=" + recoveredOffset +
-                ", data='" + data.toString() + '\'' +
                 '}';
     }
 }

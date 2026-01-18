@@ -1,5 +1,6 @@
 package capitec.branch.appointment.kafka.infrastructure.configuration;
 
+import capitec.branch.appointment.kafka.domain.EventValue;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -14,7 +15,6 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.ConsumerProperties;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.KafkaProperties;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.SecurityProperties;
-import capitec.branch.appointment.kafka.domain.EventValue;
 
 import java.io.Serializable;
 import java.util.HashMap;
@@ -25,7 +25,7 @@ import java.util.Map;
 @EnableKafka
 @Configuration
 @RequiredArgsConstructor
-public class KafkaConsumerConfig<K extends Serializable,V extends EventValue> {
+public class KafkaConsumerConfig<K extends Serializable,V extends Serializable> {
 
     private static final String SPRING_JSON_PACKAGE = "spring.json.trusted.packages";
     private final KafkaProperties kafkaProperties;

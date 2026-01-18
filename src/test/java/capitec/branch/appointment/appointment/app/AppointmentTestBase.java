@@ -8,6 +8,8 @@ import capitec.branch.appointment.branch.app.BranchDTO;
 import capitec.branch.appointment.branch.app.DeleteBranchUseCase;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.address.Address;
+import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.slots.domain.Slot;
@@ -17,7 +19,11 @@ import capitec.branch.appointment.staff.domain.StaffService;
 import capitec.branch.appointment.staff.domain.StaffStatus;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UsernameGenerator;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
+import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,14 +32,12 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
+
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.function.Consumer;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -69,6 +73,9 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     protected final LocalDate TOMORROW = LocalDate.now().plusDays(2);
     protected final LocalDate DAY_AFTER = LocalDate.now().plusDays(3);
     protected final int  MAX_BOOKING_CAPACITY = 2;
+
+    protected ObjectMapper objectMapper = EventToJSONMapper.getMapper();
+
 
     @BeforeEach
     public void setupBase() {
@@ -230,17 +237,31 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
     }
 
-    protected ConsumerRecord<String, String> getLatestRecordForKey(
+    protected Optional<EventValue<String,AppointmentMetadata>> getLatestRecordForKey(
             Consumer<String, String> consumer,
             String key,
             Duration timeout) {
 
         ConsumerRecords<String, String> records = KafkaTestUtils.getRecords(consumer, timeout);
-
         return StreamSupport.stream(records.spliterator(), false)
-                .filter(record -> key.equals(record.key()))
-                .max(Comparator.comparingLong(ConsumerRecord::timestamp))
-                .orElseThrow(() -> new AssertionError("No matching record found for key: " + key));
+                .filter(record -> record.key().equals(key))
+                .map(record ->{
+                    String value = record.value();
+
+
+                    try {
+
+                        EventValue<String,AppointmentMetadata> eventValue = record.topic().endsWith(".retry") ?
+                                objectMapper.readValue(value, new TypeReference<EventValue.EventError<String, AppointmentMetadata>>() {}):
+                                objectMapper.readValue(value, new TypeReference<EventValue.OriginEventValue<String, AppointmentMetadata>>() {});
+                        return eventValue;
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .max(Comparator.comparing(eventValue->
+                        eventValue.value().createdAt()
+                ));
     }
 
 }
