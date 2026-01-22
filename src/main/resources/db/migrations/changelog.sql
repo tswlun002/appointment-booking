@@ -24,8 +24,6 @@ CREATE TABLE branch
     created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
     branch_id          VARCHAR(36) NOT NULL,
-    open_time          TIME        NOT NULL,
-    close_time         TIME,
     CONSTRAINT unique_branch_id UNIQUE (branch_id),
     CONSTRAINT check_open_before_close CHECK (close_time IS NULL OR open_time < close_time)
 );
@@ -51,17 +49,18 @@ CREATE TABLE branch_appointment_info
     id                 SERIAL PRIMARY KEY,
     created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
     last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    branch_id  SERIAL NOT NULL REFERENCES branch(id) ON DELETE CASCADE,
-    branch_business_id  VARCHAR(36) NOT NULL,
-    branch_key         VARCHAR(16)      NOT NULL,
+    branch_id          SERIAL           NOT NULL REFERENCES branch (id) ON DELETE CASCADE,
+    branch_business_id VARCHAR(36)      NOT NULL,
+    branch_key         DATE             NOT NULL,
     slot_duration      INTEGER          NOT NULL,
     utilization_factor DOUBLE PRECISION NOT NULL,
     staff_count        INTEGER          NOT NULL,
-    day_type           VARCHAR(16)      NOT NULL,
-    CONSTRAINT unique_branch_day UNIQUE (branch_id, day_type),
+    day                DATE             NOT NULL,
+    CONSTRAINT unique_branch_day UNIQUE (branch_id, day),
     CONSTRAINT check_slot_duration_positive CHECK (slot_duration > 0),
     CONSTRAINT check_utilization_factor_range CHECK (utilization_factor > 0 AND utilization_factor <= 1),
-    CONSTRAINT check_staff_count_positive CHECK (staff_count > 0)
+    CONSTRAINT check_staff_count_positive CHECK (staff_count > 0),
+    CONSTRAINT check_day_branch_key_equal CHECK (day =branch_key)
 );
 --ROLLBACK DROP TABLE branch_appointment_info
 
@@ -136,29 +135,33 @@ CREATE TABLE branch_staff_assignment
     );
 -- Index for querying "who was working on dateOfSlots X?"
 CREATE INDEX idx_branch_date_status ON branch_staff_assignment (branch_id, day, username);
--- ROLLBAK DROP TABLE branch_staff_assignment
+-- ROLLBACK DROP TABLE branch_staff_assignment
 
 
 -- changeset Lunga:11
 -- preconditions onFail:MARK_RAN onError:HALT
--- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables  where table_name='address';
--- comment: /* Create table ADDRESS only if it does not exist. ZERO means the schema does not exist*/
-CREATE TABLE address
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables where table_name='operation_hours_override';
+-- comment: /* Create table OPERATION_HOURS_OVERRIDE only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE operation_hours_override
 (
     branch_id          SERIAL PRIMARY KEY REFERENCES branch (id) ON DELETE CASCADE,
-    created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
-    street_number      VARCHAR(16),
-    street_name        VARCHAR(32),
-    suburb             VARCHAR(32),
-    city               VARCHAR(32),
-    province           VARCHAR(16),
-    postal_code        VARCHAR(16),
-    country            VARCHAR(32),
-    CONSTRAINT unique_address UNIQUE (street_number, street_name, suburb, city, province, postal_code, country),
-    CONSTRAINT check_postal_code_format CHECK (postal_code ~ '^[0-9]{4}$')
-    );
---ROLLBACK DROP TABLE address
+    branch_key         DATE NOT NULL,
+    branch_business_id VARCHAR(36)      NOT NULL,
+    effective_day      DATE NOT NULL,
+    open_time          TIME         NOT NULL,
+    close_time         TIME         NOT NULL,
+    closed             BOOLEAN      NOT NULL,
+    reason             VARCHAR(255) NOT NULL,
+    created_date       TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP,
+    CONSTRAINT check_effective_daY_future CHECK (effective_day >= CURRENT_DATE),
+    CONSTRAINT check_open_time_close_time_valid CHECK (open_time < close_time),
+    CONSTRAINT check_reason_not_blank CHECK (TRIM(reason) <> ''),
+    CONSTRAINT check_effective_day_day_equal CHECK (effective_day = branch_key),
+    CONSTRAINT unique_branch_id_effective_day UNIQUE (branch_id, effective_day)
+
+);
+--ROLLBACK DROP TABLE operation_hours_override
 
 
 -- changeset Lunga:12
