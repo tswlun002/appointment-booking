@@ -16,5 +16,6 @@ public interface BranchService {
 
     boolean delete(String branchId);
 
-    Collection<Branch> getAllBranch();
+    Collection<Branch> getAllBranch(int offset, int limit);
+
 }

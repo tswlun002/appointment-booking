@@ -8,6 +8,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Collection;
 import java.util.Optional;
 
@@ -22,23 +24,54 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
                 WHERE branch_id = :branchId
             )
             INSERT INTO branch_appointment_info
-                (branch_id, branch_business_id, branch_key, slot_duration, utilization_factor,staff_count, day_type)
+                (branch_id, branch_business_id, branch_key, slot_duration, utilization_factor,staff_count, day)
             SELECT
                 b.id,                                   
                 b.business_id,                          
-                :dayType,
+                :day,
                 :slotDuration,
                 :utilizationFactor,
                 :staffCount,
-                :dayType
+                :day
             FROM branch_lookup b
-            ON CONFLICT (branch_id, day_type)
+            ON CONFLICT (branch_id, day)
             DO UPDATE SET
                 slot_duration = EXCLUDED.slot_duration,
                 utilization_factor = EXCLUDED.utilization_factor
             """)
     int addBranchAppointmentConfigInfo(@Param("branchId") String branchId, @Param("slotDuration") int slotDuration,
-                                       @Param("utilizationFactor") double utilizationFactor,@Param("staffCount") int staffCount, @Param("dayType") String dayType);
+                                       @Param("utilizationFactor") double utilizationFactor,@Param("staffCount") int staffCount, @Param("day") LocalDate day);
+
+    @Modifying
+    @Transactional
+    @Query("""
+            WITH branch_lookup AS (
+                SELECT id, branch_id AS business_id 
+                FROM branch
+                WHERE branch_id = :branchId
+            )
+            INSERT INTO operation_hours_override
+                (branch_id, branch_business_id, branch_key, effective_day, open_time,close_time, closed,reason)
+            SELECT
+                b.id,                                   
+                b.business_id,                          
+                :effectiveDate,
+                :effectiveDate,
+                :openTime,
+                :closingTime,
+                :closed,
+                :reason
+            FROM branch_lookup b
+            ON CONFLICT (branch_id, effective_day)
+            DO UPDATE SET
+                open_time = EXCLUDED.open_time,
+                close_time = EXCLUDED.close_time,
+                closed = EXCLUDED.closed,
+                reason = EXCLUDED.reason
+            """)
+    int addBranchOperationHoursOverride(@Param("branchId") String branchId, @Param("effectiveDate") LocalDate effectiveDate,
+                                        @Param("openTime") LocalTime openTime, @Param("closingTime") LocalTime closingTime,
+                                        @Param("closed") boolean closed, @Param("reason") String reason);
 
 
     @Query(value = """
@@ -49,22 +82,20 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
                             u.close_time,
                             u.created_at,
                             u.last_modified_date,
-                            a.branch_id AS address_branch_id,
-                            a.created_at AS address_created_at,
-                            a.last_modified_date AS address_last_modified_date,
-                            a.street_number AS address_street_number,
-                            a.street_name AS address_street_name,
-                            a.suburb AS address_suburb,
-                            a.city AS address_city,
-                            a.province AS address_province,
-                            a.postal_code AS address_postal_code,
-                            a.country AS address_country,
-                            ba.day_type AS ba_day_type,
+                            op.branch_id AS op_branch_id,
+                            op.open_time AS op_open_time,
+                            op.close_time AS op_close_time,
+                            op.effective_day AS op_effect_day,
+                            op.closed AS op_closed,
+                            op.reason AS op_reason,
+                            op.created_date AS op_created_date,
+                            op.last_modified_date AS last_modified_date,
+                            ba.day AS ba_day,
                             ba.slot_duration AS ba_slot_duration,
                             ba.utilization_factor AS ba_utilization_factor,
                             ba.staff_count AS ba_staff_count
                             FROM branch AS u
-                            INNER JOIN address AS a ON a.branch_id=u.id
+                            LEFT JOIN operation_hours_override AS op ON op.branch_id=u.id
                             LEFT JOIN branch_appointment_info AS ba  ON ba.branch_id=u.id
                        WHERE u.branch_id=:branchId 
             """)
@@ -81,27 +112,23 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
             SELECT 
                 u.id,
                 u.branch_id,
-                u.open_time,
-                u.close_time,
-                u.created_at,
-                u.last_modified_date,
-                a.branch_id AS address_branch_id,
-                a.created_at AS address_created_at,
-                a.last_modified_date AS address_last_modified_date,
-                a.street_number AS address_street_number,
-                a.street_name AS address_street_name,
-                a.suburb AS address_suburb,
-                a.city AS address_city,
-                a.province AS address_province,
-                a.postal_code AS address_postal_code,
-                a.country AS address_country,
-                ba.day_type AS ba_day_type,
+                op.branch_id AS op_branch_id,
+                op.open_time AS op_open_time,
+                op.close_time AS op_close_time,
+                op.effective_day AS op_effect_day,
+                op.closed AS op_closed,
+                op.reason AS op_reason,
+                ba.day AS ba_day,
+                op.created_date AS op_created_date,
+                op.last_modified_date AS last_modified_date,
                 ba.slot_duration AS ba_slot_duration,
                 ba.utilization_factor AS ba_utilization_factor,
                 ba.staff_count AS ba_staff_count
                 FROM branch AS u
-                INNER JOIN address AS a ON a.branch_id=u.id
+                LEFT JOIN operation_hours_override AS op ON op.branch_id=u.id
                 LEFT JOIN branch_appointment_info AS ba  ON ba.branch_id=u.id
+                ORDER BY id ASC
+                OFFSET :offset LIMIT :limit
             """)
-    Collection<BranchEntity> getAllBranch();
+    Collection<BranchEntity> getAllBranch(@Param("offset") int offset,@Param("limit") int limit);
 }

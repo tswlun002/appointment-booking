@@ -26,12 +26,12 @@ public class GetBranchQuery {
         });
     }
 
-    public Collection<Branch> execute() {
+    public Collection<Branch> execute(int offset, int limit) {
 
         Collection<Branch> branches ;
         try {
             log.debug("Retrieving all branches");
-            branches = branchService.getAllBranch();
+            branches = branchService.getAllBranch(offset, limit);
         } catch (Exception e) {
             log.error("Unable to retrieve all branches", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error during branch retrieval");

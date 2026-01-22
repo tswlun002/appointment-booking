@@ -3,7 +3,6 @@ package capitec.branch.appointment.staff.app;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
-import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.staff.domain.StaffService;
@@ -16,7 +15,6 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.LocalTime;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -71,13 +69,11 @@ abstract class StaffUseCaseTestBase extends AppointmentBookingApplicationTests {
         }
     }
     protected void setUpBranch() {
-        var branchString = "BR001;09:00;17:00;123;Main Street;Rosebank;Johannesburg;Gauteng;2196;South Africa";
+        var branchString = "BR001";
                 //   "BR002;08:30;16:30;456;Church Street;Hatfield;Pretoria;Gauteng;2828;South Africa",
 
 
-            String[] branchInfo = branchString.split(";");
-            Address address = new Address(branchInfo[3], branchInfo[4], branchInfo[5], branchInfo[6], branchInfo[7], Integer.parseInt(branchInfo[8]), branchInfo[9]);
-             branch = new Branch(branchInfo[0], LocalTime.parse(branchInfo[1]), LocalTime.parse(branchInfo[2]), address);
+             branch = new Branch(branchString);
         branch =branchService.add(branch);
 
 

@@ -1,10 +1,10 @@
 package capitec.branch.appointment.branch.app;
 
-import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 import java.time.Duration;
+import java.time.LocalDate;
 
 public record BranchAppointmentInfoDTO(
         @Min(1)
@@ -14,6 +14,6 @@ public record BranchAppointmentInfoDTO(
         @NotNull
         double utilizationFactor,
         @NotNull
-        DayType dayType
+        LocalDate day
 ) {
 }

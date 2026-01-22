@@ -1,7 +1,6 @@
 package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.address.Address;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -9,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalTime;
 import java.util.Collections;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,18 +22,13 @@ class GetBranchQueriesTest extends BranchTestBase {
 
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {
-            "BR001;09:00;17:00;123;Main Street;Rosebank;Johannesburg;Gauteng;2196;South Africa",
-            "BR002;08:30;16:30;456;Church Street;Hatfield;Pretoria;Gauteng;2828;South Africa"
+            "BR001",
+            "BR002"
     })
-    public void testGetBranchByIdQuery_ExistingBranch(String branchId, LocalTime openTime, LocalTime closingTime,
-                                                      String streetNumber, String streetName, String suburbs,
-                                                      String city, String province, Integer postalCode, String country) {
+    public void testGetBranchByIdQuery_ExistingBranch(String branchId) {
 
         // ARRANGE: Add the branch first
-        Address expectedAddress = new Address(streetNumber, streetName, suburbs, city, province, postalCode, country);
-        BranchDTO branchDTO = createBranchDTO(branchId, openTime, closingTime, 
-                                                streetNumber, streetName, suburbs, 
-                                                city, province, postalCode, country);
+        BranchDTO branchDTO = createBranchDTO(branchId);
         addBranchUseCase.execute(branchDTO);
         
         // ACT
@@ -46,9 +39,7 @@ class GetBranchQueriesTest extends BranchTestBase {
         assertThat(branch)
                 .as("Retrieved branch fields should match created fields")
                 .hasFieldOrPropertyWithValue("branchId", branchId)
-                .hasFieldOrPropertyWithValue("openTime", openTime)
-                .hasFieldOrPropertyWithValue("closingTime", closingTime)
-                .hasFieldOrPropertyWithValue("address", expectedAddress)
+                .hasFieldOrPropertyWithValue("operationHoursOverride", Collections.emptyList())
                 .hasFieldOrPropertyWithValue("branchAppointmentInfo", Collections.emptyList());
     }
 
@@ -64,8 +55,8 @@ class GetBranchQueriesTest extends BranchTestBase {
     @Test
     void testGetAllBranchesQuery_ReturnsAllCreatedBranches() {
         // ARRANGE: Add two known branches
-        BranchDTO dto1 = createBranchDTO("B1", LocalTime.NOON, LocalTime.MIDNIGHT.minusMinutes(1), "1", "A", "S", "C", "P", 9949, "SA");
-        BranchDTO dto2 = createBranchDTO("B2", LocalTime.NOON, LocalTime.MIDNIGHT.minusMinutes(1), "2", "B", "S", "C", "P", 4356, "SA");
+        BranchDTO dto1 = createBranchDTO("B1");
+        BranchDTO dto2 = createBranchDTO("B2");
         addBranchUseCase.execute(dto1);
         addBranchUseCase.execute(dto2);
         

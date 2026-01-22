@@ -219,6 +219,12 @@ public class AppointmentBookingApplicationTests {
                             wiremockClientDomainServer.getHost(),
                             wiremockClientDomainServer.getFirstMappedPort()));
 
+            // Capitec Branch Locator API (uses same WireMock server as client-domain)
+            registry.add("http://capitecbank.branch-locator.non-prd/api", () ->
+                    String.format("http://%s:%d",
+                            wiremockClientDomainServer.getHost(),
+                            wiremockClientDomainServer.getFirstMappedPort()));
+
 
 
         } catch (Exception e) {

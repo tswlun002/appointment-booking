@@ -1,12 +1,13 @@
 package capitec.branch.appointment.branch.domain;
 
-import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
-import capitec.branch.appointment.exeption.InvalidAppointmentConfigurationException;
-import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
+import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.util.Assert;
+
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -15,95 +16,101 @@ public class Branch {
 
     @NotBlank
     private final String branchId;
-    @NotNull
-    private  LocalTime openTime;
-    @NotNull
-    private  LocalTime closingTime;
     private List<BranchAppointmentInfo> branchAppointmentInfo;
-    private Address address;
+    private List<OperationHoursOverride> operationHoursOverride;
 
-    public Branch(String branchId, LocalTime openTime, LocalTime closingTime,Address address) {
+    public Branch(String branchId) {
 
+        Assert.hasText(branchId,"Branch ID cannot be blank");
         this.branchId = branchId;
-        this.openTime = openTime;
-        this.closingTime = closingTime;
-        this.address = address;
-        assert  branchId != null;
-        assert openTime != null;
-        assert closingTime != null;
-        assert openTime.isBefore(closingTime);
-        assert  address != null;
 
     }
-    public void validateAppointmentInfoConsistency(@NotNull BranchAppointmentInfo info) {
-        if (info.slotDuration().toMinutes()>Duration.between(openTime, closingTime).toMinutes()) {
-            throw new InvalidAppointmentConfigurationException(
-                    "Appointment slots must be within branch operating hours"
-            );
+    public void validateAppointmentInfoConsistency(@NotNull BranchAppointmentInfo info, LocalTime openTime, LocalTime closingTime) {
+
+        Assert.notNull(info,"Branch Appointment Info cannot be null");
+        Optional<OperationHoursOverride> optionalOperationHoursOverride = operationHoursOverride
+                .stream()
+                .filter(h -> Objects.equals(h.effectiveDate(), info.day()))
+                .findFirst();
+        if(optionalOperationHoursOverride.isPresent()) {
+
+            var h = optionalOperationHoursOverride.get();
+            Assert.isTrue(!h.isExpired(), "Cannot update branch appointment info for for day already passed");
+            Assert.isTrue(!h.closed(), "Cannot update branch appointment info for closed operation hours");
+            boolean isLess = info.slotDuration().toMinutes() < Duration.between(h.openTime(), h.closingTime()).toMinutes();
+            Assert.isTrue(isLess, "Appointment slots must be within branch operating hours");
+
         }
+        else{
+
+            Assert.notNull(openTime,"Branch open time cannot be null");
+            Assert.notNull(closingTime,"Branch closing time cannot be null");
+            boolean isLess = info.slotDuration().toMinutes() < Duration.between(openTime, closingTime).toMinutes();
+            Assert.isTrue(isLess, "Appointment slots must be within branch operating hours");
+        }
+
+
     }
 
-    public void setAddress(@NotNull Address address) {
+    public  void updateAppointmentInfo(@NotNull LocalDate day, @NotNull BranchAppointmentInfo branchAppointmentInfo, LocalTime openTime, LocalTime closingTime) {
+        if(this.branchAppointmentInfo == null) {
+            this.branchAppointmentInfo = new ArrayList<>();
+        }
 
-        this.address = address;
-        assert  address != null;
+        validateAppointmentInfoConsistency(branchAppointmentInfo,openTime,closingTime);
+
+        this.branchAppointmentInfo.removeIf(info -> info.day().equals(day));
+        this.branchAppointmentInfo.add(branchAppointmentInfo);
     }
-
-    public void setBranchAppointmentInfo(@NotNull List<BranchAppointmentInfo> branchAppointmentInfo) {
-        branchAppointmentInfo.forEach(this::validateAppointmentInfoConsistency);
+    public void setBranchAppointmentInfo(@NotNull List<BranchAppointmentInfo> branchAppointmentInfo, LocalTime openTime, LocalTime closingTime) {
+        branchAppointmentInfo.forEach(b->this.validateAppointmentInfoConsistency(b,openTime,closingTime));
         this.branchAppointmentInfo = new ArrayList<>(branchAppointmentInfo);
     }
-    public  Address getAddress() {
-        return address;
+    public void updateOperationHoursOverride(@NotNull OperationHoursOverride operationHoursOverride) {
+
+        if(this.operationHoursOverride == null) {
+            this.operationHoursOverride = new ArrayList<>();
+        }
+
+        this.operationHoursOverride.removeIf(h->Objects.equals(h.effectiveDate(), operationHoursOverride.effectiveDate()));
+        this.operationHoursOverride.add(operationHoursOverride);
     }
+    public void setOperationHoursOverride(@NotNull List<OperationHoursOverride> operationHoursOverride) {
+        this.operationHoursOverride = new ArrayList<>(operationHoursOverride);
+    }
+
     public String getBranchId() {
         return branchId;
     }
-    public LocalTime getOpenTime() {
-        return openTime;
-    }
-    public LocalTime getClosingTime() {
-        return closingTime;
-    }
+
     public List<BranchAppointmentInfo> getBranchAppointmentInfo() {
         return branchAppointmentInfo == null
                 ? Collections.emptyList()
                 : Collections.unmodifiableList(branchAppointmentInfo);
     }
-
-
-
-
-    public  void updateAppointmentInfo(@NotNull DayType dayType, @NotNull BranchAppointmentInfo branchAppointmentInfo) {
-        if(this.branchAppointmentInfo == null) {
-            this.branchAppointmentInfo = new ArrayList<>();
-        }
-
-        validateAppointmentInfoConsistency(branchAppointmentInfo);
-
-        this.branchAppointmentInfo.removeIf(info -> info.dayType().equals(dayType));
-        this.branchAppointmentInfo.add(branchAppointmentInfo);
+    public List<OperationHoursOverride> getOperationHoursOverride() {
+        return operationHoursOverride == null
+                ? Collections.emptyList()
+                : Collections.unmodifiableList(operationHoursOverride);
     }
 
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof Branch branch)) return false;
-        return Objects.equals(branchId, branch.branchId) && Objects.equals(openTime, branch.openTime) && Objects.equals(closingTime, branch.closingTime) && Objects.equals(address, branch.address);
+        return Objects.equals(branchId, branch.branchId);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(branchId, openTime, closingTime, address);
+        return Objects.hash(branchId);
     }
 
     @Override
     public String toString() {
         return "Branch{" +
                 "username='" + branchId + '\'' +
-                ", openTime=" + openTime +
-                ", closingTime=" + closingTime +
                 ", branchAppointmentInfo=" + branchAppointmentInfo +
-                ", address=" + address +
+                ", operationHoursOverride=" + operationHoursOverride +
                 '}';
     }
 }

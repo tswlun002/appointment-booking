@@ -2,33 +2,50 @@ package capitec.branch.appointment.branch.infrastructure;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
-
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
-import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
+import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverrideService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.NotFoundException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
-
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Validated
-public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService {
+public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService, OperationHoursOverrideService {
 
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
+    private final CacheManager cacheManager;
+    public static final String CACHE_NAME = "branches";
+
+    public BranchDaoImpl( BranchRepository branchRepository, BranchMapper branchMapper,
+                          @Qualifier(value = "branchCacheManager") CacheManager cacheManager) {
+        this.branchRepository = branchRepository;
+        this.branchMapper = branchMapper;
+        this.cacheManager = cacheManager;
+    }
 
     @Override
+    @CachePut(value = CACHE_NAME, key = "#branch.branchId()")
     public Branch add(@Valid Branch branch) {
 
         BranchEntity entity = branchMapper.toEntity(branch);
@@ -53,6 +70,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     }
 
     @Override
+    @Cacheable(value = CACHE_NAME, key = "#branchId", unless = "#result == null || !#result.isPresent()")
     public Optional<Branch> getByBranchId(String branchId) {
 
         Optional<Branch> branch;
@@ -70,6 +88,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     }
 
     @Override
+    @CacheEvict(value = CACHE_NAME, key = "#branchId")
     public boolean delete(String branchId) {
         var isDeleted = false;
 
@@ -85,22 +104,54 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     }
 
     @Override
-    public Collection<Branch> getAllBranch() {
-        Collection<BranchEntity> branchEntities= branchRepository.getAllBranch();
-        return branchEntities.stream().map(branchMapper::toDomain).collect(Collectors.toSet());
+    public Collection<Branch> getAllBranch(int offset, int limit) {
+
+        Collection<BranchEntity> branchEntities= branchRepository.getAllBranch(offset,limit);
+        Set<Branch> collect = branchEntities.stream().map(branchMapper::toDomain).collect(Collectors.toSet());
+
+        Cache cache = cacheManager.getCache(CACHE_NAME);
+        if (cache != null) {
+            collect.forEach(branch -> cache.putIfAbsent(branch.getBranchId(), branch));
+        }
+
+        return collect;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Async
+    public void warmCache() {
+
+        log.info("Start warming branch cache");
+        Cache cache = cacheManager.getCache(CACHE_NAME);
+        if (cache == null) return;
+
+        int offset = 0;
+        int limit = 100;
+        Collection<Branch> batch;
+        do {
+            batch = branchRepository.getAllBranch(offset, limit)
+                    .stream().map(branchMapper::toDomain).toList();
+
+            batch.forEach(branch -> cache.put(branch.getBranchId(), branch));
+            offset += limit;
+
+        } while (!batch.isEmpty());
+
+        log.info("Branch cache warmed");
     }
 
 
     @Override
-    public boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType, @Valid Branch branch) {
+    @CacheEvict(value = CACHE_NAME, key = "#branch.branchId()")
+    public boolean addBranchAppointmentConfigInfo(@NotNull LocalDate day, @Valid Branch branch) {
 
         var branchAppointmentInfo = branch.getBranchAppointmentInfo()
                 .stream()
-                .filter(info -> info.dayType().equals(dayType))
+                .filter(info -> info.day().equals(day))
                 .findFirst()
                 .orElseThrow(() -> {
-                            log.error("No appointment info found for day type: {}", dayType.name());
-                            return new NotFoundException("No appointment info found for day type: " + dayType.name());
+                            log.error("No appointment info found for day: {}", day);
+                            return new NotFoundException("No appointment info found for day : " + day);
                 });
 
         var isAdded = false;
@@ -108,13 +159,49 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
         try {
 
             var added = branchRepository.addBranchAppointmentConfigInfo(branch.getBranchId(), (int) branchAppointmentInfo.slotDuration().toMinutes(),
-                    branchAppointmentInfo.utilizationFactor(),branchAppointmentInfo.staffCount(), branchAppointmentInfo.dayType().name());
+                    branchAppointmentInfo.utilizationFactor(),branchAppointmentInfo.staffCount(), branchAppointmentInfo.day());
 
             isAdded = added == 1;
 
         } catch (Exception e) {
 
             log.error("Unable to add branch:{} appointment config information.",branch.getBranchId(), e);
+            throw e;
+        }
+        return isAdded;
+    }
+
+    @Override
+    @CacheEvict(value = CACHE_NAME, key = "#branch.branchId()")
+    public boolean addBranchOperationHoursOverride(@NotNull LocalDate day, @Valid Branch branch) {
+
+        var operationHoursOverride = branch.getOperationHoursOverride()
+                .stream()
+                .filter(operation -> operation.effectiveDate().equals(day))
+                .findFirst()
+                .orElseThrow(() -> {
+                    log.error("No operation hours override found for day: {}", day);
+                    return new NotFoundException("No operation hours override found for day: " + day);
+                });
+
+        var isAdded = false;
+
+        try {
+
+            var added = branchRepository.addBranchOperationHoursOverride(
+                    branch.getBranchId(),
+                    operationHoursOverride.effectiveDate(),
+                    operationHoursOverride.openTime(),
+                    operationHoursOverride.closingTime(),
+                    operationHoursOverride.closed(),
+                    operationHoursOverride.reason()
+            );
+
+            isAdded = added == 1;
+
+        } catch (Exception e) {
+
+            log.error("Unable to add branch:{} operation hours override.",branch.getBranchId(), e);
             throw e;
         }
         return isAdded;

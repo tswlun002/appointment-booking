@@ -1,7 +1,9 @@
 package capitec.branch.appointment.branch.app;
 
+import capitec.branch.appointment.branch.app.port.BranchOperationHoursPort;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
+import capitec.branch.appointment.exeption.BranchIsClosedException;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,22 +19,42 @@ import org.springframework.web.server.ResponseStatusException;
 public class AddBranchUseCase {
 
     private final BranchService branchService;
+    private final BranchOperationHoursPort branchOperationHoursPort;
+    private final static String COUNTRY = "South Africa";
 
     public Branch execute(@Valid BranchDTO branchInput) {
 
-        if (branchInput == null) {
-            log.error("Branch input is null");
-            throw new IllegalArgumentException("Branch input is null, it cannot be added.");
-        }
-
-        Branch branch = new Branch(branchInput.branchId(), branchInput.openTime(), branchInput.closingTime(), branchInput.address());
-
        try {
-           branch = branchService.add(branch);
-       } catch (Exception e) {
+
+           checkIfExists(branchInput.branchId());
+
+           Branch branch = new Branch(branchInput.branchId());
+           return branchService.add(branch);
+
+
+       } catch (ResponseStatusException e) {
+           throw e ;
+       }
+       catch (BranchIsClosedException e) {
+
+           log.warn("Branch is closed, branch:{}",branchInput.branchId(), e);
+           throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The branch is closed.",e);
+
+       } catch (IllegalArgumentException | IllegalStateException e) {
+           log.warn("Invalid branch input: {}", branchInput, e);
+           throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(),e);
+       }
+       catch (Exception e) {
            log.warn("Unable to add branch with ID: {}", branchInput.branchId(), e);
            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error during branch creation");
        }
-       return branch;
+
+    }
+
+    private  void checkIfExists(String branchId){
+        if (!branchOperationHoursPort.checkExist(COUNTRY,branchId)) {
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch does not exist in the system");
+        }
     }
 }

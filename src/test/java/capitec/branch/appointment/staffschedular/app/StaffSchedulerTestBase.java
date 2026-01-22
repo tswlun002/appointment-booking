@@ -5,7 +5,6 @@ import capitec.branch.appointment.branch.app.AddBranchUseCase;
 import capitec.branch.appointment.branch.app.BranchDTO;
 import capitec.branch.appointment.branch.app.DeleteBranchUseCase;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.user.domain.UserRoleService;
@@ -16,11 +15,10 @@ import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-import java.time.LocalTime;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * Base class for all Staff Scheduler tests, handling Keycloak staff and Branch data management.
@@ -79,14 +77,13 @@ abstract class StaffSchedulerTestBase extends AppointmentBookingApplicationTests
 
     protected void setUpBranch() {
         var branchesString = new String[]{
-                "BR001;09:00;17:00;123;Main Street;Rosebank;Johannesburg;Gauteng;2196;South Africa",
-                "BR002;08:30;16:30;456;Church Street;Hatfield;Pretoria;Gauteng;2828;South Africa",
+                "BR001",
+                "BR002",
         };
 
         for (String branch : branchesString) {
             String[] branchInfo = branch.split(";");
-            Address address = new Address(branchInfo[3], branchInfo[4], branchInfo[5], branchInfo[6], branchInfo[7], Integer.parseInt(branchInfo[8]), branchInfo[9]);
-            BranchDTO branchDTO = new BranchDTO(branchInfo[0], LocalTime.parse(branchInfo[1]), LocalTime.parse(branchInfo[2]), address);
+            BranchDTO branchDTO = new BranchDTO(branchInfo[0]);
             branches.add(addBranchUseCase.execute(branchDTO));
         }
     }

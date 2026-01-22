@@ -2,11 +2,9 @@ package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.address.Address;
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,7 +27,7 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
     @AfterEach
     public void tearDown() {
         // Collect IDs before deletion to avoid modifying the collection while iterating.
-        List<String> branchIds = getAllBranchesQuery.execute()
+        List<String> branchIds = getAllBranchesQuery.execute(0,100)
                 .stream()
                 .map(Branch::getBranchId)
                 .collect(Collectors.toList());
@@ -41,11 +39,8 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
     /**
      * Helper method to create a BranchDTO from a CsvSource line.
      */
-    protected BranchDTO createBranchDTO(String branchId, LocalTime openTime, LocalTime closingTime,
-                                        String streetNumber, String streetName, String suburbs,
-                                        String city, String province, Integer postalCode, String country) {
+    protected BranchDTO createBranchDTO(String branchId) {
         
-        Address address = new Address(streetNumber, streetName, suburbs, city, province, postalCode, country);
-        return new BranchDTO(branchId, openTime, closingTime, address);
+        return new BranchDTO(branchId);
     }
 }

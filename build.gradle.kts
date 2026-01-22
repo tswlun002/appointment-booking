@@ -30,6 +30,8 @@ repositories {
 // VERSIONS
 extra["resteasyVersion"] = "6.2.10.Final"
 extra["keycloakVersion"] = "26.0.5"
+extra["caffeineVersion"] = "3.2.3"
+extra["resilience4jVersion"] = "2.2.0"
 
 dependencies {
 
@@ -49,6 +51,16 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     runtimeOnly("org.postgresql:postgresql")
     implementation("org.liquibase:liquibase-core")
+
+    // Cache
+    implementation("com.github.ben-manes.caffeine:caffeine:${property("caffeineVersion")}")
+    // Optional extensions for caffeine cache
+    implementation("com.github.ben-manes.caffeine:guava:${property("caffeineVersion")}")
+    implementation("com.github.ben-manes.caffeine:jcache:${property("caffeineVersion")}")
+
+    // Resilience4j - Circuit Breaker and Retry
+    implementation("io.github.resilience4j:resilience4j-circuitbreaker:${property("resilience4jVersion")}")
+    implementation("io.github.resilience4j:resilience4j-retry:${property("resilience4jVersion")}")
 
     // Keycloak
     implementation("org.keycloak:keycloak-admin-client:${property("keycloakVersion")}")

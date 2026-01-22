@@ -3,7 +3,6 @@ package capitec.branch.appointment.slots.app;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
-import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import org.junit.jupiter.api.AfterEach;
@@ -27,8 +26,6 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     protected  List<Branch> branches = new ArrayList<>();
     @Autowired
     protected BranchSlotConfigs branchSlotConfigs;
-    @Autowired
-    GetDayTypeQuery getDayTypeQuery;
 
     @BeforeEach
     public void setUp()  {
@@ -50,8 +47,6 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
 
     protected void setUpBranch() {
 
-        var address1 = "1;Main Street;Rosebank;Johannesburg;Gauteng;2196;South Africa";
-        var address2 = "2;Main Street;Soweto;Johannesburg;Gauteng;2196;South Africa";
 
         var nonDefault = branchSlotConfigs.branchConfigs().keySet().stream().filter(s->!s.equals("default")).findFirst().get();
 
@@ -61,15 +56,8 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
         for (var i=0; i<2; i++) {
 
             String branchId = i==0?nonDefault:defaultBranch;
-            String[] address1Info = i==0 ? address1.split(";"): address2.split(";");
 
-            var day = LocalDate.now().plusDays(1);
-            var dayTye  = getDayTypeQuery.execute(day);
-
-            var propertiesMap = branchSlotConfigs.branchConfigs().get(branchId).get(dayTye);
-
-            Address address = new Address(address1Info[0], address1Info[1], address1Info[2], address1Info[3], address1Info[4], Integer.parseInt(address1Info[5]), address1Info[6]);
-            branch = new Branch(branchId,propertiesMap.openTime(),propertiesMap.closingTime(), address);
+            branch = new Branch(branchId);
 
             branches.add(branchService.add(branch));
         }

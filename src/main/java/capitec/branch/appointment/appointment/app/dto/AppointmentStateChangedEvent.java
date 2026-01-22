@@ -2,7 +2,7 @@ package capitec.branch.appointment.appointment.app.dto;
 
 import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
-import capitec.branch.appointment.branch.domain.address.Address;
+
 import capitec.branch.appointment.utils.Username;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -38,8 +38,7 @@ public record AppointmentStateChangedEvent(
             LocalDate day,
             LocalTime startTime,
             LocalTime endTime,
-            String branchId,
-            Address address
+            String branchId
     ) {
         return new AppointmentStateChangedEvent(
                 appointmentId,
@@ -53,8 +52,7 @@ public record AppointmentStateChangedEvent(
                 Map.of(
                         "day", day,
                         "startTime", startTime,
-                        "endTime", endTime,
-                        "address", address
+                        "endTime", endTime
                 )
         );
     }

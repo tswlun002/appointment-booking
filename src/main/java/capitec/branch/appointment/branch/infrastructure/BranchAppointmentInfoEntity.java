@@ -1,11 +1,12 @@
 package capitec.branch.appointment.branch.infrastructure;
 
 
-import capitec.branch.appointment.branch.domain.appointmentinfo.IsDayType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+
+import java.time.LocalDate;
 
 @Table("branch_appointment_info")
 record BranchAppointmentInfoEntity(
@@ -20,8 +21,8 @@ record BranchAppointmentInfoEntity(
         double utilizationFactor,
         @Column("staff_count")
         int staffCount,
-        @IsDayType(message = "Invalid day type")
-        String dayType
+        @NotNull
+        LocalDate day
 ) {
 }
 

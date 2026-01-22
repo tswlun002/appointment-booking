@@ -1,12 +1,13 @@
 package capitec.branch.appointment.branch.infrastructure;
 
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.address.Address;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
-import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
+import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import org.mapstruct.*;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -17,9 +18,7 @@ interface BranchMapper {
      * Converts BranchEntity Record to Branch (Domain Model).
      */
     @Mapping(target = "branchId", source = "branchId")
-    @Mapping(target = "openTime", source = "openTime")
-    @Mapping(target = "closingTime", source = "closingTime")
-    @Mapping(target = "address", source = "address")
+    @Mapping(target = "operationHoursOverride", source = "operationHoursOverride")
     @Mapping(target = "branchAppointmentInfo", source = "branchAppointmentInfo")
     Branch toDomain(BranchEntity entity);
 
@@ -30,9 +29,11 @@ interface BranchMapper {
     @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapAppointmentInfoToMap(domain))")
+    @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapOperationHoursOverrideToMap(domain))")
+
     BranchEntity toEntity(Branch domain);
 
-    static   Map<DayType, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
+    static   Map<LocalDate, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
         if(branch == null) {
             return null;
         }
@@ -42,18 +43,18 @@ interface BranchMapper {
         }
         return infos.stream()
                 .collect(Collectors.toMap(
-                        BranchAppointmentInfo::dayType,
+                        BranchAppointmentInfo::day,
                         info -> new BranchAppointmentInfoEntity(
                                 branch.getBranchId(),
                                 Math.toIntExact(info.slotDuration().toMinutes()),
                                 info.utilizationFactor(),
                                 info.staffCount(),
-                                info.dayType().name()
+                                info.day()
                         )
                 ));
     }
 
-    default List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<DayType, BranchAppointmentInfoEntity> map) {
+    default List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<LocalDate, BranchAppointmentInfoEntity> map) {
         if (map == null || map.isEmpty()) {
             return Collections.emptyList();
         }
@@ -67,15 +68,44 @@ interface BranchMapper {
                 .toList();
     }
 
-    // Address mappings
-    @Mapping(target = "streetNumber", source = "streetNumber")
-    @Mapping(target = "streetName", source = "streetName")
-    @Mapping(target = "suburb", source = "suburb")
-    @Mapping(target = "city", source = "city")
-    @Mapping(target = "province", source = "province")
-    @Mapping(target = "postalCode", source = "postalCode")
-    @Mapping(target = "country", source = "country")
-    Address mapAddress(AddressEntity entity);
+    static   Map<LocalDate, OperationHoursOverrideEntity> mapOperationHoursOverrideToMap(Branch branch) {
+        if(branch == null) {
+            return null;
+        }
+        List<OperationHoursOverride> infos = branch.getOperationHoursOverride();
+        if (infos == null || infos.isEmpty()) {
+            return null;
+        }
+        return infos.stream()
+                .collect(Collectors.toMap(
+                        OperationHoursOverride::effectiveDate,
+                        info -> new OperationHoursOverrideEntity(
+                                branch.getBranchId(),
+                                info.effectiveDate(),
+                                info.openTime(),
+                                info.closingTime(),
+                                info.closed(),
+                                info.reason(),
+                                LocalDateTime.now(),
+                                null
+                        )
+                ));
+    }
 
-    AddressEntity mapAddressToEntity(Address domain);
+    default List<OperationHoursOverride> mapOperationHoursOverrideToMapToList(Map<LocalDate, OperationHoursOverrideEntity> map) {
+        if (map == null || map.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return map.values()
+                .stream()
+                .map(operationHoursOverrideEntity -> new OperationHoursOverride(
+                        operationHoursOverrideEntity.effectiveDate(),
+                        operationHoursOverrideEntity.openTime(),
+                        operationHoursOverrideEntity.closingTime(),
+                        operationHoursOverrideEntity.closed(),
+                        operationHoursOverrideEntity.reason()
+                ))
+                .toList();
+    }
+
 }

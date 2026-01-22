@@ -5,7 +5,9 @@ import capitec.branch.appointment.branch.domain.Branch;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalDate;
+
 public interface BranchAppointmentInfoService {
 
-    boolean addBranchAppointmentConfigInfo(@NotNull DayType dayType, @Valid Branch branch);
+    boolean addBranchAppointmentConfigInfo(@NotNull LocalDate day, @Valid Branch branch);
 }
