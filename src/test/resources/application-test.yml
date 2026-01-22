@@ -129,4 +129,8 @@ branch-slot:
   branch-use-default-configs:
     - BR002
 
+capitec:
+  branch-locator-api:
+    url: "http://capitecbank.branch-locator.non-prd/api"
+
 

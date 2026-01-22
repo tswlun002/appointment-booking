@@ -163,4 +163,21 @@ slot:
   generation-errors:
     retryables: []
 
-
+capitec:
+  branch-locator-api:
+    url: ${CAPITEC_BRANCH_LOCATOR_API:https://www.capitecbank.co.za/api}
+  # Resilience configuration - defaults are in BranchLocationResilienceProperties.java
+  # Uncomment and set values below to override defaults
+  # branch-locator:
+  #   resilience:
+  #     circuit-breaker:
+  #       failure-rate-threshold: 65
+  #       minimum-number-of-calls: 5
+  #       wait-duration-in-open-state: 30s
+  #       permitted-number-of-calls-in-half-open-state: 3
+  #       sliding-window-size: 10
+  #     retry:
+  #       max-attempts: 3
+  #       initial-interval: 300ms
+  #       multiplier: 2.0
+  #       randomization-factor: 0.3
