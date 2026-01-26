@@ -35,8 +35,8 @@ public record Coordinates(
 
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof Coordinates that)) return false;
-        return Double.compare(latitude, that.latitude) == 0 && Double.compare(longitude, that.longitude) == 0;
+        if (!(o instanceof Coordinates(double latitude1, double longitude1))) return false;
+        return Double.compare(latitude, latitude1) == 0 && Double.compare(longitude, longitude1) == 0;
     }
 
     @Override

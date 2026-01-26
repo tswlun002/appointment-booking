@@ -1,17 +1,17 @@
 package capitec.branch.appointment.location.infrastructure.adapter;
 
+import capitec.branch.appointment.branch.app.port.BranchDetails;
 import capitec.branch.appointment.branch.app.port.BranchOperationHoursPort;
 import capitec.branch.appointment.branch.app.port.OperationHourDetails;
-import capitec.branch.appointment.exeption.BranchIsClosedException;
-import capitec.branch.appointment.location.app.BranchLocationFetcher;
-import capitec.branch.appointment.location.domain.OperationTime;
-import capitec.branch.appointment.slots.app.CheckHolidayQuery;
+import capitec.branch.appointment.location.app.NearbyBranchDTO;
+import capitec.branch.appointment.location.app.OperationTimeDTO;
+import capitec.branch.appointment.location.app.SearchBranchesByAreaQuery;
+import capitec.branch.appointment.location.app.SearchBranchesByAreaUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -19,38 +19,22 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class BranchOperationHoursAdapter implements BranchOperationHoursPort {
 
-    private final BranchLocationFetcher branchLocationFetcher;
-    private final CheckHolidayQuery checkHolidayQuery;
+    private final SearchBranchesByAreaUseCase searchBranchesByAreaUseCase;
 
 
     @Override
     public Optional<OperationHourDetails> getOperationHours(String country, String branchId, LocalDate day) {
 
-        return branchLocationFetcher.fetchByArea(country)
+        return searchBranchesByAreaUseCase.execute(new SearchBranchesByAreaQuery(country))
                 .stream()
-                .filter(b->{
-
-                    if(b.isClosed()){
-                        log.warn("Branch is closed, branch:{}",b);
-                        throw new BranchIsClosedException(String.format("Branch(id:%s, code:%s) is closed", b.getBranchCode(),branchId));
-                    }
-                    return b.getBranchId().equals(branchId);
-                })
+                .filter(b-> b.branchId().equals(branchId))
                 .map(b->{
-                    boolean isHoliday = checkHolidayQuery.execute(day);
-
-                    DayOfWeek dayOfWeek = day.getDayOfWeek();
-
-                    OperationTime operationTime = isHoliday ?
-                            b.getOperatingHours()==null?null:b.getOperatingHours().publicHolidayHours() :
-                            dayOfWeek == DayOfWeek.SATURDAY ?
-                            b.getOperatingHours()==null?null:b.getOperatingHours().saturdayHours() :
-                            dayOfWeek == DayOfWeek.SUNDAY ?
-                            b.getOperatingHours()==null?null: b.getOperatingHours().sundayHours() :
-                            b.getOperatingHours()==null?null:b.getOperatingHours().weekdayHours();
+                    
+                    Map<LocalDate, OperationTimeDTO> operationTimeMap = b.operationTimes();
+                    OperationTimeDTO operationTime = operationTimeMap.get(day);
 
                     return operationTime==null?null: new OperationHourDetails(
-                            operationTime.openTime(), operationTime.closingTime(),
+                            operationTime.openAt(), operationTime.closeAt(),
                             operationTime.closed());
 
                 })
@@ -59,17 +43,18 @@ public class BranchOperationHoursAdapter implements BranchOperationHoursPort {
 
     @Override
     public boolean checkExist(String country, String branchId) {
-       return branchLocationFetcher.fetchByArea(country)
+       return searchBranchesByAreaUseCase.execute(new SearchBranchesByAreaQuery(country))
                 .stream()
-                .anyMatch(b->{
-
-                    if(b.isClosed()){
-                        log.warn("Branch is closed, branch:{}",b);
-                        throw new BranchIsClosedException(String.format("Branch(id:%s, code:%s) is closed", b.getBranchCode(),branchId));
-                    }
-                    return b.getBranchId().equals(branchId);
-                });
+               .map(NearbyBranchDTO::branchId)
+                .anyMatch(branchId::equals);
     }
 
-
+    @Override
+    public Optional<BranchDetails> getBranchNames(String country, String branchId) {
+       return searchBranchesByAreaUseCase.execute(new SearchBranchesByAreaQuery(country))
+                .stream()
+                .filter(b-> b.branchId().equals(branchId))
+                .map(b->new BranchDetails(b.name(),b.branchCode()))
+                .findFirst();
+    }
 }

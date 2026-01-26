@@ -2,23 +2,20 @@ package capitec.branch.appointment.location.app;
 
 import capitec.branch.appointment.location.domain.BranchLocation;
 import capitec.branch.appointment.exeption.BranchLocationServiceException;
+import capitec.branch.appointment.location.domain.BranchLocationFetcher;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-import static capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_AREA_CACHE;
-
 /**
  * Use case to search branches by area text input.
- * Searches across city, province, suburb, address, and branch name.
+ * Searches across city, province, suburb, address, postal code,and branch name.
  */
 @Slf4j
 @UseCase
@@ -27,7 +24,6 @@ import static capitec.branch.appointment.location.infrastructure.api.CapitecBran
 public class SearchBranchesByAreaUseCase {
 
     private final BranchLocationFetcher branchLocationFetcher;
-    private final CacheManager cacheManager;
 
     public List<NearbyBranchDTO> execute(@Valid SearchBranchesByAreaQuery query) {
         log.info("Searching branches by area: {}", query.searchText());
@@ -40,43 +36,17 @@ public class SearchBranchesByAreaUseCase {
             return mapToDto(branches);
 
         } catch (BranchLocationServiceException e) {
-            log.warn("Branch location service unavailable, attempting cache fallback: {}", e.getMessage());
-            return handleFallback(query.searchText());
+            log.error("No cached data available for area: {}", query);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Branch locator service is temporarily unavailable. Please try again later.");
+        }
+        catch (Exception e) {
+            log.warn("Unexpected error while searching branches by area: {}", e.getMessage(),e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error",e);
         }
     }
 
     private List<BranchLocation> searchByArea(String searchText) {
         return branchLocationFetcher.fetchByArea(searchText).stream()
-                .filter(BranchLocation::isAvailableForBooking)
-                .toList();
-    }
-
-    private List<NearbyBranchDTO> handleFallback(String searchText) {
-        String cacheKey = searchText.toLowerCase();
-        List<BranchLocation> cachedBranches = getCachedBranches(cacheKey);
-
-        if (cachedBranches != null && !cachedBranches.isEmpty()) {
-            log.info("Returning {} cached branches for area: {}", cachedBranches.size(), searchText);
-            return mapToDto(filterAvailable(cachedBranches));
-        }
-
-        log.error("No cached data available for area: {}", searchText);
-        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
-                "Branch locator service is temporarily unavailable. Please try again later.");
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<BranchLocation> getCachedBranches(String cacheKey) {
-        Cache cache = cacheManager.getCache(BRANCH_LOCATIONS_BY_AREA_CACHE);
-        if (cache == null) {
-            return null;
-        }
-        Cache.ValueWrapper valueWrapper = cache.get(cacheKey);
-        return valueWrapper != null ? (List<BranchLocation>) valueWrapper.get() : null;
-    }
-
-    private List<BranchLocation> filterAvailable(List<BranchLocation> branches) {
-        return branches.stream()
                 .filter(BranchLocation::isAvailableForBooking)
                 .toList();
     }

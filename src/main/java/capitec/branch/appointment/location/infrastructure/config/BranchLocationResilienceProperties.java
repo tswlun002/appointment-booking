@@ -1,5 +1,6 @@
 package capitec.branch.appointment.location.infrastructure.config;
 
+import jakarta.validation.ValidationException;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -61,7 +62,8 @@ public class BranchLocationResilienceProperties {
          * Exceptions that don't count as failures
          */
         private List<Class<? extends Throwable>> ignoreExceptions = List.of(
-                IllegalArgumentException.class
+                IllegalArgumentException.class,IllegalStateException.class, NullPointerException.class,
+                ValidationException.class
         );
     }
 

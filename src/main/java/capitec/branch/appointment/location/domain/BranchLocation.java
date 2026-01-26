@@ -1,7 +1,10 @@
 package capitec.branch.appointment.location.domain;
 
+import org.apache.commons.collections4.map.UnmodifiableMap;
 import org.apache.http.util.Asserts;
 
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.Objects;
 
 public class BranchLocation {
@@ -11,39 +14,39 @@ public class BranchLocation {
     private final String name;
     private final Coordinates coordinates;
     private final BranchAddress address;
-    private final OperatingHours operatingHours;
+    private final Map<LocalDate, OperationTime> dailyOperationTimes;
     private final boolean businessBankCenter;
     private final boolean isClosed;
 
     private BranchLocation(String branchCode,String branchId, String name, Coordinates coordinates,
-                           BranchAddress address, OperatingHours operatingHours,
+                           BranchAddress address,         Map<LocalDate, OperationTime> dailyOperationTimes,
                             boolean businessBankCenter, boolean isClosed) {
         this.branchCode = branchCode;
         this.branchId = branchId;
         this.name = name;
         this.coordinates = coordinates;
         this.address = address;
-        this.operatingHours = operatingHours;
+        this.dailyOperationTimes = dailyOperationTimes;
         this.businessBankCenter = businessBankCenter;
         this.isClosed = isClosed;
     }
 
     public static BranchLocation create(String branchCode,String branchId, String name, Coordinates coordinates,
-                                         BranchAddress address, OperatingHours operatingHours,
+                                         BranchAddress address,         Map<LocalDate, OperationTime> dailyOperationTimes,
                                         boolean businessBankCenter, boolean isClosed) {
         Asserts.notBlank(branchCode, "branchCode");
         Asserts.notBlank(name, "name");
         Asserts.notNull(coordinates, "coordinates");
         Asserts.notNull(address, "address");
-        Asserts.notNull(operatingHours, "operatingHours");
+        Asserts.notNull(dailyOperationTimes, "dailyOperationTimes");
 
-        return new BranchLocation(branchCode,branchId, name, coordinates, address, operatingHours, businessBankCenter, isClosed);
+        return new BranchLocation(branchCode,branchId, name, coordinates, address, dailyOperationTimes, businessBankCenter, isClosed);
     }
 
     public static BranchLocation reconstitute(String branchCode,String branchId, String name, Coordinates coordinates,
-                                               BranchAddress address, OperatingHours operatingHours
-                                              ,boolean businessBankCenter, boolean isClosed) {
-        return new BranchLocation(branchCode,branchId, name, coordinates, address, operatingHours, businessBankCenter, isClosed);
+                                               BranchAddress address,    Map<LocalDate, OperationTime> dailyOperationTimes
+            ,boolean businessBankCenter, boolean isClosed) {
+        return new BranchLocation(branchCode,branchId, name, coordinates, address, dailyOperationTimes, businessBankCenter, isClosed);
     }
 
     public double distanceFrom(Coordinates customerLocation) {
@@ -75,8 +78,8 @@ public class BranchLocation {
         return address;
     }
 
-    public OperatingHours getOperatingHours() {
-        return operatingHours;
+    public Map<LocalDate, OperationTime> getDailyOperationTimes() {
+        return  UnmodifiableMap.unmodifiableMap( dailyOperationTimes);
     }
 
     public boolean isBusinessBankCenter() {
@@ -106,6 +109,8 @@ public class BranchLocation {
                 ", name='" + name + '\'' +
                 ", coordinates=" + coordinates +
                 ", address=" + address +
+                ", dailyOperationTimes=" + dailyOperationTimes +
+                ", businessBankCenter=" + businessBankCenter +
                 ", isClosed=" + isClosed +
                 '}';
     }

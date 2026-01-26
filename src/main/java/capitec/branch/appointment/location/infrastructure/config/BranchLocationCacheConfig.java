@@ -1,5 +1,6 @@
 package capitec.branch.appointment.location.infrastructure.config;
 
+import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -16,7 +17,7 @@ import static capitec.branch.appointment.location.infrastructure.api.CapitecBran
 @EnableCaching
 public class BranchLocationCacheConfig {
 
-    @Bean("branchLocationCacheManager")
+    @Bean(CapitecBranchLocationFetcher.CACHE_MANAGER)
     public CacheManager branchLocationCacheManager() {
         CaffeineCacheManager cacheManager = new CaffeineCacheManager(
                 BRANCH_LOCATIONS_BY_COORDINATES_CACHE,

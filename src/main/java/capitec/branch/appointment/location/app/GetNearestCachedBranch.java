@@ -5,10 +5,7 @@ import capitec.branch.appointment.location.domain.Coordinates;
 
 import java.util.List;
 
-public interface BranchLocationFetcher {
+public interface GetNearestCachedBranch {
 
-    List<BranchLocation> fetchByCoordinates(Coordinates coordinates);
-
-    List<BranchLocation> fetchByArea(String searchText);
+    List<BranchLocation> findNearByBranches(Coordinates customerLocation, double nearbyRadiusKM);
 }
-

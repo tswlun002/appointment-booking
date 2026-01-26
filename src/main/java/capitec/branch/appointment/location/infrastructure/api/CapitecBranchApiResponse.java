@@ -3,6 +3,7 @@ package capitec.branch.appointment.location.infrastructure.api;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Response DTO for Capitec Branch Locator API.
@@ -34,17 +35,8 @@ record CapitecBranchApiResponse(
             @JsonProperty("AddressLine2")
             String addressLine2,
 
-            @JsonProperty("OpeningHours")
-            String openingHours,
-
-            @JsonProperty("SaturdayHours")
-            String saturdayHours,
-
-            @JsonProperty("SundayHours")
-            String sundayHours,
-
-            @JsonProperty("PublicHolidayHours")
-            String publicHolidayHours,
+            @JsonProperty("OperationHours")
+            Map<DayTypeResponse,OperationTimeResponse> operationHours,
 
             @JsonProperty("City")
             String city,
