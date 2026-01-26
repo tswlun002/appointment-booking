@@ -119,39 +119,6 @@ management:
 server:
   port: 8083
 
-# SLOTS CONFIGS
-branch-slot:
-  branch-configs:
-    default:
-      WEEK_DAYS:
-        slot-duration: ${WEEK_DAY_SLOT_DURATION:30M}
-        staff-count: ${WEEK_DAY_STAFF_COUNT:5}
-        utilization-factor: ${WEEK_DAY_UTILIZATION_FACTOR:0.5}
-        open-time: ${WEEK_DAY_OPEN_TIME:08:30}
-        closing-time: ${WEEK_DAY_CLOSING_TIME:17:30}
-        slot-day-type: WEEK_DAYS
-        max-booking-capacity: 2
-      WEEKEND:
-        slot-duration: ${WEEKEND_SLOT_DURATION:30M}
-        staff-count: ${WEEKEND_STAFF_COUNT:3}
-        utilization-factor: ${WEEKEND_UTILIZATION_FACTOR:0.25}
-        open-time: ${WEEKEND_OPEN_TIME:09:00}
-        closing-time: ${WEEKEND_CLOSING_TIME:15:00}
-        slot-day-type: WEEKEND
-        max-booking-capacity: 1
-      HOLIDAY:
-        slot-duration: ${HOLIDAY_SLOT_DURATION:30M}
-        staff-count: ${HOLIDAY_STAFF_COUNT:3}
-        utilization-factor: ${HOLIDAY_UTILIZATION_FACTOR:0.1}
-        open-time: ${HOLIDAY_OPEN_TIME:09:00}
-        closing-time: ${HOLIDAY_CLOSING_TIME:13:00}
-        slot-day-type: HOLIDAY
-        max-booking-capacity: 1
-  branch-use-default-configs:
-    - BR004
-    - BR005
-
-
 holidays-client:
   baseurl: ${HOLIDAYS_CLIENT_API:https://dateOfSlots.nager.at}
 
