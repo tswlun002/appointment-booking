@@ -36,16 +36,17 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     private final BranchMapper branchMapper;
     private final CacheManager cacheManager;
     public static final String CACHE_NAME = "branches";
+    public static final String CACHE_MANAGER_NAME = "branchCacheManager";
 
     public BranchDaoImpl( BranchRepository branchRepository, BranchMapper branchMapper,
-                          @Qualifier(value = "branchCacheManager") CacheManager cacheManager) {
+                          @Qualifier(value = CACHE_MANAGER_NAME) CacheManager cacheManager) {
         this.branchRepository = branchRepository;
         this.branchMapper = branchMapper;
         this.cacheManager = cacheManager;
     }
 
     @Override
-    @CachePut(value = CACHE_NAME, key = "#branch.branchId()")
+    @CachePut(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branch.getBranchId()")
     public Branch add(@Valid Branch branch) {
 
         BranchEntity entity = branchMapper.toEntity(branch);
@@ -65,19 +66,19 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
             }
             throw e;
         }
-        return branchMapper.toDomain(entity);
+        return BranchMapper.toDomain(entity);
 
     }
 
     @Override
-    @Cacheable(value = CACHE_NAME, key = "#branchId", unless = "#result == null || !#result.isPresent()")
+    @Cacheable(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId", unless = "#result == null")
     public Optional<Branch> getByBranchId(String branchId) {
 
         Optional<Branch> branch;
         try {
 
             Optional<BranchEntity> branchById = branchRepository.getByBranchId(branchId);
-            branch = branchById.map(branchMapper::toDomain);
+            branch = branchById.map(BranchMapper::toDomain);
 
         } catch (Exception e) {
 
@@ -88,7 +89,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     }
 
     @Override
-    @CacheEvict(value = CACHE_NAME, key = "#branchId")
+    @CacheEvict(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId",condition = "#result == true")
     public boolean delete(String branchId) {
         var isDeleted = false;
 
@@ -107,7 +108,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     public Collection<Branch> getAllBranch(int offset, int limit) {
 
         Collection<BranchEntity> branchEntities= branchRepository.getAllBranch(offset,limit);
-        Set<Branch> collect = branchEntities.stream().map(branchMapper::toDomain).collect(Collectors.toSet());
+        Set<Branch> collect = branchEntities.stream().map(BranchMapper::toDomain).collect(Collectors.toSet());
 
         Cache cache = cacheManager.getCache(CACHE_NAME);
         if (cache != null) {
@@ -130,7 +131,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
         Collection<Branch> batch;
         do {
             batch = branchRepository.getAllBranch(offset, limit)
-                    .stream().map(branchMapper::toDomain).toList();
+                    .stream().map(BranchMapper::toDomain).toList();
 
             batch.forEach(branch -> cache.put(branch.getBranchId(), branch));
             offset += limit;
@@ -142,7 +143,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
 
     @Override
-    @CacheEvict(value = CACHE_NAME, key = "#branch.branchId()")
+    @CacheEvict(value = CACHE_NAME, cacheManager = CACHE_MANAGER_NAME, key = "#branch.getBranchId()",condition = "#result == true")
     public boolean addBranchAppointmentConfigInfo(@NotNull LocalDate day, @Valid Branch branch) {
 
         var branchAppointmentInfo = branch.getBranchAppointmentInfo()
@@ -158,8 +159,10 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
         try {
 
-            var added = branchRepository.addBranchAppointmentConfigInfo(branch.getBranchId(), (int) branchAppointmentInfo.slotDuration().toMinutes(),
-                    branchAppointmentInfo.utilizationFactor(),branchAppointmentInfo.staffCount(), branchAppointmentInfo.day());
+            var added = branchRepository.addBranchAppointmentConfigInfo(
+                    branch.getBranchId(), (int) branchAppointmentInfo.slotDuration().toMinutes(),
+                    branchAppointmentInfo.utilizationFactor(),branchAppointmentInfo.staffCount(),
+                    branchAppointmentInfo.day(), branchAppointmentInfo.maxBookingCapacity());
 
             isAdded = added == 1;
 
@@ -172,7 +175,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     }
 
     @Override
-    @CacheEvict(value = CACHE_NAME, key = "#branch.branchId()")
+    @CacheEvict(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branch.getBranchId()",condition = "#result == true")
     public boolean addBranchOperationHoursOverride(@NotNull LocalDate day, @Valid Branch branch) {
 
         var operationHoursOverride = branch.getOperationHoursOverride()
@@ -191,8 +194,8 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
             var added = branchRepository.addBranchOperationHoursOverride(
                     branch.getBranchId(),
                     operationHoursOverride.effectiveDate(),
-                    operationHoursOverride.openTime(),
-                    operationHoursOverride.closingTime(),
+                    operationHoursOverride.openAt(),
+                    operationHoursOverride.closeAt(),
                     operationHoursOverride.closed(),
                     operationHoursOverride.reason()
             );

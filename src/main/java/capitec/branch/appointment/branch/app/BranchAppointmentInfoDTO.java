@@ -14,6 +14,8 @@ public record BranchAppointmentInfoDTO(
         @NotNull
         double utilizationFactor,
         @NotNull
-        LocalDate day
+        LocalDate day,
+        @Min(1)
+        int maxBookingCapacity
 ) {
 }

@@ -17,10 +17,12 @@ interface BranchMapper {
     /**
      * Converts BranchEntity Record to Branch (Domain Model).
      */
-    @Mapping(target = "branchId", source = "branchId")
-    @Mapping(target = "operationHoursOverride", source = "operationHoursOverride")
-    @Mapping(target = "branchAppointmentInfo", source = "branchAppointmentInfo")
-    Branch toDomain(BranchEntity entity);
+    static Branch toDomain(BranchEntity entity){
+        return Branch.restituteFromPersistence(entity.branchId(), entity.branchName(),
+                mapAppointmentInfoToList(entity.branchAppointmentInfo()),
+                mapOperationHoursOverrideToMapToList(entity.operationHoursOverride())
+        );
+    }
 
     /**
      * Converts Branch (Domain Model) to BranchEntity Record.
@@ -29,8 +31,7 @@ interface BranchMapper {
     @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapAppointmentInfoToMap(domain))")
-    @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapOperationHoursOverrideToMap(domain))")
-
+    @Mapping(target = "operationHoursOverride", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapOperationHoursOverrideToMap(domain))")
     BranchEntity toEntity(Branch domain);
 
     static   Map<LocalDate, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
@@ -49,12 +50,13 @@ interface BranchMapper {
                                 Math.toIntExact(info.slotDuration().toMinutes()),
                                 info.utilizationFactor(),
                                 info.staffCount(),
-                                info.day()
+                                info.day(),
+                                info.maxBookingCapacity()
                         )
                 ));
     }
 
-    default List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<LocalDate, BranchAppointmentInfoEntity> map) {
+  static    List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<LocalDate, BranchAppointmentInfoEntity> map) {
         if (map == null || map.isEmpty()) {
             return Collections.emptyList();
         }
@@ -63,7 +65,8 @@ interface BranchMapper {
                         Duration.ofMinutes(entry.getValue().slotDuration()),
                         entry.getValue().utilizationFactor(),
                         entry.getValue().staffCount(),
-                        entry.getKey()
+                        entry.getKey(),
+                        entry.getValue().maxBookingCapacity()
                 ))
                 .toList();
     }
@@ -82,8 +85,8 @@ interface BranchMapper {
                         info -> new OperationHoursOverrideEntity(
                                 branch.getBranchId(),
                                 info.effectiveDate(),
-                                info.openTime(),
-                                info.closingTime(),
+                                info.openAt(),
+                                info.closeAt(),
                                 info.closed(),
                                 info.reason(),
                                 LocalDateTime.now(),
@@ -92,7 +95,7 @@ interface BranchMapper {
                 ));
     }
 
-    default List<OperationHoursOverride> mapOperationHoursOverrideToMapToList(Map<LocalDate, OperationHoursOverrideEntity> map) {
+    static List<OperationHoursOverride> mapOperationHoursOverrideToMapToList(Map<LocalDate, OperationHoursOverrideEntity> map) {
         if (map == null || map.isEmpty()) {
             return Collections.emptyList();
         }
@@ -100,8 +103,8 @@ interface BranchMapper {
                 .stream()
                 .map(operationHoursOverrideEntity -> new OperationHoursOverride(
                         operationHoursOverrideEntity.effectiveDate(),
-                        operationHoursOverrideEntity.openTime(),
-                        operationHoursOverrideEntity.closingTime(),
+                        operationHoursOverrideEntity.openAt(),
+                        operationHoursOverrideEntity.closeAt(),
                         operationHoursOverrideEntity.closed(),
                         operationHoursOverrideEntity.reason()
                 ))

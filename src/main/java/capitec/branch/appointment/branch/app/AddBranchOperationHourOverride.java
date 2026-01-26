@@ -1,13 +1,11 @@
 package capitec.branch.appointment.branch.app;
 
-import capitec.branch.appointment.branch.app.port.BranchOperationHoursPort;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverrideService;
-import capitec.branch.appointment.exeption.BranchIsClosedException;
-import capitec.branch.appointment.exeption.BranchLocationServiceException;
 import capitec.branch.appointment.utils.UseCase;
+import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,16 +20,13 @@ import java.util.function.Supplier;
 @Validated
 @RequiredArgsConstructor
 public class AddBranchOperationHourOverride {
-    private static final String COUNTRY = "South Africa";
     private final BranchService branchService;
     private final OperationHoursOverrideService operationHoursOverrideService;
-    private final BranchOperationHoursPort branchOperationHoursPort;
 
     public boolean execute(String branchId, @Valid BranchOperationHourOverrideDTO dto) {
 
         return executeWithExceptionHandling(dto, () -> {
 
-            validateBranchExists(branchId);
 
             Branch branch = getByBranchIdOrThrow(branchId);
 
@@ -46,12 +41,6 @@ public class AddBranchOperationHourOverride {
         });
     }
 
-    private void validateBranchExists(String branchId) {
-        if (!branchOperationHoursPort.checkExist(COUNTRY, branchId)) {
-            log.warn("Branch does not exist in the system, branchId: {}", branchId);
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch is not found.");
-        }
-    }
 
     private Branch getByBranchIdOrThrow(String branchId) {
         return branchService.getByBranchId(branchId)
@@ -64,14 +53,10 @@ public class AddBranchOperationHourOverride {
     private Boolean executeWithExceptionHandling(BranchOperationHourOverrideDTO dto, Supplier<Boolean> action) {
         try {
             return action.get();
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | ConstraintViolationException e) {
             log.warn("Invalid branch operation hour override input: {}", dto, e);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (BranchLocationServiceException e) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage(), e);
-        } catch (BranchIsClosedException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Branch is closed.", e);
-        } catch (ResponseStatusException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getLocalizedMessage(), e);
+        }catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
             log.error("Internal server error.", e);

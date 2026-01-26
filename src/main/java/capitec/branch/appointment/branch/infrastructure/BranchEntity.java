@@ -17,6 +17,8 @@ import java.util.Map;
         Long id,
         @Column("branch_id")
         String branchId,
+        @Column("branch_name")
+        String branchName,
         @MappedCollection(idColumn = "branch_id", keyColumn = "branch_key")
         Map<LocalDate, BranchAppointmentInfoEntity> branchAppointmentInfo,
         @MappedCollection(idColumn = "branch_id", keyColumn = "branch_key")

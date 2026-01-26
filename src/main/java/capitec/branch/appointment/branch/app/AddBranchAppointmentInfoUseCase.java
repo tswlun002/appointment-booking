@@ -6,8 +6,7 @@ import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
-import capitec.branch.appointment.exeption.BranchIsClosedException;
-import capitec.branch.appointment.exeption.BranchLocationServiceException;
+import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalTime;
+import java.util.List;
 
 import java.util.function.Supplier;
 
@@ -38,15 +40,47 @@ public class AddBranchAppointmentInfoUseCase {
                     dto.slotDuration(),
                     dto.utilizationFactor(),
                     dto.staffCount(),
-                    dto.day()
+                    dto.day(),
+                    dto.maxBookingCapacity()
             );
 
-            var operationHourDetails = getOperationHoursOrThrow(branchId, dto);
 
-            validateBranchIsOpen(operationHourDetails);
+            LocalTime openAt ;
+            LocalTime closeAt;
 
-            branch.updateAppointmentInfo(dto.day(), info,
-                    operationHourDetails.openTime(), operationHourDetails.closingTime());
+            List<OperationHoursOverride> operationHoursOverride = branch.getOperationHoursOverride();
+
+            if(operationHoursOverride != null && !operationHoursOverride.isEmpty()){
+                var hoursOverride = operationHoursOverride
+                                    .stream()
+                                    .filter(op -> dto.day().equals(op.effectiveDate()))
+                                    .findFirst();
+
+                if(hoursOverride.isPresent()){
+
+                    openAt=hoursOverride.get().openAt();
+                    closeAt=hoursOverride.get().closeAt();
+                }
+                else{
+                    // no overrides for the give day, use branch locator service
+                    var operationHourDetails = getOperationHoursOrThrow(branchId, dto);
+                    validateBranchIsOpen(operationHourDetails);
+
+                    openAt = operationHourDetails.openTime();
+                    closeAt = operationHourDetails.closingTime();
+                }
+            }
+            else {
+                // no overrides at all, use branch locator service
+                var operationHourDetails = getOperationHoursOrThrow(branchId, dto);
+                validateBranchIsOpen(operationHourDetails);
+
+                openAt = operationHourDetails.openTime();
+                closeAt = operationHourDetails.closingTime();
+            }
+
+
+            branch.updateAppointmentInfo(dto.day(), info,openAt, closeAt);
 
             return branchAppointmentInfoService.addBranchAppointmentConfigInfo(dto.day(), branch);
         });
@@ -81,13 +115,10 @@ public class AddBranchAppointmentInfoUseCase {
         } catch (ResponseStatusException e) {
             throw e;
         } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Invalid arguments for the branch appointment info, input dto:{}",dto, e);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (BranchIsClosedException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The branch is closed.", e);
-        } catch (BranchLocationServiceException e) {
-            log.warn("Unable to get operation hours. DTO: {}", dto, e);
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage(), e);
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Internal server error.", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error.", e);
         }

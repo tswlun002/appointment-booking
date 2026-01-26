@@ -7,17 +7,17 @@ import java.time.LocalTime;
 
 public record OperationHoursOverride (
         LocalDate effectiveDate,
-        LocalTime openTime,
-        LocalTime closingTime,
+        LocalTime openAt,
+        LocalTime closeAt,
         boolean closed,
         String reason
 ){
 
     public OperationHoursOverride {
         Assert.notNull(effectiveDate, "Effective date cannot be null");
-        Assert.notNull(openTime, "Open time cannot be null");
-        Assert.notNull(closingTime, "Closing time cannot be null");
-        Assert.isTrue(openTime.isBefore(closingTime), "Open time must be before closing time");
+        Assert.notNull(openAt, "Open time cannot be null");
+        Assert.notNull(closeAt, "Closing time cannot be null");
+        Assert.isTrue(openAt.isBefore(closeAt), "Open time must be before closing time");
         Assert.isTrue(!closed || reason != null, "Closed operation hours must have a reason");
         Assert.hasText(reason, "Closed operation hours must have a reason");
         Assert.isTrue(effectiveDate.isEqual(LocalDate.now()) || effectiveDate.isAfter(LocalDate.now()), "Effective date must not be in the past");

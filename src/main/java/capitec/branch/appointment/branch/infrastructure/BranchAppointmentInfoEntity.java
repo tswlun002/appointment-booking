@@ -1,6 +1,7 @@
 package capitec.branch.appointment.branch.infrastructure;
 
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.relational.core.mapping.Column;
@@ -22,7 +23,10 @@ record BranchAppointmentInfoEntity(
         @Column("staff_count")
         int staffCount,
         @NotNull
-        LocalDate day
+        LocalDate day,
+        @Min(1)
+        @Column("max_booking_capacity")
+        int maxBookingCapacity
 ) {
 }
 

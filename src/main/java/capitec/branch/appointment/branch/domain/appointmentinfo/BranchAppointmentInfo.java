@@ -13,19 +13,23 @@ public record BranchAppointmentInfo(
         double utilizationFactor,
         int staffCount,
         @NotNull
-        LocalDate day
+        LocalDate day,
+        int maxBookingCapacity
 ) {
 
-    public BranchAppointmentInfo(Duration slotDuration, double utilizationFactor, int staffCount, LocalDate day) {
+    public BranchAppointmentInfo(Duration slotDuration, double utilizationFactor, int staffCount, LocalDate day,int maxBookingCapacity
+                                 ) {
 
         Assert.notNull(slotDuration, "Slot duration cannot be null");
         Assert.notNull(day, "Day cannot be null");
         Assert.isTrue(slotDuration.toMinutes() > 0, "Slot duration must be greater than 0 minutes");
+        Assert.isTrue(maxBookingCapacity > 0, "Max booking capacity must be greater than 0");
 
-        this.slotDuration = slotDuration;
-        this.utilizationFactor = utilizationFactor;
-        this.day = day;
-        this.staffCount = staffCount;
+      this.slotDuration = slotDuration;
+      this.utilizationFactor = utilizationFactor;
+      this.staffCount = staffCount;
+      this.day = day;
+      this.maxBookingCapacity = maxBookingCapacity;
 
     }
 }

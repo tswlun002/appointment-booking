@@ -16,10 +16,10 @@ public record OperationHoursOverrideEntity(
         String branchId,
         @Column("effective_date")
         LocalDate effectiveDate,
-        @Column("open_time")
-        LocalTime openTime,
-        @Column("closing_time")
-        LocalTime closingTime,
+        @Column("open_at")
+        LocalTime openAt,
+        @Column("close_at")
+        LocalTime closeAt,
         @Column("closed")
         boolean closed,
         @Column("reason")

@@ -7,4 +7,5 @@ public interface BranchOperationHoursPort {
 
     Optional<OperationHourDetails> getOperationHours(String country,String branchId, LocalDate day);
     boolean checkExist(String country, String branchId);
+    Optional<BranchDetails> getBranchNames(String country, String branchId);
 }
