@@ -1,32 +1,29 @@
 package capitec.branch.appointment.slots.app;
-
-import capitec.branch.appointment.slots.domain.Day;
-import capitec.branch.appointment.slots.domain.SlotDayType;
+import capitec.branch.appointment.slots.app.port.AppointmentInfoDetails;
+import capitec.branch.appointment.slots.app.port.BranchOperationTimesDetails;
+import capitec.branch.appointment.slots.app.port.GetActiveBranchesForSlotGenerationPort;
+import capitec.branch.appointment.slots.app.port.OperationTimesDetails;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
-
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @UseCase
 @Validated
 @RequiredArgsConstructor
 public class GenerateSlotsUseCase {
-
+    private final static String COUNTRY= "South Africa";
     private final int SLOTS_DISTRIBUTION_FACTOR = 2;
-    private final BranchSlotConfigs branchSlotConfigs;
+    private final GetActiveBranchesForSlotGenerationPort activeBranchesForSlotGenerationPort;
     private final SlotService slotStorage;
-    private final CheckHolidayQuery checkHolidayQuery;
-    private final CalculateAvailableCapacityService calculateAvailableCapacityService;
-
     private static final int ROLLING_WINDOW_DAYS = 7;
 
     /**
@@ -36,61 +33,84 @@ public class GenerateSlotsUseCase {
      *
      */
     public void createNext7DaySlots(LocalDate fromDate, int nextDays) {
-        int rolling_window = nextDays == 0 ? ROLLING_WINDOW_DAYS : nextDays;
+
         LocalDate date = fromDate == null ? LocalDate.now().plusDays(1) : fromDate;
 
-        Set<String> strings = branchSlotConfigs
-                .branchConfigs()
-                .keySet()
-                .stream().
-                filter(s->!s.equals(BranchSlotConfigs.DEFAULT_CONFIG_KEY))
-                .collect(Collectors.toSet());
+        Collection<BranchOperationTimesDetails> activeBranches = activeBranchesForSlotGenerationPort.execute(COUNTRY, date);
+
+        int rolling_window = nextDays == 0 ? ROLLING_WINDOW_DAYS : nextDays;
+
+
         List<Slot> allSlots  = new ArrayList<>();
-        for (String branch : strings) {
+        for (var branch : activeBranches) {
             Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,date, rolling_window );
-            List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
-            allSlots.addAll(list);
+            if(!dayOfWeekListMap.isEmpty()) {
+                List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
+                allSlots.addAll(list);
+            }
+
         }
-        slotStorage.save(allSlots);
+        if(allSlots.isEmpty()) {
+            log.warn("Failed to generate slots, current date:{}", LocalDateTime.now());
+            //throw new RuntimeException("Failed to generate slots, current date:" + LocalDateTime.now());
+        }
+        else slotStorage.save(allSlots);
 
 
     }
 
     /**
      * Generate Time Slots for a given dateOfSlots range.
-     * @param branchId The id of the branch of slot to generate
+     * @param branch The branch of slots to generate
      * @param startDate The starting dateOfSlots.
      * @param days The bookingCount of days to generate slots for.
      * @return A map of generated slots grouped by dateOfSlots.
      */
-    private Map<LocalDate, List<Slot>> generateTimeSlotsForRange(String branchId,LocalDate startDate, int days) {
+    private Map<LocalDate, List<Slot>> generateTimeSlotsForRange(BranchOperationTimesDetails branch, LocalDate startDate, int days) {
 
         final Map<LocalDate, List<Slot>> weeklySlots = new HashMap<>();
         
         LocalDate day = startDate;
+
+        Map<LocalDate, OperationTimesDetails> localDateOperationTimesDtoMap = branch.operationTimes();
+        Map<LocalDate, AppointmentInfoDetails> AppointmentInfoDtoMap = branch.appointmentInfo();
+
+
+        if (localDateOperationTimesDtoMap ==null || localDateOperationTimesDtoMap.isEmpty()) {
+            log.error("Branch has no operation times found, branch:{}",branch);
+            return  Collections.emptyMap();
+        }
+
+        if (AppointmentInfoDtoMap ==null || AppointmentInfoDtoMap.isEmpty()) {
+            log.error("Branch has no appointment information found, branch:{}",branch.branchId());
+            return  Collections.emptyMap();
+        }
+
+
         for (int numDays = 0; numDays < days; numDays++) {
             
             int slotGenerated = 0;
-            
-            SlotDayType slotDayType = checkHolidayQuery.execute(day) ? SlotDayType.HOLIDAY :
-                              Day.isWeekend(day.getDayOfWeek()) ? SlotDayType.WEEKEND : SlotDayType.WEEK_DAYS;
 
-            var slotProperties = branchSlotConfigs
-                    .branchConfigs()
-                    .get(branchId)
-                    .get(slotDayType);
-            
-            // Check if branchConfigs exist for this day type
-            if (slotProperties == null) {
-                log.warn("No slot branchConfigs configured for SlotDayType: {}. Skipping slot generation for {}.", slotDayType, day);
+            // Check if OperationTimes exist for this day
+            OperationTimesDetails operationTimesDetails = localDateOperationTimesDtoMap.get(day);
+            if (operationTimesDetails == null || operationTimesDetails.isClose()) {
+                log.warn("Branch {} has operation times detected for day {}",branch.branchId(), day);
                 day = day.plusDays(1);
-                continue; 
+                continue;
+            }
+            // Check if appointmentInfo exist for this day
+            AppointmentInfoDetails appointmentInfoDetails = AppointmentInfoDtoMap.get(day);
+            if (appointmentInfoDetails == null) {
+                 log.warn("Branch {} has no appointment info found for day {}", branch.branchId(),day);
+                day = day.plusDays(1);
+                continue;
             }
 
-            Duration slotDuration = slotProperties.slotDuration();
-            int availableCapacity = calculateAvailableCapacityService.execute(branchId, slotDayType);
-            LocalTime closingTime = slotProperties.closingTime();
-            LocalTime openTime = slotProperties.openTime();
+
+            int availableCapacity = calculateAvailableCapacity(appointmentInfoDetails, operationTimesDetails);
+            Duration slotDuration = appointmentInfoDetails.slotDuration();
+            LocalTime closingTime = operationTimesDetails.closeAt();
+            LocalTime openTime = operationTimesDetails.openAt();
             
             List<Slot> slots = new ArrayList<>();
 
@@ -101,7 +121,7 @@ public class GenerateSlotsUseCase {
 
                     LocalTime slotClosingTime = openTime.plus(slotDuration);
                     
-                    Slot slot = new Slot(day, openTime, slotClosingTime, slotProperties.maxBookingCapacity(),branchId);
+                    Slot slot = new Slot(day, openTime, slotClosingTime, appointmentInfoDetails.maxBookingCapacity(),branch.branchId());
                     slots.add(slot);
                     slotGenerated++;
                 }
@@ -115,5 +135,27 @@ public class GenerateSlotsUseCase {
         }
 
         return weeklySlots;
+    }
+
+    private int calculateAvailableCapacity(AppointmentInfoDetails appointmentInfoDetails, OperationTimesDetails operationTimesDetails) {
+
+        // 1. Calculate working duration in minutes
+        LocalTime openTime = operationTimesDetails.openAt();
+        LocalTime closingTime = operationTimesDetails.closeAt();
+
+        // Calculate difference in hours/minutes (e.g., 17:00 - 08:00 = 9 hours)
+        long workingMinutes = java.time.Duration.between(openTime, closingTime).toMinutes();
+
+        // 2. Calculate theoretical slots per staff
+        long slotDurationMinutes = appointmentInfoDetails.slotDuration().toMinutes();
+        var theoreticalSlotsPerStaff = workingMinutes / slotDurationMinutes;
+
+        // 3. Calculate total theoretical capacity
+        var totalCapacity = appointmentInfoDetails.staffCount() * theoreticalSlotsPerStaff;
+
+        // 4. Calculate available capacity using utilization factor
+        var availableCapacity = totalCapacity * appointmentInfoDetails.utilizationFactor();
+
+        return (int) Math.round(availableCapacity);
     }
 }

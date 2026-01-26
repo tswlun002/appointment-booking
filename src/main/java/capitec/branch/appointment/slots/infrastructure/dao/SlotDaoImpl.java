@@ -32,7 +32,7 @@ public class SlotDaoImpl implements SlotService {
     public void save( List<Slot> slots) {
 
         if(slots == null || slots.isEmpty()) {
-            log.error("Slot storage trying to save is null or empty");
+            log.error("Slots trying to save is null or empty");
             throw new IllegalArgumentException("Slot cannot be null");
         }
 

@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 
 import java.time.Duration;
@@ -17,7 +15,6 @@ import java.util.Objects;
 import java.util.UUID;
 
 public class Slot {
-    private static Logger log = LoggerFactory.getLogger(Slot.class);
 
     @NotNull
     private final UUID id;
@@ -113,6 +110,7 @@ public class Slot {
             throw new IllegalStateException("Cannot book an expired slot.");
         }
         if (!hasAvailableCapacity()) {
+
             throw new SlotFullyBookedException("Slot is fully booked.");
         }
 
