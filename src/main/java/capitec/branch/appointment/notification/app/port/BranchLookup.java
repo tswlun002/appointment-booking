@@ -1,5 +1,7 @@
 package capitec.branch.appointment.notification.app.port;
 
+import java.util.Optional;
+
 public interface BranchLookup {
-    BranchDetails findById(String branchId);
+    Optional<BranchDetails> findById(String branchId);
 }

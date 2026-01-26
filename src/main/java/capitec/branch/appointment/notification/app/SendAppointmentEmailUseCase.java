@@ -16,7 +16,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.Objects;
 import java.util.Set;
 
@@ -39,7 +42,12 @@ public class SendAppointmentEmailUseCase {
         log.info("Sending appointment email, traceId:{}", event.traceId());
 
         CustomerDetails user = customerLookup.findByUsername(event.customerUsername());
-        BranchDetails branchDetails = branchLookup.findById(event.branchId());
+
+        BranchDetails branchDetails = branchLookup.findById(event.branchId())
+                                                    .orElseThrow(()->{
+                                                        log.warn("No branch found with id:{}", event.branchId());
+                                                        return new ResponseStatusException(HttpStatus.NOT_FOUND, "No branch found.");
+                                                    });
 
         String subject;
         String body;
@@ -82,7 +90,11 @@ public class SendAppointmentEmailUseCase {
 
         log.info("Sending appointment status updates email, traceId:{}", event.traceId());
         CustomerDetails user = customerLookup.findByUsername(event.customerUsername());
-        BranchDetails branchDetails = branchLookup.findById(event.branchId());
+        BranchDetails branchDetails = branchLookup.findById(event.branchId())
+                                                    .orElseThrow(()->{
+                                                        log.warn("No branch found with id:{}", event.branchId());
+                                                        return new ResponseStatusException(HttpStatus.NOT_FOUND, "No branch found.");
+                                                    });
         String date = event.createdAt().toLocalDate().toString();
         String time = event.createdAt().toLocalTime().toString();
 
