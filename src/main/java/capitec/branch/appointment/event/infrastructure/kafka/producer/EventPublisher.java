@@ -168,6 +168,8 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
                                                       String triggeredBy,
                                                       @NotNull LocalDateTime occurredAt) {
         var traceId = UUID.randomUUID().toString();
+        log.debug("To published  appointment cancel event, branchId:{}, reference:{},appointmentId:{},occurred at:{}, trigger by:{} ",branchId,reference,appointmentId,
+                occurredAt,triggeredBy);
 
         String topic = Topics.APPOINTMENT_CANCELED;
         validateTopic(topic, traceId);
@@ -226,7 +228,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
             if (error != null || !Boolean.TRUE.equals(result)) {
                 log.error("Failed to publish {}, traceId: {}", value.topic(), value.traceId());
             } else {
-                log.info("Published {} successfully, traceId: {}", value.topic(), value.traceId());
+                log.info("Published  successfully event:{}, traceId: {}", value.topic(), value.traceId());
             }
         });
     }

@@ -12,7 +12,7 @@ public record UserEventStatus(String  status) {
 
         if(StringUtils.isBlank(status) && ! DEAD_LETTER_STATUS.isValueOf(status)) {
 
-            log.error("OTPEventStatus status is invalid, status is {}", status);
+            log.error("Event status is invalid, status is {}", status);
             throw new InternalServerErrorException("Internal Server Error");
         }
     }
