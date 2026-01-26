@@ -1,4 +1,4 @@
-package capitec.branch.appointment.slots.infrastructure.holiday.config;
+package capitec.branch.appointment.day.infrastructure.config;
 
 
 import org.springframework.beans.factory.annotation.Qualifier;

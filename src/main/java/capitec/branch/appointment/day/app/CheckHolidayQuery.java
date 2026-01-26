@@ -1,6 +1,5 @@
-package capitec.branch.appointment.slots.app;
+package capitec.branch.appointment.day.app;
 
-import capitec.branch.appointment.slots.domain.HolidayClient;
 import capitec.branch.appointment.slots.domain.Holiday;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
