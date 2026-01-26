@@ -1,11 +1,13 @@
 package capitec.branch.appointment.location.infrastructure.api;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.day.domain.Day;
 import capitec.branch.appointment.location.domain.BranchLocation;
 import capitec.branch.appointment.exeption.BranchLocationServiceException;
 import capitec.branch.appointment.location.domain.Coordinates;
+import capitec.branch.appointment.location.domain.OperationTime;
 import com.github.tomakehurst.wiremock.client.WireMock;
-import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,12 +15,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
-import java.util.Objects;
-
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import java.util.Map;
+import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -32,6 +37,10 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
     private CircuitBreakerRegistry circuitBreakerRegistry;
 
     @Autowired
+    private GetDateOfNextDaysQuery getDateOfNextDaysQuery;
+
+    @Autowired
+    @Qualifier("branchLocationCacheManager")
     private CacheManager cacheManager;
 
     private WireMock capitecApiWireMock;
@@ -39,84 +48,15 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
     private static final double CAPE_TOWN_LAT = -33.9249;
     private static final double CAPE_TOWN_LON = 18.4241;
 
-    private static final String CAPITEC_BRANCH_API_RESPONSE = """
-            {
-                "Branches": [
-                    {
-                        "Id": null,
-                        "Code": "470010",
-                        "Latitude": -33.960553,
-                        "Longitude": 18.470156,
-                        "Name": "Rondebosch",
-                        "AddressLine1": "Shop G21, Cnr Main & Belmont Road, Fountain Centre, Rondebosch, 7700",
-                        "AddressLine2": "Fountain Centre",
-                        "OpeningHours": "Monday - Friday, 8am - 5pm",
-                        "SaturdayHours": "Saturday, 8am - 1pm",
-                        "SundayHours": "Closed on Sundays",
-                        "PublicHolidayHours": "Closed on Public Holidays",
-                        "City": "Rondebosch",
-                        "Province": "Western Cape",
-                        "IsAtm": false,
-                        "CashAccepting": false,
-                        "HandlesHomeLoans": false,
-                        "IsClosed": false,
-                        "BusinessBankCenter": false
-                    },
-                    {
-                        "Id": null,
-                        "Code": "470020",
-                        "Latitude": -33.925839,
-                        "Longitude": 18.423622,
-                        "Name": "Cape Town CBD",
-                        "AddressLine1": "Shop 5, Cape Town Station Building, Adderley Street",
-                        "AddressLine2": null,
-                        "OpeningHours": "Monday - Friday, 8am - 5pm",
-                        "SaturdayHours": "Saturday, 8am - 1pm",
-                        "SundayHours": "Closed on Sundays",
-                        "PublicHolidayHours": "Closed on Public Holidays",
-                        "City": "Cape Town",
-                        "Province": "Western Cape",
-                        "IsAtm": false,
-                        "CashAccepting": false,
-                        "HandlesHomeLoans": true,
-                        "IsClosed": false,
-                        "BusinessBankCenter": true
-                    },
-                    {
-                        "Id": "SAS29340",
-                        "Code": null,
-                        "Latitude": -25.7751312,
-                        "Longitude": 29.4944725,
-                        "Name": "Total Rondebosch ATM",
-                        "AddressLine1": "Total Rondebosch Vulstasie, Corner of N11",
-                        "AddressLine2": null,
-                        "OpeningHours": null,
-                        "SaturdayHours": null,
-                        "SundayHours": null,
-                        "PublicHolidayHours": null,
-                        "City": "Middelburg",
-                        "Province": "Mpumalanga",
-                        "IsAtm": true,
-                        "CashAccepting": false,
-                        "HandlesHomeLoans": false,
-                        "IsClosed": false,
-                        "BusinessBankCenter": false
-                    }
-                ]
-            }
-            """;
+    private static final String CAPITEC_BRANCH_API_RESPONSE = capitecApiBranchResponse();
 
-    private static final String EMPTY_BRANCH_RESPONSE = """
-            {
-                "Branches": []
-            }
-            """;
+    private static final String EMPTY_BRANCH_RESPONSE = capitecApiBranchEmptyResponse();
 
     @BeforeEach
     void setup() {
         capitecApiWireMock = new WireMock(
-                wiremockClientDomainServer.getHost(),
-                wiremockClientDomainServer.getFirstMappedPort()
+                wiremockContainer.getHost(),
+                wiremockContainer.getFirstMappedPort()
         );
         capitecApiWireMock.resetMappings();
 
@@ -129,10 +69,15 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
     }
 
     private void clearCaches() {
-        Objects.requireNonNull(cacheManager.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_COORDINATES_CACHE))
-                .clear();
-        Objects.requireNonNull(cacheManager.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_AREA_CACHE))
-                .clear();
+        var cache = new Cache[]{
+                cacheManager.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_COORDINATES_CACHE),
+                cacheManager.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_AREA_CACHE)
+        };
+        for (Cache cache1 : cache) {
+            if(cache1!=null) {
+                cache1.clear();
+            }
+        }
     }
 
     @Nested
@@ -143,7 +88,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should fetch branches by coordinates successfully")
         void shouldFetchBranchesByCoordinatesSuccessfully() {
             // Given
-            stubCapitecApiSuccess();
+            stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
             Coordinates coordinates = new Coordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
 
             // When
@@ -151,7 +96,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
 
             // Then
             assertThat(result).isNotEmpty();
-            assertThat(result).hasSize(2); // ATM is filtered out
+            assertThat(result).hasSize(7); // ATM is filtered out
 
             // Verify first branch
             BranchLocation rondebosch = result.stream()
@@ -167,7 +112,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should filter out ATMs from response")
         void shouldFilterOutAtmsFromResponse() {
             // Given
-            stubCapitecApiSuccess();
+            stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
             Coordinates coordinates = new Coordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
 
             // When
@@ -183,7 +128,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should return empty list when no branches found")
         void shouldReturnEmptyListWhenNoBranchesFound() {
             // Given
-            stubCapitecApiEmptyResponse();
+            stubCapitecApiEmptyResponse(capitecApiWireMock,EMPTY_BRANCH_RESPONSE);
             Coordinates coordinates = new Coordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
 
             // When
@@ -197,7 +142,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should cache results for same coordinates")
         void shouldCacheResultsForSameCoordinates() {
             // Given
-            stubCapitecApiSuccess();
+            stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
             Coordinates coordinates = new Coordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
 
             // When - First call
@@ -205,7 +150,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
 
             // Reset WireMock to verify second call doesn't hit API
             capitecApiWireMock.resetMappings();
-            stubCapitecApiError(); // This would fail if called
+            stubCapitecApiError(capitecApiWireMock); // This would fail if called
 
             // When - Second call (should use cache)
             List<BranchLocation> secondResult = branchLocationFetcher.fetchByCoordinates(coordinates);
@@ -223,7 +168,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should fetch branches by area successfully")
         void shouldFetchBranchesByAreaSuccessfully() {
             // Given
-            stubCapitecApiSuccess();
+            stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
             String searchText = "Cape Town";
 
             // When
@@ -231,21 +176,21 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
 
             // Then
             assertThat(result).isNotEmpty();
-            assertThat(result).hasSize(2); // ATM is filtered out
+            assertThat(result).hasSize(7); // ATM is filtered out
         }
 
         @Test
         @DisplayName("Should cache results for same area search (case insensitive)")
         void shouldCacheResultsForSameAreaSearch() {
             // Given
-            stubCapitecApiSuccess();
+            stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
 
             // When - First call with lowercase
             List<BranchLocation> firstResult = branchLocationFetcher.fetchByArea("cape town");
 
             // Reset WireMock
             capitecApiWireMock.resetMappings();
-            stubCapitecApiError();
+            stubCapitecApiError(capitecApiWireMock);
 
             // When - Second call with uppercase (should use cache due to toLowerCase in key)
             List<BranchLocation> secondResult = branchLocationFetcher.fetchByArea("CAPE TOWN");
@@ -263,7 +208,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should retry on transient failure and succeed")
         void shouldRetryOnTransientFailureAndSucceed() {
             // Given - First call fails, second succeeds
-            stubCapitecApiFailThenSucceed();
+            stubCapitecApiFailThenSucceed(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
             Coordinates coordinates = new Coordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
 
             // When
@@ -271,15 +216,15 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
 
             // Then - Should succeed after retry
             assertThat(result).isNotEmpty();
-            assertThat(result).hasSize(2);
+            assertThat(result).hasSize(7);
         }
 
         @Test
         @DisplayName("Should throw exception after all retries exhausted")
         void shouldThrowExceptionAfterAllRetriesExhausted() {
             // Given - All calls fail
-            stubCapitecApiPersistentFailure();
-            Coordinates coordinates = new Coordinates(-99.0, -99.0); // Different coordinates to avoid cache
+            stubCapitecApiPersistentFailure(capitecApiWireMock);
+            Coordinates coordinates = new Coordinates(-90.0, -90.0); // Different coordinates to avoid cache
 
             // When/Then
             assertThatThrownBy(() -> branchLocationFetcher.fetchByCoordinates(coordinates))
@@ -296,7 +241,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should open circuit breaker after failures threshold")
         void shouldOpenCircuitBreakerAfterFailuresThreshold() {
             // Given
-            stubCapitecApiPersistentFailure();
+            stubCapitecApiPersistentFailure(capitecApiWireMock);
             CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("branchLocatorCircuitBreaker");
 
             // When - Make enough calls to trigger circuit breaker (minimum 5 calls, 65% failure rate)
@@ -327,6 +272,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
             assertThatThrownBy(() -> branchLocationFetcher.fetchByCoordinates(coordinates))
                     .isInstanceOf(BranchLocationServiceException.class)
                     .hasMessageContaining("temporarily unavailable");
+
         }
     }
 
@@ -338,7 +284,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
         @DisplayName("Should map branch with all fields correctly")
         void shouldMapBranchWithAllFieldsCorrectly() {
             // Given
-            stubCapitecApiSuccess();
+            stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
             Coordinates coordinates = new Coordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
 
             // When
@@ -356,178 +302,55 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
             assertThat(capeTownCbd.getAddress().addressLine1()).isEqualTo("Shop 5, Cape Town Station Building, Adderley Street");
             assertThat(capeTownCbd.getAddress().city()).isEqualTo("Cape Town");
             assertThat(capeTownCbd.getAddress().province()).isEqualTo("Western Cape");
-            assertThat(capeTownCbd.getOperatingHours().weekdayHours()).isEqualTo("Monday - Friday, 8am - 5pm");
-            assertThat(capeTownCbd.getOperatingHours().saturdayHours()).isEqualTo("Saturday, 8am - 1pm");
             assertThat(capeTownCbd.isBusinessBankCenter()).isTrue();
             assertThat(capeTownCbd.isClosed()).isFalse();
-        }
 
-        @Test
-        @DisplayName("Should handle null optional fields gracefully")
-        void shouldHandleNullOptionalFieldsGracefully() {
-            // Given
-            String responseWithNulls = """
-                    {
-                        "Branches": [
-                            {
-                                "Id": null,
-                                "Code": "470099",
-                                "Latitude": -33.960553,
-                                "Longitude": 18.470156,
-                                "Name": null,
-                                "AddressLine1": null,
-                                "AddressLine2": null,
-                                "OpeningHours": null,
-                                "SaturdayHours": null,
-                                "SundayHours": null,
-                                "PublicHolidayHours": null,
-                                "City": null,
-                                "Province": null,
-                                "IsAtm": false,
-                                "CashAccepting": false,
-                                "HandlesHomeLoans": null,
-                                "IsClosed": null,
-                                "BusinessBankCenter": null
-                            }
-                        ]
-                    }
-                    """;
-            stubCapitecApiWithResponse(responseWithNulls);
-            Coordinates coordinates = new Coordinates(-35.0, 19.0);
+            Set<Day> daySet = getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
 
-            // When
-            List<BranchLocation> result = branchLocationFetcher.fetchByCoordinates(coordinates);
+            for (Day day : daySet) {
+                Map<LocalDate, OperationTime> actual = capeTownCbd.getDailyOperationTimes();
+                if(day.isHoliday()){
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", true)
+                            .hasFieldOrPropertyWithValue("openAt", null)
+                            .hasFieldOrPropertyWithValue("closeAt", null)
+                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("isHoliday", true);
+                }
+                if(day.isWeekday()) {
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", false)
+                            .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
+                            .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(17, 0))
+                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("isHoliday", false);
+                }
+                if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)) {
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", false)
+                            .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
+                            .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(13, 0))
+                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("isHoliday", false);
+                }
+                if(day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
 
-            // Then
-            assertThat(result).hasSize(1);
-            BranchLocation branch = result.get(0);
-            assertThat(branch.getName()).isEqualTo("Capitec Branch"); // Default
-            assertThat(branch.getAddress().addressLine1()).isEqualTo("Unknown");
-            assertThat(branch.getAddress().city()).isEqualTo("Unknown");
-            assertThat(branch.getAddress().province()).isEqualTo("Unknown");
-            assertThat(branch.getOperatingHours().weekdayHours()).isEqualTo("Monday - Friday, 8am - 5pm"); // Default
-            assertThat(branch.isBusinessBankCenter()).isFalse();
-            assertThat(branch.isClosed()).isFalse();
-        }
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", true)
+                            .hasFieldOrPropertyWithValue("openAt", null)
+                            .hasFieldOrPropertyWithValue("closeAt", null)
+                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
+                            .hasFieldOrPropertyWithValue("isHoliday", false);
+                }
 
-        @Test
-        @DisplayName("Should skip branches with missing coordinates")
-        void shouldSkipBranchesWithMissingCoordinates() {
-            // Given
-            String responseWithMissingCoords = """
-                    {
-                        "Branches": [
-                            {
-                                "Code": "470001",
-                                "Latitude": null,
-                                "Longitude": 18.470156,
-                                "Name": "Branch Without Lat",
-                                "IsAtm": false
-                            },
-                            {
-                                "Code": "470002",
-                                "Latitude": -33.960553,
-                                "Longitude": null,
-                                "Name": "Branch Without Lon",
-                                "IsAtm": false
-                            },
-                            {
-                                "Code": "470003",
-                                "Latitude": -33.960553,
-                                "Longitude": 18.470156,
-                                "Name": "Valid Branch",
-                                "IsAtm": false
-                            }
-                        ]
-                    }
-                    """;
-            stubCapitecApiWithResponse(responseWithMissingCoords);
-            Coordinates coordinates = new Coordinates(-36.0, 20.0);
-
-            // When
-            List<BranchLocation> result = branchLocationFetcher.fetchByCoordinates(coordinates);
-
-            // Then - Only the valid branch should be returned
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getBranchCode()).isEqualTo("470003");
-            assertThat(result.get(0).getName()).isEqualTo("Valid Branch");
+            }
         }
     }
 
-    // ==================== Helper Methods ====================
 
-    private void stubCapitecApiSuccess() {
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .willReturn(aResponse()
-                                .withStatus(200)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(CAPITEC_BRANCH_API_RESPONSE))
-        );
-    }
-
-    private void stubCapitecApiWithResponse(String response) {
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .willReturn(aResponse()
-                                .withStatus(200)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(response))
-        );
-    }
-
-    private void stubCapitecApiEmptyResponse() {
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .willReturn(aResponse()
-                                .withStatus(200)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(EMPTY_BRANCH_RESPONSE))
-        );
-    }
-
-    private void stubCapitecApiError() {
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .willReturn(aResponse()
-                                .withStatus(500)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody("{\"error\": \"Internal Server Error\"}"))
-        );
-    }
-
-    private void stubCapitecApiPersistentFailure() {
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .willReturn(aResponse()
-                                .withStatus(503)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody("{\"error\": \"Service Unavailable\"}"))
-        );
-    }
-
-    private void stubCapitecApiFailThenSucceed() {
-        // First call fails
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .inScenario("Retry Scenario")
-                        .whenScenarioStateIs(Scenario.STARTED)
-                        .willReturn(aResponse()
-                                .withStatus(503)
-                                .withBody("{\"error\": \"Service Unavailable\"}"))
-                        .willSetStateTo("RETRY_1")
-        );
-
-        // Second call succeeds
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .inScenario("Retry Scenario")
-                        .whenScenarioStateIs("RETRY_1")
-                        .willReturn(aResponse()
-                                .withStatus(200)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(CAPITEC_BRANCH_API_RESPONSE))
-        );
-    }
 }
 

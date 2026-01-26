@@ -3,15 +3,30 @@ package capitec.branch.appointment.slots.app;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
+import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
+import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
+import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.day.domain.Day;
+import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
+import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Base class for all Slot Use Case tests.
@@ -25,7 +40,16 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     protected  Branch branch;
     protected  List<Branch> branches = new ArrayList<>();
     @Autowired
-    protected BranchSlotConfigs branchSlotConfigs;
+    @Qualifier("branchLocationCacheManager")
+    protected CacheManager cacheManagerBranchLocationService;
+    @Autowired
+    @Qualifier("branchCacheManager")
+    protected CacheManager cacheManagerBranches;
+    @Autowired
+    protected CircuitBreakerRegistry circuitBreakerRegistry;
+    private WireMock capitecWireMock;
+    @Autowired
+    protected GetDateOfNextDaysQuery getDateOfNextDaysQuery;
 
     @BeforeEach
     public void setUp()  {
@@ -48,27 +72,84 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     protected void setUpBranch() {
 
 
-        var nonDefault = branchSlotConfigs.branchConfigs().keySet().stream().filter(s->!s.equals("default")).findFirst().get();
+       // var nonDefault = branchSlotConfigs.branchConfigs().keySet().stream().filter(s->!s.equals("default")).findFirst().get();
 
-        var defaultBranch = branchSlotConfigs.branchUseDefaultConfigs().getFirst();
+        //var defaultBranch = branchSlotConfigs.branchUseDefaultConfigs().getFirst();
+
+       capitecWireMock = new WireMock(
+               wiremockContainer.getHost(),
+               wiremockContainer.getFirstMappedPort()
+       );
+
+        // Reset any previous stubs
+        capitecWireMock.resetMappings();
+        stubCapitecApiSuccess(capitecWireMock, capitecApiBranchResponse());
+        // Reset circuit breaker state before each test
+        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("branchLocatorCircuitBreaker");
+        cb.reset();
+
+        // Clear caches
+        clearCaches();
+        for (var branchId: new String[]{ "SAS293200", "SAS29300"}) {
+
+            branch = new Branch(branchId,"Capitec Head Office");
+            LocalDate now = LocalDate.now();
+            Set<Day> execute = getDateOfNextDaysQuery.execute(now.getDayOfWeek(), now.plusDays(6).getDayOfWeek());
+
+            for(var day : execute) {
+
+                if(day.isHoliday())continue;
+
+                else if(day.isWeekday()){
+
+                    var branchAppointmentInfo =
+                            new BranchAppointmentInfo(
+                                    Duration.ofMinutes(30),
+                                    0.6,
+                                    6,
+                                    day.getDate(),
+                                    3
+                            );
+                    branch.updateAppointmentInfo(day.getDate(), branchAppointmentInfo, LocalTime.of(8,0), LocalTime.of(17,0));
+                }
+                else if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)){
+                    var branchAppointmentInfo =
+                            new BranchAppointmentInfo(
+                                    Duration.ofMinutes(30),
+                                    0.3,
+                                    4,
+                                    day.getDate(),
+                                    1
+                            );
+                    branch.updateAppointmentInfo(day.getDate(), branchAppointmentInfo, LocalTime.of(8,0), LocalTime.of(17,0));
+
+                }
+
+            }
 
 
-        for (var i=0; i<2; i++) {
-
-            String branchId = i==0?nonDefault:defaultBranch;
-
-            branch = new Branch(branchId);
 
             branches.add(branchService.add(branch));
         }
        branch = branches.getFirst();
 
 
-
-
+    }
+    private void clearCaches() {
+        var cache = new Cache[]{
+                cacheManagerBranchLocationService.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_COORDINATES_CACHE),
+                cacheManagerBranchLocationService.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_AREA_CACHE),
+                cacheManagerBranches.getCache(BranchDaoImpl.CACHE_NAME)
+        };
+        for (Cache cache1 : cache) {
+            if(cache1!=null) {
+                cache1.clear();
+            }
+        }
     }
 
     protected void deleteBranches() {
+        capitecWireMock.resetMappings();
        for (Branch branch : branches) {
            branchService.delete(branch.getBranchId());
        }

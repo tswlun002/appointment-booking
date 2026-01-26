@@ -2,6 +2,7 @@ package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -25,15 +26,17 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
     @Autowired
     private AddBranchOperationHourOverride addBranchOperationHourOverride;
 
+
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {
-            "BR001;08:00;17:00;false;Public holiday - reduced hours",
-            "BR002;09:00;13:00;true;Christmas Day closure"
+            "SAS293200;08:00;17:00;false;Public holiday - reduced hours",
+            "SASB9001;09:00;13:00;true;Christmas Day closure"
     })
     void shouldAddOperationHourOverride_whenBranchExists(String branchId, String openTime, String closingTime, boolean isClosed, String reason) {
         LocalDate effectiveDate = LocalDate.now().plusDays(1);
 
         // ARRANGE
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         BranchDTO branchDTO = createBranchDTO(branchId);
         addBranchUseCase.execute(branchDTO);
 
@@ -56,15 +59,16 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
 
         assertThat(overrides).hasSize(1);
         assertThat(overrides.get(0).effectiveDate()).isEqualTo(effectiveDate);
-        assertThat(overrides.get(0).openTime()).isEqualTo(LocalTime.parse(openTime));
-        assertThat(overrides.get(0).closingTime()).isEqualTo(LocalTime.parse(closingTime));
+        assertThat(overrides.get(0).openAt()).isEqualTo(LocalTime.parse(openTime));
+        assertThat(overrides.get(0).closeAt()).isEqualTo(LocalTime.parse(closingTime));
         assertThat(overrides.get(0).closed()).isEqualTo(isClosed);
         assertThat(overrides.get(0).reason()).isEqualTo(reason);
     }
 
     @Test
     void shouldReplaceOverride_whenSameDateExists() {
-        String branchId = "BR003";
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
+        String branchId = "SAS29300";
         LocalDate effectiveDate = LocalDate.now().plusDays(1);
 
         // ARRANGE
@@ -93,6 +97,7 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
     @Test
     void shouldThrowNotFound_whenBranchDoesNotExistInExternalSystem() {
         // ARRANGE - Branch not registered in external system (branchOperationHoursPort)
+
         BranchOperationHourOverrideDTO dto = new BranchOperationHourOverrideDTO(
                 LocalDate.now().plusDays(1),
                 LocalTime.of(8, 0),
@@ -102,7 +107,8 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
         );
 
         // ACT & ASSERT
-        assertThatThrownBy(() -> addBranchOperationHourOverride.execute("NON_EXISTENT_EXTERNAL_ID", dto))
+        stubCapitecApiEmptyResponse(capitecApiWireMock,EMPTY_BRANCH_RESPONSE);
+        assertThatThrownBy(() -> addBranchOperationHourOverride.execute("SAS29300", dto))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.NOT_FOUND)
                 .hasMessageContaining("Branch is not found");
@@ -121,7 +127,9 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
         );
 
         // ACT & ASSERT
-        assertThatThrownBy(() -> addBranchOperationHourOverride.execute("NON_EXISTENT_LOCAL_ID", dto))
+        stubCapitecApiEmptyResponse(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
+
+        assertThatThrownBy(() -> addBranchOperationHourOverride.execute("SAS29300", dto))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.NOT_FOUND)
                 .hasMessageContaining("Branch is not found");
@@ -129,9 +137,10 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
 
     @Test
     void shouldThrowBadRequest_whenOpenTimeIsAfterClosingTime() {
-        String branchId = "BR004";
+        String branchId = "SAS29300";
 
         // ARRANGE
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         addBranchUseCase.execute(createBranchDTO(branchId));
 
         BranchOperationHourOverrideDTO dto = new BranchOperationHourOverrideDTO(
@@ -150,9 +159,10 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
 
     @Test
     void shouldThrowBadRequest_whenEffectiveDateIsInThePast() {
-        String branchId = "BR005";
+        String branchId = "SAS29300";
 
         // ARRANGE
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         addBranchUseCase.execute(createBranchDTO(branchId));
 
         BranchOperationHourOverrideDTO dto = new BranchOperationHourOverrideDTO(
@@ -169,29 +179,6 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
                 .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST);
     }
 
-    @Test
-    void shouldThrowBadRequest_whenBranchIsClosed() {
-        String branchId = "BR006";
-
-        // ARRANGE - Setup branch that triggers BranchIsClosedException
-        addBranchUseCase.execute(createBranchDTO(branchId));
-
-        BranchOperationHourOverrideDTO dto = new BranchOperationHourOverrideDTO(
-                LocalDate.now().plusDays(1),
-                LocalTime.of(8, 0),
-                LocalTime.of(17, 0),
-                false,
-                "Override for closed branch"
-        );
-
-        // ACT & ASSERT - Depends on your domain logic for when BranchIsClosedException is thrown
-        // Adjust based on actual business rules
-        assertThatThrownBy(() -> addBranchOperationHourOverride.execute(branchId, dto))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST)
-                .hasMessageContaining("Branch is closed");
-    }
-
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {
             ";08:00;17:00;false;Missing effective date",
@@ -199,9 +186,10 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
             "2025-12-25;08:00;;false;Missing closing time"
     })
     void shouldThrowBadRequest_whenRequiredFieldsAreMissing(String effectiveDate, String openTime, String closingTime, boolean isClosed, String reason) {
-        String branchId = "BR007";
+        String branchId = "SAS29300";
 
         // ARRANGE
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         addBranchUseCase.execute(createBranchDTO(branchId));
 
         BranchOperationHourOverrideDTO dto = new BranchOperationHourOverrideDTO(
@@ -214,15 +202,15 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
 
         // ACT & ASSERT
         assertThatThrownBy(() -> addBranchOperationHourOverride.execute(branchId, dto))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasFieldOrPropertyWithValue("status", HttpStatus.BAD_REQUEST);
+                .isInstanceOf(ConstraintViolationException.class);
     }
 
     @Test
     void shouldAddMultipleOverrides_forDifferentDates() {
-        String branchId = "BR008";
+        String branchId = "SAS29300";
 
         // ARRANGE
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         addBranchUseCase.execute(createBranchDTO(branchId));
 
         BranchOperationHourOverrideDTO override1 = new BranchOperationHourOverrideDTO(

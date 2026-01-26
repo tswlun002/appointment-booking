@@ -22,12 +22,14 @@ class GetBranchQueriesTest extends BranchTestBase {
 
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {
-            "BR001",
-            "BR002"
+            "SAS293200",
+            "SAS29300",
     })
     public void testGetBranchByIdQuery_ExistingBranch(String branchId) {
 
         // ARRANGE: Add the branch first
+        stubCapitecApiSuccess(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
+
         BranchDTO branchDTO = createBranchDTO(branchId);
         addBranchUseCase.execute(branchDTO);
         
@@ -55,8 +57,9 @@ class GetBranchQueriesTest extends BranchTestBase {
     @Test
     void testGetAllBranchesQuery_ReturnsAllCreatedBranches() {
         // ARRANGE: Add two known branches
-        BranchDTO dto1 = createBranchDTO("B1");
-        BranchDTO dto2 = createBranchDTO("B2");
+        stubCapitecApiSuccess(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
+        BranchDTO dto1 = createBranchDTO("SAS293200");
+        BranchDTO dto2 = createBranchDTO("SAS29300");
         addBranchUseCase.execute(dto1);
         addBranchUseCase.execute(dto2);
         
@@ -70,6 +73,6 @@ class GetBranchQueriesTest extends BranchTestBase {
         
         assertThat(allBranches.stream().map(Branch::getBranchId))
             .as("Retrieved IDs must match the created IDs")
-            .containsExactlyInAnyOrder("B1", "B2");
+            .containsExactlyInAnyOrder("SAS293200", "SAS29300");
     }
 }

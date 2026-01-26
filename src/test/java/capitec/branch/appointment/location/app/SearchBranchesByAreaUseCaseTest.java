@@ -1,10 +1,19 @@
 package capitec.branch.appointment.location.app;
 
+import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.day.domain.Day;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -12,11 +21,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DisplayName("SearchBranchesByAreaUseCase Integration Test")
 class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
 
+     @Autowired
+     private GetDateOfNextDaysQuery getDateOfNextDaysQuery;
+
     @Test
     @DisplayName("Should find branches by city name")
     void shouldFindBranchesByCityName() {
         // Given
-        stubCapitecBranchApiForArea("Rondebosch");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Rondebosch");
 
@@ -37,8 +49,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should find branches by province name")
     void shouldFindBranchesByProvinceName() {
         // Given
-        stubCapitecBranchApiForArea("Western Cape");
-
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Western Cape");
 
         // When
@@ -52,7 +63,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should find branches by mall name")
     void shouldFindBranchesByMallName() {
         // Given
-        stubCapitecBranchApiForArea("V&A Waterfront");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("V&A Waterfront");
 
@@ -67,7 +78,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should find branches by suburb name")
     void shouldFindBranchesBySuburbName() {
         // Given
-        stubCapitecBranchApiForArea("Cape Town CBD");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Cape Town CBD");
 
@@ -82,7 +93,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should filter out ATMs from results")
     void shouldFilterOutATMsFromResults() {
         // Given
-        stubCapitecBranchApiForArea("Rondebosch");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Rondebosch");
 
@@ -91,14 +102,14 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
 
         // Then - ATM (Total Rondebosch Vulstasie with Code=null) should be filtered out
         assertThat(result)
-                .noneMatch(branch -> branch.name().contains("Total Rondebosch Vulstasie"));
+                .noneMatch(branch -> StringUtils.isBlank(branch.branchCode()));
     }
 
     @Test
     @DisplayName("Should return empty list when no branches match")
     void shouldReturnEmptyListWhenNoBranchesMatch() {
         // Given
-        stubCapitecBranchApiEmptyResponse();
+        stubCapitecApiEmptyResponse(capitecApiWireMock, EMPTY_BRANCH_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("NonExistentArea");
 
@@ -113,7 +124,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should throw ResponseStatusException when API is unavailable and no cache exists")
     void shouldThrowExceptionWhenApiUnavailableAndNoCacheExists() {
         // Given
-        stubCapitecBranchApiError();
+        stubCapitecApiError(capitecApiWireMock);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Cape Town");
 
@@ -127,7 +138,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should return cached data when API is unavailable but cache exists")
     void shouldReturnCachedDataWhenApiUnavailableButCacheExists() {
         // Given - First call to populate cache
-        stubCapitecBranchApiForArea("Cape Town");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Cape Town");
 
@@ -138,7 +149,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
 
         // Now make API return error
         capitecApiWireMock.resetMappings();
-        stubCapitecBranchApiError();
+        stubCapitecApiError(capitecApiWireMock);
 
         // When - Second call should use cache fallback
         List<NearbyBranchDTO> fallbackResult = searchBranchesByAreaUseCase.execute(query);
@@ -153,8 +164,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should include all branch details in response")
     void shouldIncludeAllBranchDetailsInResponse() {
         // Given
-        stubCapitecBranchApiForArea("Cape Town");
-
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Cape Town");
 
         // When
@@ -174,8 +184,37 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
             assertThat(cbdBranch.fullAddress()).contains("Adderley Street");
             assertThat(cbdBranch.latitude()).isEqualTo(-33.925839);
             assertThat(cbdBranch.longitude()).isEqualTo(18.423622);
-            assertThat(cbdBranch.weekdayHours()).isEqualTo("Monday - Friday, 8am - 5pm");
-            assertThat(cbdBranch.handlesHomeLoans()).isTrue();
+            Set<Day> daySet = getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
+
+            for (Day day : daySet) {
+                Map<LocalDate, OperationTimeDTO> actual = cbdBranch.operationTimes();
+                if(day.isHoliday()){
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", true)
+                            .hasFieldOrPropertyWithValue("openAt", null)
+                            .hasFieldOrPropertyWithValue("closeAt", null);
+                }
+                if(day.isWeekday()) {
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", false)
+                            .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
+                            .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(17, 0));
+                }
+                if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)) {
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", false)
+                            .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
+                            .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(13, 0));
+                }
+                if(day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
+
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", true)
+                            .hasFieldOrPropertyWithValue("openAt", null)
+                            .hasFieldOrPropertyWithValue("closeAt", null);
+                }
+
+            };
             assertThat(cbdBranch.businessBankCenter()).isTrue();
             assertThat(cbdBranch.fromNearbyLocation()).isFalse();
         }
@@ -185,7 +224,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should return branches with distance as zero and fromNearbyLocation as false for area search")
     void shouldReturnBranchesWithDistanceZeroForAreaSearch() {
         // Given
-        stubCapitecBranchApiForArea("Cape Town");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("Cape Town");
 
@@ -204,7 +243,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should handle case-insensitive search")
     void shouldHandleCaseInsensitiveSearch() {
         // Given
-        stubCapitecBranchApiForArea("cape town");
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery queryLowerCase = new SearchBranchesByAreaQuery("cape town");
         SearchBranchesByAreaQuery queryUpperCase = new SearchBranchesByAreaQuery("CAPE TOWN");
@@ -222,7 +261,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
     @DisplayName("Should include operating hours for branches open on weekends")
     void shouldIncludeOperatingHoursForBranchesOpenOnWeekends() {
         // Given
-        stubCapitecBranchApiForArea("V&A Waterfront");
+        stubCapitecApiSuccess(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery("V&A Waterfront");
 
@@ -230,14 +269,19 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
         List<NearbyBranchDTO> result = searchBranchesByAreaUseCase.execute(query);
 
         // Then - V&A Waterfront branch is open on Sundays
-        NearbyBranchDTO waterfrontBranch = result.stream()
-                .filter(b -> b.name().equals("V&A Waterfront"))
-                .findFirst()
-                .orElse(null);
-
-        if (waterfrontBranch != null) {
-            assertThat(waterfrontBranch.sundayHours()).isEqualTo("Sunday, 10am - 4pm");
+        LocalDate now = LocalDate.now();
+        for (var i = 0; i < 7; i++) {
+            if(now.getDayOfWeek() == DayOfWeek.SATURDAY) {
+                break;
+            }
+            now = now.plusDays(1);
         }
+        LocalDate finalNow = now;
+        result.stream()
+                .filter(b -> b.name().equals("V&A Waterfront"))
+                .findFirst().ifPresent(waterfrontBranch ->
+                        assertThat(waterfrontBranch.operationTimes().get(finalNow)).hasFieldOrPropertyWithValue("closed",false));
+
     }
 }
 

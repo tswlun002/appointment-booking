@@ -28,7 +28,7 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
         // Calculate staff evenly split between the two test branches (5 staff total / 2 branches = 2.5, using 2)
         int numStaffPerBranch = totalStaff / numBranches; 
         
-        // --- Branch 1: BR001 ---
+        // --- Branch 1:
         String branchId1 = branches.getFirst().getBranchId();
         int index1 = 0; // Staff 0, 1
         
@@ -48,18 +48,7 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
 
         // ASSERT 1: The use case reported successful addition
         assertThat(added).isTrue();
-        
-   /*     // ASSERT 2: Verify the data was actually saved for today's dateOfSlots
-        BranchStaffAssignment assignment = originalStaffScheduleService.get(branchId1, now).orElse(null);
-        assertThat(assignment).isNotNull();
-        // Get the list of staff assigned to today
-        Set<String> assignedUsernames = assignment.getWeeklyStaff().get(now).stream().map(StaffRef::username).collect(Collectors.toSet());
-        
-        // Verify the bookingCount of staff saved matches the bookingCount assigned
-        assertThat(assignedUsernames).hasSize(numStaffPerBranch);
-        
-        // Verify the correct staff members were assigned
-        assertThat(assignedUsernames).containsAll(staffUsernames.subList(index1, index1 + numStaffPerBranch));*/
+
     }
     
     @Test
@@ -84,18 +73,6 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
 
         // ASSERT 1: The use case reported successful update (or add)
         assertThat(updated).isTrue();
-        
-//        // ASSERT 2: Verify the data was overwritten for today's dateOfSlots
-//        BranchStaffAssignment assignment = originalStaffScheduleService.get(branchId, today).orElseThrow();
-//        Set<String> assignedUsernames = assignment.getWeeklyStaff().get(today).stream().map(StaffRef::username).collect(Collectors.toSet());
-//
-//        // Verify the bookingCount of staff saved matches the new assignment (2 staff)
-//        assertThat(assignedUsernames).hasSize(2);
-//
-//        // Verify the correct NEW staff members were assigned
-//        assertThat(assignedUsernames).contains(staffUsernames.get(1), staffUsernames.get(2));
-//
-//        // Verify the OLD staff member is gone
-//        assertThat(assignedUsernames).doesNotContain(staffUsernames.getFirst());
+
     }
 }

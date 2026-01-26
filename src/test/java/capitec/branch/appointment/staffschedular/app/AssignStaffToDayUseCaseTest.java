@@ -21,9 +21,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
 
     @Autowired
-    private SetWeeklyStaffScheduleUseCase setWeeklyStaffScheduleUseCase; // For initial setup
+    private SetWeeklyStaffScheduleUseCase setWeeklyStaffScheduleUseCase;
     @Autowired
-    private CancelFutureWorkingDaysUseCase cancelFutureWorkingDaysUseCase; // For tear down setup after each method run
+    private CancelFutureWorkingDaysUseCase cancelFutureWorkingDaysUseCase;
     @Autowired
     private AssignStaffToDayUseCase assignStaffToDayUseCase;
     private String testBranchId;
@@ -64,8 +64,6 @@ class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
         // Ensure the initial schedule is present in the database
         setWeeklyStaffScheduleUseCase.execute(testBranchId, schedule);
 
-        // Count staff before assignment for verification
-        int initialStaffCount = staffInitiallyAssigned.size();
 
         // ACT: Add the excluded staff member (staff[0]) to TODAY
         BranchStaffAssignmentDTO assignmentDTO = new BranchStaffAssignmentDTO(initialStaffToExclude, today);
@@ -74,14 +72,6 @@ class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
         // ASSERT 1: The use case reported successful addition
         assertThat(added).isTrue();
 
-//        // ASSERT 2: Verify the final staff count is initialCount + 1
-//        BranchStaffAssignment assignment = originalStaffScheduleService.get(testBranchId, today).orElseThrow();
-//        Set<StaffRef> finalStaffRefs = assignment.getWeeklyStaff().get(today);
-//
-//        assertThat(finalStaffRefs).hasSize(initialStaffCount + 1);
-//
-//        // ASSERT 3: Verify the newly added staff member is present
-//        assertThat(finalStaffRefs.stream().map(StaffRef::username)).contains(initialStaffToExclude);
     }
 
     @Test
@@ -101,9 +91,6 @@ class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Staff already scheduled to work at the given day.");
 
-//        // VERIFY: The count remains unchanged
-//        BranchStaffAssignment assignment = originalStaffScheduleService.get(testBranchId, today).orElseThrow();
-//        assertThat(assignment.getWeeklyStaff().get(today)).hasSize(1);
     }
 
     @Test

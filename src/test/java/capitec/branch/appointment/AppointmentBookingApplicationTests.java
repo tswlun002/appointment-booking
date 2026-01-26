@@ -2,6 +2,7 @@ package capitec.branch.appointment;
 
 import capitec.branch.appointment.user.domain.User;
 import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.stubbing.Scenario;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,11 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.awaitility.Awaitility.await;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -145,10 +151,7 @@ public class AppointmentBookingApplicationTests {
                 .withStartupTimeout(Duration.ofMinutes(1));
     }
 
-    public  static GenericContainer<?> wiremockClientDomainServer = new GenericContainer<>(
-            DockerImageName.parse("wiremock/wiremock:latest"))
-            .withExposedPorts(8080); // WireMock's default port
-    public  static GenericContainer<?> wiremockNagerServer = new GenericContainer<>(
+    public  static GenericContainer<?> wiremockContainer = new GenericContainer<>(
             DockerImageName.parse("wiremock/wiremock:latest"))
             .withExposedPorts(8080); // WireMock's default port
 
@@ -204,26 +207,28 @@ public class AppointmentBookingApplicationTests {
             registry.add("allowed_origins.cache_period",()->"30");
 
             //Client domain
-            wiremockClientDomainServer.start();
-            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockClientDomainServer.isRunning());
+            wiremockContainer.start();
+            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
             registry.add("client-domain.baseurl", () ->
                     String.format("http://%s:%d",
-                            wiremockClientDomainServer.getHost(),
-                            wiremockClientDomainServer.getFirstMappedPort()));
+                            wiremockContainer.getHost(),
+                            wiremockContainer.getFirstMappedPort()));
 
             // Mock Nager server
-            wiremockNagerServer.start();
-            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockNagerServer.isRunning());
+            //wiremockNagerServer.start();
+            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
             registry.add("holidays-client.baseurl", () ->
                     String.format("http://%s:%d",
-                            wiremockClientDomainServer.getHost(),
-                            wiremockClientDomainServer.getFirstMappedPort()));
+                            wiremockContainer.getHost(),
+                            wiremockContainer.getFirstMappedPort()));
 
             // Capitec Branch Locator API (uses same WireMock server as client-domain)
-            registry.add("http://capitecbank.branch-locator.non-prd/api", () ->
+            //wiremockClientDomainServer.start();
+            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
+            registry.add("capitec.branch-locator-api.url", () ->
                     String.format("http://%s:%d",
-                            wiremockClientDomainServer.getHost(),
-                            wiremockClientDomainServer.getFirstMappedPort()));
+                            wiremockContainer.getHost(),
+                            wiremockContainer.getFirstMappedPort()));
 
 
 
@@ -234,7 +239,7 @@ public class AppointmentBookingApplicationTests {
     }
 
     public static   void wireMockGetHolidayByYearAndCountryCode(User user, String idNumber) {
-        var  wireMock = new WireMock(wiremockClientDomainServer.getHost(), wiremockClientDomainServer.getFirstMappedPort());
+        var  wireMock = new WireMock(wiremockContainer.getHost(), wiremockContainer.getFirstMappedPort());
 
         // 1. Define the mock response (the stub)
 
@@ -261,7 +266,7 @@ public class AppointmentBookingApplicationTests {
     public static   void wireMockGetHolidayByYearAndCountryCode(String year, String countryCode) {
 
         String uri = String.format("/api/v3/PublicHolidays/%s/%s", year, countryCode);
-        var  wireMock = new WireMock(wiremockClientDomainServer.getHost(), wiremockClientDomainServer.getFirstMappedPort());
+        var  wireMock = new WireMock(wiremockContainer.getHost(), wiremockContainer.getFirstMappedPort());
         String expectedBody = """
                         [
                             {
@@ -435,4 +440,367 @@ public class AppointmentBookingApplicationTests {
     void contextLoads() {
     }
 
+
+    // ==================== Helper Methods ====================
+
+    protected void stubCapitecApiSuccess( WireMock capitecApiWireMock,String responseBody) {
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(responseBody))
+        );
+    }
+
+    protected void stubCapitecApiWithResponse(WireMock capitecApiWireMock,String response) {
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(response))
+        );
+    }
+
+    protected void stubCapitecApiEmptyResponse(WireMock capitecApiWireMock,String response) {
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(response))
+        );
+    }
+
+    protected void stubCapitecApiError(WireMock capitecApiWireMock) {
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .willReturn(aResponse()
+                                .withStatus(500)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\"error\": \"Internal Server Error\"}"))
+        );
+    }
+
+    protected void stubCapitecApiPersistentFailure(WireMock capitecApiWireMock) {
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .willReturn(aResponse()
+                                .withStatus(503)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody("{\"error\": \"Service Unavailable\"}"))
+        );
+    }
+
+    protected void stubCapitecApiFailThenSucceed(WireMock capitecApiWireMock, String response) {
+        // First call fails
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .inScenario("Retry Scenario")
+                        .whenScenarioStateIs(Scenario.STARTED)
+                        .willReturn(aResponse()
+                                .withStatus(503)
+                                .withBody("{\"error\": \"Service Unavailable\"}"))
+                        .willSetStateTo("RETRY_1")
+        );
+
+        // Second call succeeds
+        capitecApiWireMock.register(
+                post(urlPathEqualTo("/Branch"))
+                        .inScenario("Retry Scenario")
+                        .whenScenarioStateIs("RETRY_1")
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(response))
+        );
+    }
+
+    public  static  String capitecApiBranchResponse(){
+
+       return """
+            {
+                "Branches": [
+                    {
+                        "Id": "SAS293200",
+                        "Code": "470010",
+                        "Latitude": -33.960553,
+                        "Longitude": 18.470156,
+                        "Name": "Rondebosch",
+                        "AddressLine1": "Shop G21, Cnr Main & Belmont Road, Fountain Centre, Rondebosch, 7700",
+                        "AddressLine2": "Fountain Centre",
+                        "OperationHours": {
+                           WEEK_DAYS: {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                             "openAt": "08:00",
+                             "closeAt": "17:00"
+                          },
+                          "SATURDAY": {
+                             "fromDay": "Saturday",
+                             "toDay": "Saturday",
+                             "openAt": "08:00",
+                              "closeAt": "13:00"
+                          },
+                           "SUNDAY": {
+                              "closed": true
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        },
+                        "City": "Rondebosch",
+                        "Province": "Western Cape",
+                        "IsAtm": false,
+                        "CashAccepting": false,
+                        "HandlesHomeLoans": false,
+                        "IsClosed": false,
+                        "BusinessBankCenter": false
+                    },
+                    {
+                        "Id": "SAS29300",
+                        "Code": "470020",
+                        "Latitude": -33.925839,
+                        "Longitude": 18.423622,
+                        "Name": "Cape Town CBD",
+                        "AddressLine1": "Shop 5, Cape Town Station Building, Adderley Street",
+                        "AddressLine2": null,
+                        "OperationHours": {
+                           WEEK_DAYS: {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                             "openAt": "08:00",
+                             "closeAt": "17:00"
+                          },
+                          "SATURDAY": {
+                             "fromDay": "Saturday",
+                             "toDay": "Saturday",
+                             "openAt": "08:00",
+                              "closeAt": "13:00"
+                          },
+                           "SUNDAY": {
+                              "closed": true
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        },
+                        "City": "Cape Town",
+                        "Province": "Western Cape",
+                        "IsAtm": false,
+                        "CashAccepting": false,
+                        "HandlesHomeLoans": true,
+                        "IsClosed": false,
+                        "BusinessBankCenter": true
+                    },
+                    {
+                        "Id": "SAS29340",
+                        "Code": null,
+                        "Latitude": -25.7751312,
+                        "Longitude": 29.4944725,
+                        "Name": "Total Rondebosch ATM",
+                        "AddressLine1": "Total Rondebosch Vulstasie, Corner of N11",
+                        "AddressLine2": null,
+                        "OperationHours": {},
+                        "City": "Middelburg",
+                        "Province": "Mpumalanga",
+                        "IsAtm": true,
+                        "CashAccepting": false,
+                        "HandlesHomeLoans": false,
+                        "IsClosed": false,
+                        "BusinessBankCenter": false
+                    },
+                     {
+                        "Id": "SASB9001",
+                        "Name": "Century City Business Support",
+                        "Code": "470010",
+                        "Address": "64 Century Boulevard, Century City, Cape Town, 7441, South Africa",
+                        "City": "Cape Town",
+                        "Province": "Western Cape",
+                        "Latitude": -33.884873,
+                        "Longitude": 18.518016,
+                        "IsAtm": false,
+                        "IsCashAccepting": false,
+                        "HomeLoan": false,
+                        "IsClosed": false,
+                        "IsBusinessBankCenter": false,
+                        "OperationHours": {
+                          "WEEK_DAYS": {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                            "openAt": "08:00",
+                            "closeAt": "17:00"
+                          },
+                          "SATURDAY": {
+                            "fromDay": "Saturday",
+                            "toDay": "Saturday",
+                            "openAt": "08:00",
+                            "closeAt": "13:00"
+                          },
+                          "SUNDAY": {
+                            "closed": true
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        }
+                      },
+                      {
+                        "Id": "SASB9002",
+                        "Name": "Montague Gardens",
+                        "Code": "470010",
+                        "Address": "John Montague Centre, Montague Drive, Montague Gardens, 7441",
+                        "City": "Montague Gardens",
+                        "Province": "Western Cape",
+                        "Latitude": -33.8793377854504,
+                        "Longitude": 18.5217539445352,
+                        "IsAtm": false,
+                        "IsCashAccepting": false,
+                        "HomeLoan": false,
+                        "IsClosed": false,
+                        "IsBusinessBankCenter": false,
+                        "OperationHours": {
+                          "WEEK_DAYS": {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                            "openAt": "08:00",
+                            "closeAt": "17:00"
+                          },
+                          "SATURDAY": {
+                            "fromDay": "Saturday",
+                            "toDay": "Saturday",
+                            "openAt": "08:00",
+                            "closeAt": "13:00"
+                          },
+                          "SUNDAY": {
+                            "closed": true
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        }
+                      },
+                      {
+                        "Id": "SASB9003",
+                        "Name": "Canal Walk",
+                        "Code": "470010",
+                        "Address": "Shop 171, Century Boulevard, Canal Walk Shopping Centre, Century City, Cape Town, 7441",
+                        "City": "Cape Town",
+                        "Province": "Western Cape",
+                        "Latitude": -33.89406,
+                        "Longitude": 18.511311,
+                        "IsAtm": false,
+                        "IsCashAccepting": true,
+                        "HomeLoan": true,
+                        "IsClosed": false,
+                        "IsBusinessBankCenter": false,
+                        "OperationHours": {
+                          "WEEK_DAYS": {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                            "openAt": "09:00",
+                            "closeAt": "18:00"
+                          },
+                          "SATURDAY": {
+                            "fromDay": "Saturday",
+                            "toDay": "Saturday",
+                            "openAt": "09:00",
+                            "closeAt": "15:00"
+                          },
+                          "SUNDAY": {
+                            "fromDay": "Sunday",
+                            "toDay": "Sunday",
+                            "openAt": "09:00",
+                            "closeAt": "13:00"
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        }
+                      },
+                      {
+                        "Id": "SASB9004",
+                        "Name": "Goodwood N1 City",
+                        "Code": "470010",
+                        "Address": "Shop 40a and 41, N1 City, Louwtjie Rothman Street, Goodwood, 7460",
+                        "City": "Goodwood",
+                        "Province": "Western Cape",
+                        "Latitude": -33.8932973250128,
+                        "Longitude": 18.5585940598494,
+                        "IsAtm": false,
+                        "IsCashAccepting": false,
+                        "HomeLoan": true,
+                        "IsClosed": false,
+                        "IsBusinessBankCenter": false,
+                        "OperationHours": {
+                          "WEEK_DAYS": {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                            "openAt": "09:00",
+                            "closeAt": "18:00"
+                          },
+                          "SATURDAY": {
+                            "fromDay": "Saturday",
+                            "toDay": "Saturday",
+                            "openAt": "09:00",
+                            "closeAt": "14:00"
+                          },
+                          "SUNDAY": {
+                            "fromDay": "Sunday",
+                            "toDay": "Sunday",
+                            "openAt": "09:00",
+                            "closeAt": "13:00"
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        }
+                      },
+                      {
+                        "Id": "SASB9005",
+                        "Name": "Goodwood Mall",
+                        "Code": "470010",
+                        "Address": "Shop 8A, 8B & 9, Goodwood Mall, cnr Mc Donald & Voortrekker Road, Goodwood, 7460",
+                        "City": "Goodwood",
+                        "Province": "Western Cape",
+                        "Latitude": -33.910978,
+                        "Longitude": 18.552359,
+                        "IsAtm": false,
+                        "IsCashAccepting": false,
+                        "HomeLoan": false,
+                        "IsClosed": false,
+                        "IsBusinessBankCenter": false,
+                        "OperationHours": {
+                          "WEEK_DAYS": {
+                            "fromDay": "Monday",
+                            "toDay": "Friday",
+                            "openAt": "09:00",
+                            "closeAt": "18:00"
+                          },
+                          "SATURDAY": {
+                            "fromDay": "Saturday",
+                            "toDay": "Saturday",
+                            "openAt": "08:00",
+                            "closeAt": "13:00"
+                          },
+                          "SUNDAY": {
+                            "closed": true
+                          },
+                          "PUBLIC_HOLIDAY": {
+                            "closed": true
+                          }
+                        }
+                      }
+                ]
+            }
+            """;
+    }
+    public  static  String capitecApiBranchEmptyResponse() {
+       return  """
+            {
+                "Branches": []
+            }
+            """;
+    }
 }

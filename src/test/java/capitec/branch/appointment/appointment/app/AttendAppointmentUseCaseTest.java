@@ -4,7 +4,6 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
-import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.event.app.Topics;
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
@@ -14,7 +13,6 @@ import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
 import capitec.branch.appointment.utils.sharekernel.EventTrigger;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -64,7 +62,6 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
     @BeforeEach
     void setUpAppointment() {
         Slot slot = slots.getFirst();
-        Branch branch = branches.getFirst();
         String customerUsername = guestClients.getFirst();
         customer = getUserQuery.execute(new UsernameCommand(customerUsername));
         staffUsername = staff.getFirst();
@@ -81,13 +78,12 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         bookAppointmentUseCase.execute(dto);
         bookedAppointment = appointmentService.getUserActiveAppointment(
-                branchId,
-                slot.getDay(),
-                customer.getUsername()
+                branch.getBranchId(), slot.getDay(), customer.getUsername()
 
         ).orElseThrow();
+
         Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(
-                kafkaContainer.getBootstrapServers(), "test-group", "true");
+                kafkaContainer.getBootstrapServers(), "test-group-"+UUID.randomUUID(), "true");
 
         // Explicitly set deserializers to String
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -100,10 +96,17 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                 new DefaultKafkaConsumerFactory<>(consumerProps);
         testConsumer = cf.createConsumer();
         testConsumer.subscribe(List.of(Topics.ATTENDED_APPOINTMENT,Topics.APPOINTMENT_CANCELED));
+
     }
     @AfterEach
     void tearDown() {
         if (testConsumer != null) {
+            // Drain remaining messages
+            try {
+                testConsumer.poll(Duration.ofMillis(100));
+            } catch (Exception e) {
+                // Ignore
+            }
             testConsumer.close();
         }
     }
@@ -133,13 +136,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                     Duration.ofSeconds(10)
             );
             assertThat(eventValueOptional).isPresent();
-            // Assertions on Kafka event
-           /* AssertionsForClassTypes.assertThat(received).isNotNull();
-            AssertionsForClassTypes.assertThat(received.key()).isNotNull();
-            String value = received.value();
-            AssertionsForClassTypes.assertThat(value).isNotNull();
 
-            ;*/
             ObjectMapper mapper = EventToJSONMapper.getMapper();
             var eventValue = eventValueOptional.get();
             AssertionsForClassTypes.assertThat(eventValue).isNotNull();
@@ -244,7 +241,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should throw exception when starting service on BOOKED appointment")
         void shouldThrowWhenNotCheckedIn() {
             Slot anotherSlot = slots.get(1);
-            Branch branch = branches.getFirst();
+
             String anotherCustomer = guestClients.get(1);
 
             AppointmentDTO dto = new AppointmentDTO(
@@ -296,7 +293,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should complete appointment successfully and publish event")
-        void shouldCompleteSuccessfully() throws JsonProcessingException {
+        void shouldCompleteSuccessfully()  {
             var action = new AttendingAppointmentStateTransitionAction.CompleteAttendingAppointment(
                     bookedAppointment.getId(),
                     staffUsername
@@ -334,7 +331,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should cancel BOOKED appointment by staff")
-        void shouldCancelBookedAppointment() throws JsonProcessingException {
+        void shouldCancelBookedAppointment()  {
             String reason = "Customer requested cancellation via phone";
 
             var action = new AttendingAppointmentStateTransitionAction.CancelByStaff(

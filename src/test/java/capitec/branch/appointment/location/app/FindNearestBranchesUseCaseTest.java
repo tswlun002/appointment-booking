@@ -1,10 +1,18 @@
 package capitec.branch.appointment.location.app;
 
+import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.day.domain.Day;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -15,12 +23,14 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     // Cape Town coordinates
     private static final double CAPE_TOWN_LAT = -33.9249;
     private static final double CAPE_TOWN_LON = 18.4241;
+    @Autowired
+    private  GetDateOfNextDaysQuery getDateOfNextDaysQuery;
 
     @Test
     @DisplayName("Should find nearest branches by coordinates")
     void shouldFindNearestBranchesByCoordinates() {
         // Given
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -54,7 +64,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should find nearest branches with max distance filter")
     void shouldFindNearestBranchesWithMaxDistance() {
         // Given
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -78,7 +88,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should return branches sorted by distance")
     void shouldReturnBranchesSortedByDistance() {
         // Given
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -104,7 +114,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should respect limit parameter")
     void shouldRespectLimitParameter() {
         // Given
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -124,7 +134,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should use default limit of 10 when not specified")
     void shouldUseDefaultLimitWhenNotSpecified() {
         // Given
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -141,7 +151,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should return empty list when no branches found")
     void shouldReturnEmptyListWhenNoBranchesFound() {
         // Given
-        stubCapitecBranchApiEmptyResponse();
+        stubCapitecApiEmptyResponse(capitecApiWireMock, EMPTY_BRANCH_RESPONSE);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -161,7 +171,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should throw ResponseStatusException when API is unavailable and no cache exists")
     void shouldThrowExceptionWhenApiUnavailableAndNoCacheExists() {
         // Given
-        stubCapitecBranchApiError();
+        stubCapitecApiError(capitecApiWireMock);
 
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
@@ -180,8 +190,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should return cached data when API is unavailable but cache exists")
     void shouldReturnCachedDataWhenApiUnavailableButCacheExists() {
         // Given - First call to populate cache
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
-
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
                 CAPE_TOWN_LON,
@@ -196,7 +205,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
 
         // Now make API return error
         capitecApiWireMock.resetMappings();
-        stubCapitecBranchApiError();
+        stubCapitecApiError(capitecApiWireMock);
 
         // When - Second call should use cache fallback
         List<NearbyBranchDTO> fallbackResult = findNearestBranchesUseCase.execute(query);
@@ -214,8 +223,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
         double cachedLat = CAPE_TOWN_LAT + 0.01; // ~1km difference
         double cachedLon = CAPE_TOWN_LON + 0.01;
 
-        stubCapitecBranchApiForCoordinates(cachedLat, cachedLon);
-
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
         FindNearestBranchesQuery cachePopulationQuery = new FindNearestBranchesQuery(
                 cachedLat,
                 cachedLon,
@@ -229,7 +237,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
 
         // Now make API return error
         capitecApiWireMock.resetMappings();
-        stubCapitecBranchApiError();
+        stubCapitecApiError(capitecApiWireMock);
 
         // When - Query with original coordinates (not in cache, but within 5km radius)
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
@@ -250,8 +258,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
     @DisplayName("Should include branch details in response")
     void shouldIncludeBranchDetailsInResponse() {
         // Given
-        stubCapitecBranchApiForCoordinates(CAPE_TOWN_LAT, CAPE_TOWN_LON);
-
+        stubCapitecApiFailThenSucceed(capitecApiWireMock, CAPITEC_BRANCH_API_RESPONSE);
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(
                 CAPE_TOWN_LAT,
                 CAPE_TOWN_LON,
@@ -273,8 +280,37 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
         if (branch != null) {
             assertThat(branch.branchCode()).isEqualTo("470010");
             assertThat(branch.fullAddress()).contains("Rondebosch");
-            assertThat(branch.weekdayHours()).isEqualTo("Monday - Friday, 8am - 5pm");
-            assertThat(branch.saturdayHours()).isEqualTo("Saturday, 8am - 1pm");
+            Set<Day> daySet = getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
+
+            for (Day day : daySet) {
+                Map<LocalDate, OperationTimeDTO> actual = branch.operationTimes();
+                if(day.isHoliday()){
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", true)
+                            .hasFieldOrPropertyWithValue("openAt", null)
+                            .hasFieldOrPropertyWithValue("closeAt", null);
+                }
+                if(day.isWeekday()) {
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", false)
+                            .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
+                            .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(17, 0));
+                }
+                if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)) {
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", false)
+                            .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
+                            .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(13, 0));
+                }
+                if(day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
+
+                    assertThat(actual.get(day.getDate()))
+                            .hasFieldOrPropertyWithValue("closed", true)
+                            .hasFieldOrPropertyWithValue("openAt", null)
+                            .hasFieldOrPropertyWithValue("closeAt", null);
+                }
+
+            };
             assertThat(branch.fromNearbyLocation()).isFalse();
         }
     }

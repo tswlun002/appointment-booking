@@ -65,7 +65,6 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
     @BeforeEach
     void setUpAppointment() {
         slot = slots.getFirst();
-        Branch branch = branches.getFirst();
         String customerUsername = guestClients.getFirst();
         customer = getUserQuery.execute(new UsernameCommand(customerUsername));
 
@@ -81,13 +80,11 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
         bookAppointmentUseCase.execute(dto);
         bookedAppointment = appointmentService.getUserActiveAppointment(
-                branchId,
-                slot.getDay(),
-                customer.getUsername()
+                branch.getBranchId(), slot.getDay(), customer.getUsername()
         ).orElseThrow();
 
         Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(
-                kafkaContainer.getBootstrapServers(), "test-group", "true");
+                kafkaContainer.getBootstrapServers(), "test-group-"+UUID.randomUUID(), "true");
 
         // Explicitly set deserializers to String
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -100,12 +97,20 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
                 new DefaultKafkaConsumerFactory<>(consumerProps);
         testConsumer = cf.createConsumer();
         testConsumer.subscribe(List.of(Topics.APPOINTMENT_RESCHEDULED,Topics.APPOINTMENT_CANCELED));
+
     }
     @AfterEach
     void tearDown() {
         if (testConsumer != null) {
+            // Drain remaining messages
+            try {
+                testConsumer.poll(Duration.ofMillis(100));
+            } catch (Exception e) {
+                // Ignore
+            }
             testConsumer.close();
         }
+
     }
 
 

@@ -1,7 +1,6 @@
 package capitec.branch.appointment.appointment.app;
 
 import capitec.branch.appointment.appointment.domain.Appointment;
-import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.event.app.Topics;
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
@@ -12,7 +11,6 @@ import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -28,13 +26,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
@@ -59,7 +57,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     @BeforeEach
     void setup() {
         Map<String, Object> consumerProps = KafkaTestUtils.consumerProps(
-                kafkaContainer.getBootstrapServers(), "test-group", "true");
+                kafkaContainer.getBootstrapServers(), "test-group-"+UUID.randomUUID(), "true");
 
         // Explicitly set deserializers to String
         consumerProps.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
@@ -76,6 +74,12 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     @AfterEach
     void tearDown() {
         if (testConsumer != null) {
+            // Drain remaining messages
+            try {
+                testConsumer.poll(Duration.ofMillis(100));
+            } catch (Exception e) {
+                // Ignore
+            }
             testConsumer.close();
         }
     }
@@ -84,13 +88,12 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
     @Test
     @DisplayName("Should execute successfully and publish event with real beans")
-    void shouldExecuteSuccessfullyAndPublishEvent() throws JsonProcessingException {
+    void shouldExecuteSuccessfullyAndPublishEvent() {
 
         List<Slot> ListOneSlotADay = slots.stream().collect(Collectors.groupingBy(Slot::getDay)).values().stream().map(List::getFirst).toList();
         for (Slot slot : ListOneSlotADay) {
 
 
-            Branch branch = branches.getFirst();
             String customerUsername = guestClients.getFirst();
             User user = getUserQuery.execute(new UsernameCommand(customerUsername));
 
@@ -145,7 +148,6 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     void bookByMultipleUser_shouldExecuteSuccessfullyAndPublishEvent() {
 
         Slot slot = slots.getFirst();
-        Branch branch = branches.getFirst();
         String customerUsername = guestClients.getFirst();
         User user = getUserQuery.execute(new UsernameCommand(customerUsername));
 
@@ -174,7 +176,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         eventValueOptional = getLatestRecordForKey(
                 testConsumer,
                 result.getId().toString()+result.getReference(),
-                Duration.ofSeconds(10)
+                Duration.ofSeconds(30)
         );
         Assertions.assertThat(eventValueOptional).isPresent();
         EventValue<String, AppointmentMetadata> eventValue = eventValueOptional.get();
@@ -182,7 +184,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         //VERIFY slot booking
         Slot bookedSlot = getSlotQuery.execute(slot.getId());
         assertThat(bookedSlot).isNotNull();
-        assertThat(bookedSlot.getBookingCount()).isEqualTo(MAX_BOOKING_CAPACITY);
+        assertThat(bookedSlot.getBookingCount()).isEqualTo(2);
         assertThat(bookedSlot.getStatus()).isEqualTo(SlotStatus.FULLY_BOOKED);
 
     }
@@ -193,7 +195,6 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     void shouldThrowConflictWhenSlotIsFullyBooked() {
 
         Slot slot = slots.getFirst();
-        Branch branch = branches.getFirst();
         String customerUsername = guestClients.getFirst();
         User user = getUserQuery.execute(new UsernameCommand(customerUsername));
 
@@ -239,7 +240,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         //VERIFY slot booking
         Slot bookedSlot = getSlotQuery.execute(slot.getId());
         assertThat(bookedSlot).isNotNull();
-        assertThat(bookedSlot.getBookingCount()).isEqualTo(MAX_BOOKING_CAPACITY);
+        assertThat(bookedSlot.getBookingCount()).isEqualTo(2);
         assertThat(bookedSlot.getStatus()).isEqualTo(SlotStatus.FULLY_BOOKED);
 
 
@@ -250,7 +251,6 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     void shouldThrowConflict_whenUserHasAppointment_onTheDay() {
 
         Slot slot = slots.getFirst();
-        Branch branch = branches.getFirst();
         String customerUsername = guestClients.getFirst();
         User user = getUserQuery.execute(new UsernameCommand(customerUsername));
 

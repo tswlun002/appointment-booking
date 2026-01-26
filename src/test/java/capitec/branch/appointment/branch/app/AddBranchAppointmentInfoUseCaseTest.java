@@ -19,29 +19,30 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
 
     @Autowired
-    private AddBranchUseCase addBranchUseCase; // For setup
+    private AddBranchUseCase addBranchUseCase;
     @Autowired
-    private GetBranchQuery getBranchByIdQuery; // For verification
+    private GetBranchQuery getBranchByIdQuery;
     @Autowired
     private AddBranchAppointmentInfoUseCase addBranchAppointmentInfoUseCase; // Use Case under test
 
 
     @ParameterizedTest
     @CsvSource(delimiter = ';', value = {
-            "BR001;30;0.5;5",
-            "BR002;20;0.6;5"
+            "SAS29300;30;0.5;5",
+            "SASB9001;20;0.6;5"
     })
     public void testUpdateBranchAppointmentConfigUseCase_AddsNewConfig(String branchId, Integer duration, Double utilizationFactor, int staffCount) {
         LocalDate day = LocalDate.now();
 
         // ARRANGE: Create the branch first
+        stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         BranchDTO branchDTO = createBranchDTO(branchId);
         addBranchUseCase.execute(branchDTO);
 
         BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(staffCount, 
                                                                            Duration.ofMinutes(duration), 
                                                                            utilizationFactor,
-                day);
+                day,2);
         
         // ACT
         boolean isAdded = addBranchAppointmentInfoUseCase.execute(branchId, configDTO);
@@ -66,10 +67,10 @@ class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
     @Test
     void testUpdateBranchAppointmentConfigUseCase_NonExistingBranch_ThrowsNotFound() {
         // ARRANGE
-        BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(5, Duration.ofMinutes(30), 0.5, LocalDate.now());
+        BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(5, Duration.ofMinutes(30), 0.5, LocalDate.now(),2);
 
         // ACT & ASSERT
-        assertThatThrownBy(() -> addBranchAppointmentInfoUseCase.execute("NON_EXISTENT_ID", configDTO))
+        assertThatThrownBy(() -> addBranchAppointmentInfoUseCase.execute("SAS29300", configDTO))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("status", HttpStatus.NOT_FOUND)
                 .hasMessageContaining("Branch not found");

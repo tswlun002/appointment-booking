@@ -3,11 +3,15 @@ package capitec.branch.appointment.appointment.app;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
-import capitec.branch.appointment.branch.app.AddBranchUseCase;
-import capitec.branch.appointment.branch.app.BranchDTO;
-import capitec.branch.appointment.branch.app.DeleteBranchUseCase;
+import capitec.branch.appointment.branch.app.*;
 import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
+import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.day.domain.Day;
 import capitec.branch.appointment.kafka.domain.EventValue;
+import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
+import capitec.branch.appointment.slots.app.GetNext7DaySlotsQuery;
+import capitec.branch.appointment.slots.app.SlotGeneratorScheduler;
 import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
@@ -22,6 +26,9 @@ import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.junit.jupiter.api.AfterEach;
@@ -30,9 +37,11 @@ import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.kafka.test.utils.KafkaTestUtils;
-
-import java.lang.reflect.Type;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -56,39 +65,47 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     @Autowired protected UserRoleService userRoleService;
     @Autowired protected SlotService slotService;
     @Autowired protected StaffService staffService;
+    @Autowired
+    @Qualifier("branchLocationCacheManager")
+    protected CacheManager cacheManagerBranchLocationService;
+    @Autowired
+    @Qualifier("branchCacheManager")
+    protected CacheManager cacheManagerBranches;
+    @Autowired
+    protected CircuitBreakerRegistry circuitBreakerRegistry;
+    @Autowired
+    protected GetDateOfNextDaysQuery getDateOfNextDaysQuery;
+    @Autowired
+    private SlotGeneratorScheduler slotGeneratorScheduler;
+    @Autowired
+    private AddBranchAppointmentInfoUseCase addBranchAppointmentInfoUseCase;
+
+    private WireMock capitecApiWireMock;
 
     protected Predicate<String> excludeAdmin = username -> !ADMIN_USERNAME.equals(username);
     protected List<String> staff = new ArrayList<>();
     protected List<String> guestClients = new ArrayList<>();
-    protected List<Branch> branches = new ArrayList<>();
     protected  static  String ADMIN_GROUP = "ADMIN";
     protected static  String GUEST_CLIENT_GROUP = "USER_GUEST";
     protected List<Slot> slots;
-    protected  String branchId;
-
-
+    protected  Branch branch;
     //SLOT
-    protected final LocalDate TODAY = LocalDate.now().plusDays(1);
-    protected final LocalDate TOMORROW = LocalDate.now().plusDays(2);
-    protected final LocalDate DAY_AFTER = LocalDate.now().plusDays(3);
-    protected final int  MAX_BOOKING_CAPACITY = 2;
 
     protected ObjectMapper objectMapper = EventToJSONMapper.getMapper();
+    @Autowired
+    private GetNext7DaySlotsQuery getNext7DaySlotsQuery;
 
 
     @BeforeEach
     public void setupBase() {
-
         setUpBranch();
-        branchId = branches.getFirst().getBranchId();
         setUpStaff();
         setUpCustomers();
         setUpSlots();
-        slots = slotService.getSlots(branchId,TODAY);
-      //  UsersResource usersResource = keycloakService.getRealm().users();
 
-
-
+        slots = getNext7DaySlotsQuery.execute(branch.getBranchId(),LocalDate.now().plusDays(1))
+                .values().stream().flatMap(List::stream).sorted(Comparator.comparing(Slot::getDay))
+                .collect(Collectors.toList());
     }
 
     @AfterEach
@@ -96,13 +113,13 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
         //clear up appointments
 
-        Collection<Appointment> appointments = appointmentService.branchAppointments(branchId,0,Integer.MAX_VALUE);
+        Collection<Appointment> appointments = appointmentService.branchAppointments(branch.getBranchId(),0,Integer.MAX_VALUE);
         for (Appointment appointment : appointments) {
 
                 appointmentService.deleteAppointment(appointment.getId());
             }
         // delete slots
-            slotService.getSlots(branchId, LocalDate.now())
+            slotService.getSlots(branch.getBranchId(), LocalDate.now())
                     .forEach(slot -> {
                         slotService.cleanUpSlot(slot.getId());
                     });
@@ -130,40 +147,83 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
     // --- Utility Methods ---
 
-    protected void setUpSlots(){
+    private void setUpSlots(){
+        slotGeneratorScheduler.execute();
+    }
 
+    private void setUpBranch() {
+        var branchesString ="SAS293200";
 
-        // Example Slots for arrangement
-         final Slot slot1 = new Slot(TODAY, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branchId);
-         final Slot slot2 = new Slot(TODAY, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branchId);
-         final Slot slot3 = new Slot(TOMORROW, LocalTime.of(9, 0), LocalTime.of(9, 30), MAX_BOOKING_CAPACITY, branchId);
-         final Slot slot4 = new Slot(TOMORROW, LocalTime.of(9, 30), LocalTime.of(10, 0), MAX_BOOKING_CAPACITY, branchId);
-         final Slot slot5 = new Slot(DAY_AFTER, LocalTime.of(8, 0), LocalTime.of(8, 30), MAX_BOOKING_CAPACITY, branchId);
+        capitecApiWireMock = new WireMock(
+                wiremockContainer.getHost(),
+                wiremockContainer.getFirstMappedPort()
+        );
 
-        slotService.save(List.of(slot1, slot2, slot3, slot4, slot5));
+        // Reset any previous stubs
+        capitecApiWireMock.resetMappings();
+        stubCapitecApiSuccess(capitecApiWireMock, capitecApiBranchResponse());
+        // Reset circuit breaker state before each test
+        CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("branchLocatorCircuitBreaker");
+        cb.reset();
+
+        // Clear caches
+        clearCaches();
+
+        BranchDTO branchDTO = new BranchDTO(branchesString);
+         branch = addBranchUseCase.execute(branchDTO);
+
+        LocalDate now = LocalDate.now();
+        Set<Day> execute = getDateOfNextDaysQuery.execute(now.getDayOfWeek(), now.plusDays(6).getDayOfWeek());
+
+        for(var day : execute) {
+
+            if(day.isHoliday())continue;
+
+            else if(day.isWeekday()){
+
+                BranchAppointmentInfoDTO dto = new BranchAppointmentInfoDTO(
+                        6,
+                        Duration.ofMinutes(30),
+                        0.6,
+                        day.getDate(),
+                        2
+                );
+                addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
+            }
+            else if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)){
+                BranchAppointmentInfoDTO dto = new BranchAppointmentInfoDTO(
+                        4,
+                        Duration.ofMinutes(30),
+                        0.3,
+                        day.getDate(),
+                        1
+                );
+                addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
+            }
+
+        }
 
 
     }
 
-    protected void setUpBranch() {
-        var branchesString = new String[]{
-                "BR001",
-             //   "BR002;08:30;16:30;456;Church Street;Hatfield;Pretoria;Gauteng;2828;South Africa",
+    private void clearCaches() {
+        var cache = new Cache[]{
+                cacheManagerBranchLocationService.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_COORDINATES_CACHE),
+                cacheManagerBranchLocationService.getCache(CapitecBranchLocationFetcher.BRANCH_LOCATIONS_BY_AREA_CACHE),
+                cacheManagerBranches.getCache(BranchDaoImpl.CACHE_NAME)
         };
-
-        for (String branch : branchesString) {
-            String[] branchInfo = branch.split(";");
-            BranchDTO branchDTO = new BranchDTO(branchInfo[0]);
-            branches.add(addBranchUseCase.execute(branchDTO));
+        for (Cache cache1 : cache) {
+            if (cache1 != null) {
+                cache1.clear();
+            }
         }
     }
 
-    protected void deleteBranches() {
-        for (Branch branch : branches) {
-            branchUseCase.execute(branch.getBranchId());
-        }
+    private void deleteBranches() {
+        capitecApiWireMock.resetMappings();
+        branchUseCase.execute(branch.getBranchId());
     }
-    protected void setUpCustomers() {
+    private void setUpCustomers() {
         UsersResource usersResource = keycloakService.getRealm().users();
         String[] users = new String[]{
                 "sara.lee@capitec.co.za;Sara;Lee;k9aL!pG5rT2q",
@@ -199,7 +259,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
             userRoleService.addUserToGroup(username, adminId);
         }
     }
-    protected void setUpStaff() {
+    private void setUpStaff() {
         UsersResource usersResource = keycloakService.getRealm().users();
         String[] users = new String[]{
                 "manju@gmail.com;Manju;Miranda;@KrVgfjl62",
@@ -227,7 +287,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
             String adminId = fetchRoleByNameService.getGroupId(ADMIN_GROUP, true).orElseThrow();
             userRoleService.addUserToGroup(username, adminId);
-            staffService.addStaff(new Staff(username, StaffStatus.WORKING,branchId));
+            staffService.addStaff(new Staff(username, StaffStatus.WORKING,branch.getBranchId()));
             staff.add(username);
 
         }
@@ -246,7 +306,6 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                 .map(record ->{
                     String value = record.value();
 
-
                     try {
 
                         EventValue<String,AppointmentMetadata> eventValue = record.topic().endsWith(".retry") ?
@@ -257,7 +316,8 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         throw new RuntimeException(e);
                     }
                 })
-                .max(Comparator.comparing(eventValue->
+                .max(Comparator.comparing(
+                        eventValue->
                         eventValue.value().createdAt()
                 ));
     }

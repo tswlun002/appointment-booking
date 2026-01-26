@@ -20,6 +20,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class BranchTest {
 
     private static final String BRANCH_ID = "BR001";
+    private static final String BRANCH_NAME = "Capitec Head office";
+
+
     private static final LocalTime OPEN_TIME = LocalTime.of(8, 0);
     private static final LocalTime CLOSE_TIME = LocalTime.of(17, 0);
 
@@ -28,7 +31,7 @@ class BranchTest {
 
         @Test
         void shouldCreateBranch_whenValidBranchId() {
-            Branch branch = new Branch(BRANCH_ID);
+            Branch branch = new Branch(BRANCH_ID,BRANCH_NAME);
 
             assertThat(branch.getBranchId()).isEqualTo(BRANCH_ID);
             assertThat(branch.getBranchAppointmentInfo()).isEmpty();
@@ -39,7 +42,7 @@ class BranchTest {
         @NullAndEmptySource
         @ValueSource(strings = {"   ", "\t", "\n"})
         void shouldThrowException_whenBranchIdIsBlank(String branchId) {
-            assertThatThrownBy(() -> new Branch(branchId))
+            assertThatThrownBy(() -> new Branch(branchId,BRANCH_NAME))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Branch ID cannot be blank");
         }
@@ -52,7 +55,7 @@ class BranchTest {
 
         @BeforeEach
         void setUp() {
-            branch = new Branch(BRANCH_ID);
+            branch = new Branch(BRANCH_ID,BRANCH_NAME);
         }
 
         @Test
@@ -118,7 +121,7 @@ class BranchTest {
 
         @BeforeEach
         void setUp() {
-            branch = new Branch(BRANCH_ID);
+            branch = new Branch(BRANCH_ID,BRANCH_NAME);
         }
 
         @Test
@@ -164,7 +167,7 @@ class BranchTest {
 
         @BeforeEach
         void setUp() {
-            branch = new Branch(BRANCH_ID);
+            branch = new Branch(BRANCH_ID,BRANCH_NAME);
         }
 
         @Test
@@ -196,7 +199,7 @@ class BranchTest {
 
         @Test
         void shouldSetOverrideList() {
-            Branch branch = new Branch(BRANCH_ID);
+            Branch branch = new Branch(BRANCH_ID,BRANCH_NAME);
             List<OperationHoursOverride> overrides = List.of(
                     createOverride(LocalDate.now().plusDays(1), false, "Scheduled maintenance - early close"),
                     createOverride(LocalDate.now().plusDays(2), true, "Christmas Day closure")
@@ -213,8 +216,8 @@ class BranchTest {
 
         @Test
         void shouldBeEqual_whenSameBranchId() {
-            Branch branch1 = new Branch(BRANCH_ID);
-            Branch branch2 = new Branch(BRANCH_ID);
+            Branch branch1 = new Branch(BRANCH_ID,BRANCH_NAME);
+            Branch branch2 = new Branch(BRANCH_ID,BRANCH_NAME);
 
             assertThat(branch1).isEqualTo(branch2);
             assertThat(branch1.hashCode()).isEqualTo(branch2.hashCode());
@@ -222,8 +225,8 @@ class BranchTest {
 
         @Test
         void shouldNotBeEqual_whenDifferentBranchId() {
-            Branch branch1 = new Branch("BR001");
-            Branch branch2 = new Branch("BR002");
+            Branch branch1 = new Branch("BR001",BRANCH_NAME);
+            Branch branch2 = new Branch("BR002",BRANCH_NAME);
 
             assertThat(branch1).isNotEqualTo(branch2);
         }
@@ -231,7 +234,7 @@ class BranchTest {
 
     // Helper methods
     private BranchAppointmentInfo createAppointmentInfo(LocalDate day, Duration slotDuration) {
-        return new BranchAppointmentInfo(slotDuration, 0.8, 5, day);
+        return new BranchAppointmentInfo(slotDuration, 0.8, 5, day,2);
     }
 
     private OperationHoursOverride createOverride(LocalDate effectiveDate, boolean closed, String reason) {
