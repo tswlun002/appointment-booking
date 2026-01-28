@@ -1,7 +1,7 @@
 package capitec.branch.appointment.location.infrastructure.api;
 
-import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
-import capitec.branch.appointment.day.domain.Day;
+import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
 import capitec.branch.appointment.exeption.BranchLocationServiceException;
 import capitec.branch.appointment.location.app.GetNearestCachedBranch;
 import capitec.branch.appointment.location.domain.BranchLocationFetcher;
@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.function.Supplier;
 

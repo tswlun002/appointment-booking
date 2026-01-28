@@ -1,0 +1,344 @@
+openapi: 3.1.0
+info:
+  title: Location API
+  description: |
+    API for searching and finding Capitec branch locations.
+    Supports searching by area text (city, suburb, postal code, etc.) or by geographic coordinates.
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/location-service
+    description: Location Service Base Path (v1)
+
+tags:
+  - name: Branch Location
+    description: Operations for finding and searching branch locations
+
+paths:
+  /branches/search:
+    get:
+      tags:
+        - Branch Location
+      summary: Search branches by area
+      description: |
+        Search for Capitec branches by area text input.
+        Searches across city, province, suburb, address, postal code, and branch name.
+        Only returns branches available for appointment booking (excludes ATMs and closed branches).
+      operationId: searchBranchesByArea
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search text (city, suburb, postal code, branch name, etc.)
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+          example: "Rondebosch"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved matching branches
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchSearchResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Appointment service temporarily unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/nearby:
+    get:
+      tags:
+        - Branch Location
+      summary: Find nearest branches by coordinates
+      description: |
+        Find the nearest Capitec branches to a given geographic location.
+        Returns branches sorted by distance from the provided coordinates.
+        Only returns branches available for appointment booking (excludes ATMs and closed branches).
+        
+        When the branch locator service is unavailable, cached data from nearby locations 
+        (within 5km radius) may be returned. The `fromNearbyLocation` flag indicates if 
+        the response is from cached nearby data.
+      operationId: findNearestBranches
+      parameters:
+        - name: latitude
+          in: query
+          required: true
+          description: Latitude of the customer's location
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          example: -33.960553
+        - name: longitude
+          in: query
+          required: true
+          description: Longitude of the customer's location
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          example: 18.470156
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of branches to return (default 10)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+          example: 10
+        - name: maxDistanceKm
+          in: query
+          required: false
+          description: Maximum distance in kilometers to search for branches
+          schema:
+            type: number
+            format: double
+            minimum: 1
+            maximum: 500
+          example: 25
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved nearest branches
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NearbyBranchesResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Branch locator service temporarily unavailable and no cached data available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    BranchSearchResponse:
+      type: object
+      description: Response containing branches matching the search criteria
+      required:
+        - branches
+        - totalCount
+      properties:
+        branches:
+          type: array
+          description: List of branches matching the search
+          items:
+            $ref: '#/components/schemas/BranchLocation'
+        totalCount:
+          type: integer
+          description: Total number of matching branches
+          example: 5
+
+    NearbyBranchesResponse:
+      type: object
+      description: Response containing nearest branches to the given coordinates
+      required:
+        - branches
+        - totalCount
+      properties:
+        branches:
+          type: array
+          description: List of nearby branches sorted by distance
+          items:
+            $ref: '#/components/schemas/BranchLocation'
+        totalCount:
+          type: integer
+          description: Total number of branches returned
+          example: 10
+
+    BranchLocation:
+      type: object
+      description: Detailed information about a Capitec branch location
+      required:
+        - branchId
+        - name
+        - fullAddress
+        - latitude
+        - longitude
+        - distanceKm
+        - operationTimes
+        - businessBankCenter
+        - fromNearbyLocation
+      properties:
+        branchId:
+          type: string
+          description: Unique identifier of the branch
+          example: "470010"
+        branchCode:
+          type: string
+          description: Branch code
+          example: "470010"
+          nullable: true
+        name:
+          type: string
+          description: Name of the branch
+          example: "Rondebosch"
+        fullAddress:
+          type: string
+          description: Complete address of the branch
+          example: "Shop G21, Cnr Main & Belmont Road, Fountain Centre, Rondebosch, 7700"
+        latitude:
+          type: number
+          format: double
+          description: Latitude coordinate of the branch
+          example: -33.960553
+        longitude:
+          type: number
+          format: double
+          description: Longitude coordinate of the branch
+          example: 18.470156
+        distanceKm:
+          type: number
+          format: double
+          description: Distance from the search coordinates in kilometers (0 for area search)
+          example: 1.25
+        operationTimes:
+          type: object
+          description: Branch operation times keyed by date (ISO format YYYY-MM-DD)
+          additionalProperties:
+            $ref: '#/components/schemas/OperationTime'
+          example:
+            "2026-01-27":
+              openAt: "08:00"
+              closeAt: "17:00"
+              closed: false
+              isHoliday: false
+            "2026-01-28":
+              openAt: "08:00"
+              closeAt: "17:00"
+              closed: false
+              isHoliday: false
+            "2026-01-31":
+              openAt: "08:00"
+              closeAt: "13:00"
+              closed: false
+              isHoliday: false
+            "2026-02-01":
+              openAt: "00:00"
+              closeAt: "00:00"
+              closed: true
+              isHoliday: false
+        businessBankCenter:
+          type: boolean
+          description: Indicates if the branch is a business banking center
+          example: false
+        fromNearbyLocation:
+          type: boolean
+          description: |
+            Indicates if the result was fetched from cached nearby location data
+            (only true when service fallback was used)
+          example: false
+
+    OperationTime:
+      type: object
+      description: Branch operation hours for a specific day
+      required:
+        - openAt
+        - closeAt
+        - closed
+        - isHoliday
+      properties:
+        openAt:
+          type: string
+          format: time
+          description: Opening time (HH:mm format)
+          example: "08:00"
+          nullable: true
+        closeAt:
+          type: string
+          format: time
+          description: Closing time (HH:mm format)
+          example: "17:00"
+          nullable: true
+        closed:
+          type: boolean
+          description: Whether the branch is closed on this day
+          example: false
+        isHoliday:
+          type: boolean
+          description: Whether this day is a holiday
+          example: false
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-27T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Search text must be between 2 and 100 characters"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/location-service/branches/search"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"
