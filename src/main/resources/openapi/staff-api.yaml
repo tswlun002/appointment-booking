@@ -1,0 +1,374 @@
+openapi: 3.1.0
+info:
+  title: Staff API
+  description: |
+    API for managing staff members at Capitec branches.
+    Supports adding, updating status, deleting, and querying staff members.
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/staff
+    description: Staff Service Base Path (v1)
+
+tags:
+  - name: Staff Management
+    description: Staff management operations
+
+paths:
+  /:
+    post:
+      tags:
+        - Staff Management
+      summary: Add a new staff member
+      description: |
+        Adds a new staff member to a branch.
+        New staff members start with TRAINING status.
+      operationId: addStaff
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddStaffRequest'
+      responses:
+        '201':
+          description: Staff member added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Staff already exists in this branch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}:
+    get:
+      tags:
+        - Staff Management
+      summary: Get staff members for a branch
+      description: |
+        Retrieves all staff members for a specific branch, optionally filtered by status.
+        Defaults to WORKING status if no filter is provided.
+      operationId: getStaffByBranch
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - name: status
+          in: query
+          required: false
+          description: Filter by staff status
+          schema:
+            $ref: '#/components/schemas/StaffStatus'
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved staff list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffListResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}/count:
+    get:
+      tags:
+        - Staff Management
+      summary: Get working staff count for a branch
+      description: |
+        Returns the count of staff members with WORKING status for a specific branch.
+      operationId: getStaffCount
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved staff count
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffCountResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{username}/status:
+    patch:
+      tags:
+        - Staff Management
+      summary: Update staff work status
+      description: |
+        Updates the work status of a staff member.
+        Valid statuses are: TRAINING, WORKING, LEAVE.
+      operationId: updateStaffStatus
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Staff username
+          schema:
+            type: string
+            minLength: 5
+            maxLength: 50
+          example: "john.doe123"
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStaffStatusRequest'
+      responses:
+        '200':
+          description: Staff status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Staff not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{username}:
+    delete:
+      tags:
+        - Staff Management
+      summary: Delete a staff member
+      description: |
+        Removes a staff member from the system.
+      operationId: deleteStaff
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Staff username
+          schema:
+            type: string
+            minLength: 5
+            maxLength: 50
+          example: "john.doe123"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '204':
+          description: Staff deleted successfully
+        '404':
+          description: Staff not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    AddStaffRequest:
+      type: object
+      description: Request body for adding a new staff member
+      required:
+        - username
+        - branchId
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: Staff username
+          example: "john.doe123"
+        branchId:
+          type: string
+          minLength: 2
+          maxLength: 50
+          description: Branch identifier
+          example: "470010"
+
+    UpdateStaffStatusRequest:
+      type: object
+      description: Request body for updating staff status
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/StaffStatus'
+
+    StaffResponse:
+      type: object
+      description: Staff member information
+      required:
+        - username
+        - status
+        - branchId
+      properties:
+        username:
+          type: string
+          description: Staff username
+          example: "john.doe123"
+        status:
+          $ref: '#/components/schemas/StaffStatus'
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+
+    StaffListResponse:
+      type: object
+      description: Response containing list of staff usernames
+      required:
+        - usernames
+        - totalCount
+      properties:
+        usernames:
+          type: array
+          description: List of staff usernames
+          items:
+            type: string
+          example: ["john.doe123", "jane.smith456"]
+        totalCount:
+          type: integer
+          description: Total number of staff members
+          example: 2
+
+    StaffCountResponse:
+      type: object
+      description: Response containing staff count for a branch
+      required:
+        - branchId
+        - count
+      properties:
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        count:
+          type: integer
+          description: Number of working staff members
+          example: 5
+
+    StaffStatus:
+      type: string
+      description: Staff work status
+      enum:
+        - TRAINING
+        - WORKING
+        - LEAVE
+      example: WORKING
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-28T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid staff status"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/staff"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"
