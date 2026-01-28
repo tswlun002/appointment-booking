@@ -1,4 +1,4 @@
-package capitec.branch.appointment.authentication.infrastructure.api;
+package capitec.branch.appointment.authentication.app;
 
 
 public record LoginDTO(

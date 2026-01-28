@@ -4,7 +4,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import capitec.branch.appointment.authentication.domain.AuthService;
 import capitec.branch.appointment.authentication.domain.TokenResponse;
-import capitec.branch.appointment.authentication.infrastructure.api.LoginDTO;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

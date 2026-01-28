@@ -1,6 +1,6 @@
 package capitec.branch.appointment.authentication.domain;
 
-import capitec.branch.appointment.authentication.infrastructure.api.LoginDTO;
+import capitec.branch.appointment.authentication.app.LoginDTO;
 
 public interface AuthUseCase {
     TokenResponse login(LoginDTO loginDTO, String traceId);

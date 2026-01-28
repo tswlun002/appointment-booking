@@ -1,4 +1,4 @@
-package capitec.branch.appointment.authentication.infrastructure.api;
+package capitec.branch.appointment.authentication.infrastructure.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.security.core.Authentication;
