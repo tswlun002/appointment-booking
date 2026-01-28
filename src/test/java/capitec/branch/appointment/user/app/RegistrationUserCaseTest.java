@@ -58,7 +58,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
             "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"})
     void testRegisterUser(String email, String firstname, String lastname, String password, String traceId) {
 
-        var userRegister = new NewUserDtO(email, firstname, lastname,password);
+        var userRegister = new NewUserDtO(email, firstname, lastname,password, password);
 
         var registeredUser = registrationUserCase.registerUser(userRegister, traceId);
 
@@ -78,7 +78,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
             "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;9607037886182;e23f32b9-3dea-41ed-ac8d-fa283dacb424"})
     void testRegisterCapitecClient(String email, String firstname, String lastname, String password,String idNumber, String traceId) {
 
-        var userRegister = new NewUserDtO(email, password, firstname, lastname, idNumber, true);
+        var userRegister = new NewUserDtO(email, password,password, firstname, lastname, idNumber, true);
 
         User user = new User(userRegister.email(), userRegister.firstname(), userRegister.lastname(), userRegister.password());
         wireMockGetHolidayByYearAndCountryCode(user, idNumber);
@@ -100,7 +100,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
             "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"})
     void testRegisterDuplicateUser(String email, String firstname, String lastname, String password, String traceId) {
 
-        var userRegister = new NewUserDtO(email, firstname, lastname,password);
+        var userRegister = new NewUserDtO(email, firstname, lastname,password, password);
         registrationUserCase.registerUser(userRegister, traceId);
         assertThatThrownBy(() -> registrationUserCase.registerUser(userRegister, traceId))
                 .isInstanceOf(EntityAlreadyExistException.class)
@@ -115,7 +115,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     void testVerifyRegisteredGuestUser(String email, String firstname, String lastname,
                                   String password, String traceId) {
 
-        var registerDTO = new NewUserDtO(email, firstname, lastname,password);
+        var registerDTO = new NewUserDtO(email, firstname, lastname,password, password);
         User user = registrationUserCase.registerUser(registerDTO, traceId);
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
@@ -147,7 +147,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     void testVerifyRegisteredCapitecClientUser(String email, String firstname, String lastname,
                                   String password,String idNumber, String traceId) {
 
-        var registerDTO = new NewUserDtO(email, firstname, lastname,password);
+        var registerDTO = new NewUserDtO(email, firstname, lastname,password, password);
         User userMock = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
         wireMockGetHolidayByYearAndCountryCode(userMock,idNumber );
 
@@ -183,7 +183,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     void testVerifyRegisteredUserUntilOTPRevoked(String email, String firstname, String lastname,
                                                  String password, String traceId) throws JsonProcessingException {
 
-        var registerDTO = new NewUserDtO(email, firstname, lastname,password);
+        var registerDTO = new NewUserDtO(email, firstname, lastname,password, password);
         User user = registrationUserCase.registerUser(registerDTO, traceId);
 
         OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))

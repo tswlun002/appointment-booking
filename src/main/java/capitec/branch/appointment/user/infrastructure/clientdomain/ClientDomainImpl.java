@@ -3,12 +3,9 @@ package capitec.branch.appointment.user.infrastructure.clientdomain;
 
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.user.domain.ClientDomain;
-import capitec.branch.appointment.user.domain.User;
-import capitec.branch.appointment.user.infrastructure.UserMapperReflection;
-
+import capitec.branch.appointment.user.domain.UserClientDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.AccessTokenResponse;
-
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -30,17 +26,17 @@ public class ClientDomainImpl implements ClientDomain {
     private final RestClient clientDomainClient;
 
     private final KeycloakService keycloakService;
-    private final UserMapperReflection userMapper;
 
-    public ClientDomainImpl( @Qualifier("clientDomainRestClient")RestClient clientDomainClient, KeycloakService keycloakService, UserMapperReflection userMapper) {
+
+    public ClientDomainImpl( @Qualifier("clientDomainRestClient")RestClient clientDomainClient, KeycloakService keycloakService) {
         this.clientDomainClient = clientDomainClient;
         this.keycloakService = keycloakService;
-        this.userMapper = userMapper;
+
 
     }
 
     @Override
-    public Optional<User> findByUsername(String IDNumber) {
+    public Optional<UserClientDetails> findByUsername(String IDNumber) {
 
 
         //Assume admin has role to call client api
@@ -55,7 +51,7 @@ public class ClientDomainImpl implements ClientDomain {
                     if (HttpStatusCode.valueOf(response.getStatusCode().value()).is2xxSuccessful()) {
 
                         log.debug("User found with IDNumber: {}", IDNumber);
-                        return Optional.of(Objects.requireNonNull(userMapper.mapFromInputStream(response.getBody())));
+                        return Optional.ofNullable(response.bodyTo(UserClientDetails.class));
                     } else if (HttpStatus.NOT_FOUND == response.getStatusCode()) {
 
                         log.debug("User not found with IIDNumber: {}, error:[ status {} , statusText:{}]", IDNumber, response.getStatusCode(), response.getStatusText());

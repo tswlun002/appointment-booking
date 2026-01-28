@@ -12,6 +12,8 @@ import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;
 import org.apache.james.mime4j.dom.datetime.DateTime;
 import org.hibernate.validator.internal.engine.ConstraintViolationImpl;
+import org.springframework.util.Assert;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -49,6 +51,21 @@ public class User {
         this.verified = false;
         this.enabled = true;
         this.username = new UsernameGenerator().getId();
+        log.debug("User:{} created successfully", this);
+        validateUser();
+
+    }
+   protected User(String username,String email, String firstname, String lastname, String password) {
+        Assert.isTrue(UsernameGenerator.isValid(username), "Invalid username");
+
+        log.debug("Create user :{}", email);
+        this.email = email;
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.password = password;
+        this.verified = false;
+        this.enabled = true;
+        this.username = username;
         log.debug("User:{} created successfully", this);
         validateUser();
 

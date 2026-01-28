@@ -535,6 +535,7 @@ components:
       required:
         - email
         - password
+        - confirmPassword
         - firstname
         - lastname
       properties:
@@ -544,6 +545,11 @@ components:
           description: User's email address
           example: "john.doe@example.com"
         password:
+          type: string
+          minLength: 8,
+          description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
+          example: "SecurePass123!"
+        confirmPassword:
           type: string
           minLength: 8
           description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
@@ -562,6 +568,7 @@ components:
           example: "Doe"
         idNumber:
           type: string
+          pattern: "^\\d{13}$"
           description: South African ID number (optional)
           example: "9001015009087"
         isCapitecClient:

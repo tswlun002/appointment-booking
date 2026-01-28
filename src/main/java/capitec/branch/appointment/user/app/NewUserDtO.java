@@ -1,14 +1,17 @@
 package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.utils.Password;
+import capitec.branch.appointment.utils.ValidRSAId;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import org.springframework.util.Assert;
 
 public record NewUserDtO(
         String email,
         String password,
+        String confirmPassword,
         String firstname,
         String lastname,
         String idNumber,
@@ -24,14 +27,10 @@ public record NewUserDtO(
                      @Pattern(regexp = "[a-zA-Z]{2,}")
                      String lastname,
                      @Password
-                     String password) {
-        this(email, password,firstname,lastname, null,false);
+                     String password,
+                     @Password
+                     String confirmPassword) {
+        this(email, password,confirmPassword ,firstname,lastname, null,false);
+     Assert.isTrue(password.equals(confirmPassword),"Passwords do not match");
     }
-
-public   NewUserDtO(@NotBlank @Pattern(regexp = "[0-9]{0,13}")
-                    String idNumber,
-                    @NotNull
-                    Boolean isCapitecClient) {
-    this(null, null,null,null, idNumber,isCapitecClient);
-}
 }

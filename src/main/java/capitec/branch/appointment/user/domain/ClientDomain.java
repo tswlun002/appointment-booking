@@ -4,5 +4,5 @@ import java.util.Optional;
 
 public interface ClientDomain {
 
-    Optional<User> findByUsername(String IDNumber);
+    Optional<UserClientDetails> findByUsername(String IDNumber);
 }

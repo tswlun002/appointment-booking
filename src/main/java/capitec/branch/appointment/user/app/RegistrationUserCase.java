@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.Optional;
@@ -35,17 +36,28 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
 
     public User registerUser(@Valid NewUserDtO registerDTO, String traceId) {
 
+        Assert.isTrue(registerDTO.confirmPassword().equals(registerDTO.password()), "Passwords don't match");
         User user;
 
 
         if (registerDTO.isCapitecClient()) {
 
-            user = clientDomain.findByUsername(registerDTO.idNumber()).orElseThrow(() -> {
+            var createUserExistingClientFactory = new CreateUserExistingClientFactory(registerDTO.firstname(), registerDTO.lastname(), registerDTO.email(), registerDTO.password());
+
+            user = createUserExistingClientFactory.createUser(() ->
+                    clientDomain.findByUsername(registerDTO.idNumber()).orElseThrow(() -> {
                 log.error("User is not found with idNumber {}, traceId:{}", registerDTO.idNumber(), traceId);
                 return new NotFoundException("User not found");
-            });
+            }));
+
         }
-        else {
+        else{
+
+            clientDomain.findByUsername(registerDTO.idNumber()).ifPresent(presentUser-> {
+                log.error("UnAuthorized to use other client data. Client try to register as non-capitec client but existing client with existing data  {}, traceId:{}", registerDTO.idNumber(), traceId);
+                throw  new ResponseStatusException(HttpStatus.UNAUTHORIZED , "UnAuthorized to use other client data");
+            });
+
             do {
                 user = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
             } while (userService.checkIfUserExists(user.getUsername()));
