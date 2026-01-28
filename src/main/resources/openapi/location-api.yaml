@@ -29,7 +29,7 @@ paths:
         Only returns branches available for appointment booking (excludes ATMs and closed branches).
       operationId: searchBranchesByArea
       parameters:
-        - name: q
+        - name: searchText
           in: query
           required: true
           description: Search text (city, suburb, postal code, branch name, etc.)
