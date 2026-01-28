@@ -1,0 +1,507 @@
+openapi: 3.1.0
+info:
+  title: Branch API
+  description: |
+    API for managing Capitec branches.
+    Supports adding, retrieving, deleting branches and managing appointment info and operation hours overrides.
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/branches
+    description: Branch Service Base Path (v1)
+
+tags:
+  - name: Branch Management
+    description: Branch management operations
+
+paths:
+  /:
+    post:
+      tags:
+        - Branch Management
+      summary: Add a new branch
+      description: |
+        Adds a new branch to the system.
+        Branch details are fetched from the branch locator service.
+      operationId: addBranch
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddBranchRequest'
+      responses:
+        '201':
+          description: Branch added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+        '400':
+          description: Invalid request or branch does not exist in the system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Branch Management
+      summary: Get all branches
+      description: |
+        Retrieves all branches with pagination support.
+      operationId: getAllBranches
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          description: Pagination offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: limit
+          in: query
+          required: false
+          description: Pagination limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved branches
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchListResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{branchId}:
+    get:
+      tags:
+        - Branch Management
+      summary: Get branch by ID
+      description: |
+        Retrieves detailed information about a specific branch.
+      operationId: getBranch
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved branch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchResponse'
+        '404':
+          description: Branch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Branch Management
+      summary: Delete a branch
+      description: |
+        Removes a branch from the system.
+      operationId: deleteBranch
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '204':
+          description: Branch deleted successfully
+        '404':
+          description: Branch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{branchId}/appointment-info/{dayType}:
+    put:
+      tags:
+        - Branch Management
+      summary: Add or update branch appointment info
+      description: |
+        Adds or updates appointment configuration for a branch for a specific day type.
+        If configuration exists for the day type, it will be replaced.
+        Day types represent recurring days (e.g., all Mondays) or special days (e.g., public holidays).
+      operationId: upsertBranchAppointmentInfo
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - name: dayType
+          in: path
+          required: true
+          description: Day type for which this configuration applies
+          schema:
+            $ref: '#/components/schemas/DayType'
+          example: "MONDAY"
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddBranchAppointmentInfoRequest'
+      responses:
+        '200':
+          description: Appointment info added/updated successfully
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Branch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{branchId}/operation-hours-override/{effectiveDate}:
+    put:
+      tags:
+        - Branch Management
+      summary: Add or update operation hours override
+      description: |
+        Adds or updates operation hours override for a branch on a specific date.
+        If override exists for the date, it will be replaced.
+        Used for holidays, special events, or temporary schedule changes.
+      operationId: upsertOperationHoursOverride
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - name: effectiveDate
+          in: path
+          required: true
+          description: Date for which this override applies
+          schema:
+            type: string
+            format: date
+          example: "2026-01-28"
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddOperationHoursOverrideRequest'
+      responses:
+        '200':
+          description: Operation hours override added/updated successfully
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Branch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    BranchId:
+      name: branchId
+      in: path
+      required: true
+      description: Branch identifier
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 50
+      example: "470010"
+
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    DayType:
+      type: string
+      description: Type of day for appointment configuration
+      enum:
+        - MONDAY
+        - TUESDAY
+        - WEDNESDAY
+        - THURSDAY
+        - FRIDAY
+        - SATURDAY
+        - SUNDAY
+        - PUBLIC_HOLIDAY
+      example: MONDAY
+
+    AddBranchRequest:
+      type: object
+      description: Request body for adding a new branch
+      required:
+        - branchId
+      properties:
+        branchId:
+          type: string
+          minLength: 1
+          description: Branch identifier
+          example: "470010"
+
+    AddBranchAppointmentInfoRequest:
+      type: object
+      description: Request body for adding/updating branch appointment info
+      required:
+        - staffCount
+        - slotDuration
+        - utilizationFactor
+        - maxBookingCapacity
+      properties:
+        staffCount:
+          type: integer
+          minimum: 1
+          description: Number of staff available for appointments
+          example: 3
+        slotDuration:
+          type: string
+          format: duration
+          description: Duration of each appointment slot (ISO 8601 duration)
+          example: "PT30M"
+        utilizationFactor:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Staff utilization factor (0.0 to 1.0)
+          example: 0.8
+        maxBookingCapacity:
+          type: integer
+          minimum: 1
+          description: Maximum number of bookings per slot
+          example: 2
+
+    AddOperationHoursOverrideRequest:
+      type: object
+      description: Request body for adding/updating operation hours override
+      required:
+        - openTime
+        - closingTime
+        - isClosed
+        - reason
+      properties:
+        openTime:
+          type: string
+          format: time
+          description: Opening time
+          example: "08:00:00"
+        closingTime:
+          type: string
+          format: time
+          description: Closing time
+          example: "17:00:00"
+        isClosed:
+          type: boolean
+          description: Whether the branch is closed on this date
+          example: false
+        reason:
+          type: string
+          minLength: 1
+          description: Reason for the override
+          example: "Public Holiday - Human Rights Day"
+
+    BranchResponse:
+      type: object
+      description: Branch information
+      required:
+        - branchId
+        - branchName
+      properties:
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        branchName:
+          type: string
+          description: Branch name
+          example: "Rondebosch"
+        appointmentInfo:
+          type: array
+          description: List of appointment configurations
+          items:
+            $ref: '#/components/schemas/BranchAppointmentInfoResponse'
+        operationHoursOverrides:
+          type: array
+          description: List of operation hours overrides
+          items:
+            $ref: '#/components/schemas/OperationHoursOverrideResponse'
+
+    BranchAppointmentInfoResponse:
+      type: object
+      description: Branch appointment configuration
+      required:
+        - staffCount
+        - slotDuration
+        - utilizationFactor
+        - dayType
+        - maxBookingCapacity
+      properties:
+        staffCount:
+          type: integer
+          description: Number of staff available
+          example: 3
+        slotDuration:
+          type: string
+          format: duration
+          description: Duration of each appointment slot
+          example: "PT30M"
+        utilizationFactor:
+          type: number
+          format: double
+          description: Staff utilization factor
+          example: 0.8
+        dayType:
+          $ref: '#/components/schemas/DayType'
+        maxBookingCapacity:
+          type: integer
+          description: Maximum bookings per slot
+          example: 2
+
+    OperationHoursOverrideResponse:
+      type: object
+      description: Operation hours override
+      required:
+        - effectiveDate
+        - openAt
+        - closeAt
+        - closed
+        - reason
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: Date for which this override applies
+          example: "2026-01-28"
+        openAt:
+          type: string
+          format: time
+          description: Opening time
+          example: "08:00:00"
+        closeAt:
+          type: string
+          format: time
+          description: Closing time
+          example: "17:00:00"
+        closed:
+          type: boolean
+          description: Whether the branch is closed
+          example: false
+        reason:
+          type: string
+          description: Reason for the override
+          example: "Public Holiday - Human Rights Day"
+
+    BranchListResponse:
+      type: object
+      description: Response containing list of branches
+      required:
+        - branches
+        - totalCount
+      properties:
+        branches:
+          type: array
+          description: List of branches
+          items:
+            $ref: '#/components/schemas/BranchResponse'
+        totalCount:
+          type: integer
+          description: Total number of branches
+          example: 10
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-28T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Branch does not exist in the system"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/branches"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"
