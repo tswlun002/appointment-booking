@@ -28,7 +28,7 @@ public class BookAppointmentUseCase {
 
 
     @Transactional
-    Appointment execute(@Valid AppointmentDTO appointmentDTO){
+    public Appointment execute(@Valid AppointmentDTO appointmentDTO){
 
 
         LocalDateTime dateTime = appointmentDTO.day().atTime(appointmentDTO.startTime());
