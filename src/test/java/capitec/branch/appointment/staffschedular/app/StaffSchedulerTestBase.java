@@ -5,7 +5,7 @@ import capitec.branch.appointment.branch.app.AddBranchUseCase;
 import capitec.branch.appointment.branch.app.BranchDTO;
 import capitec.branch.appointment.branch.app.DeleteBranchUseCase;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
+import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;

@@ -1,7 +1,7 @@
 package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
+import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;

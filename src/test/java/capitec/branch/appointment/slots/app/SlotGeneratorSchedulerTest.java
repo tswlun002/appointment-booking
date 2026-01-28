@@ -1,8 +1,8 @@
 package capitec.branch.appointment.slots.app;
 
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.day.domain.Scale;
-import capitec.branch.appointment.day.domain.Day;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Scale;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
 import capitec.branch.appointment.slots.domain.Slot;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

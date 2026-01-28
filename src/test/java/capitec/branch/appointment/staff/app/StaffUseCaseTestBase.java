@@ -3,7 +3,7 @@ package capitec.branch.appointment.staff.app;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
-import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
+import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;

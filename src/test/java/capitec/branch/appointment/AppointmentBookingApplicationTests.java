@@ -453,15 +453,6 @@ public class AppointmentBookingApplicationTests {
         );
     }
 
-    protected void stubCapitecApiWithResponse(WireMock capitecApiWireMock,String response) {
-        capitecApiWireMock.register(
-                post(urlPathEqualTo("/Branch"))
-                        .willReturn(aResponse()
-                                .withStatus(200)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(response))
-        );
-    }
 
     protected void stubCapitecApiEmptyResponse(WireMock capitecApiWireMock,String response) {
         capitecApiWireMock.register(

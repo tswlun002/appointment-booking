@@ -1,6 +1,7 @@
 package capitec.branch.appointment.branch.domain;
 
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -63,7 +64,7 @@ class BranchTest {
             LocalDate day = LocalDate.now().plusDays(1);
             BranchAppointmentInfo info = createAppointmentInfo(day, Duration.ofMinutes(30));
 
-            branch.updateAppointmentInfo(day, info, OPEN_TIME, CLOSE_TIME);
+            branch.updateAppointmentInfo(DayType.valueOf(day.getDayOfWeek().name()), info, OPEN_TIME, CLOSE_TIME);
 
             assertThat(branch.getBranchAppointmentInfo()).hasSize(1);
             assertThat(branch.getBranchAppointmentInfo().get(0)).isEqualTo(info);
@@ -75,8 +76,8 @@ class BranchTest {
             BranchAppointmentInfo oldInfo = createAppointmentInfo(day, Duration.ofMinutes(30));
             BranchAppointmentInfo newInfo = createAppointmentInfo(day, Duration.ofMinutes(45));
 
-            branch.updateAppointmentInfo(day, oldInfo, OPEN_TIME, CLOSE_TIME);
-            branch.updateAppointmentInfo(day, newInfo, OPEN_TIME, CLOSE_TIME);
+            branch.updateAppointmentInfo(DayType.valueOf(day.getDayOfWeek().name()), oldInfo, OPEN_TIME, CLOSE_TIME);
+            branch.updateAppointmentInfo(DayType.valueOf(day.getDayOfWeek().name()), newInfo, OPEN_TIME, CLOSE_TIME);
 
             assertThat(branch.getBranchAppointmentInfo()).hasSize(1);
             assertThat(branch.getBranchAppointmentInfo().get(0).slotDuration()).isEqualTo(Duration.ofMinutes(45));
@@ -88,7 +89,7 @@ class BranchTest {
             Duration longDuration = Duration.ofHours(10);
             BranchAppointmentInfo info = createAppointmentInfo(day, longDuration);
 
-            assertThatThrownBy(() -> branch.updateAppointmentInfo(day, info, OPEN_TIME, CLOSE_TIME))
+            assertThatThrownBy(() -> branch.updateAppointmentInfo(DayType.valueOf(day.getDayOfWeek().name()), info, OPEN_TIME, CLOSE_TIME))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Appointment slots must be within branch operating hours");
         }
@@ -98,7 +99,7 @@ class BranchTest {
             LocalDate day = LocalDate.now().plusDays(1);
             BranchAppointmentInfo info = createAppointmentInfo(day, Duration.ofMinutes(30));
 
-            assertThatThrownBy(() -> branch.updateAppointmentInfo(day, info, null, CLOSE_TIME))
+            assertThatThrownBy(() -> branch.updateAppointmentInfo(DayType.valueOf(day.getDayOfWeek().name()), info, null, CLOSE_TIME))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Branch open time cannot be null");
         }
@@ -108,7 +109,7 @@ class BranchTest {
             LocalDate day = LocalDate.now().plusDays(1);
             BranchAppointmentInfo info = createAppointmentInfo(day, Duration.ofMinutes(30));
 
-            assertThatThrownBy(() -> branch.updateAppointmentInfo(day, info, OPEN_TIME, null))
+            assertThatThrownBy(() -> branch.updateAppointmentInfo(DayType.valueOf(day.getDayOfWeek().name()), info, OPEN_TIME, null))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Branch closing time cannot be null");
         }
@@ -234,7 +235,7 @@ class BranchTest {
 
     // Helper methods
     private BranchAppointmentInfo createAppointmentInfo(LocalDate day, Duration slotDuration) {
-        return new BranchAppointmentInfo(slotDuration, 0.8, 5, day,2);
+        return new BranchAppointmentInfo(slotDuration, 0.8, 5, DayType.valueOf(day.getDayOfWeek().name()),2);
     }
 
     private OperationHoursOverride createOverride(LocalDate effectiveDate, boolean closed, String reason) {

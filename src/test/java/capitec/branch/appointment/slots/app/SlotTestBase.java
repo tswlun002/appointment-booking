@@ -4,9 +4,10 @@ import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
-import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
-import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
-import capitec.branch.appointment.day.domain.Day;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
+import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
+import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
@@ -102,15 +103,16 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
 
                 else if(day.isWeekday()){
 
+                    DayType day1 = DayType.valueOf(day.getDate().getDayOfWeek().name());
                     var branchAppointmentInfo =
                             new BranchAppointmentInfo(
                                     Duration.ofMinutes(30),
                                     0.6,
                                     6,
-                                    day.getDate(),
+                                    day1,
                                     3
                             );
-                    branch.updateAppointmentInfo(day.getDate(), branchAppointmentInfo, LocalTime.of(8,0), LocalTime.of(17,0));
+                    branch.updateAppointmentInfo(day1, branchAppointmentInfo, LocalTime.of(8,0), LocalTime.of(17,0));
                 }
                 else if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)){
                     var branchAppointmentInfo =
@@ -118,10 +120,10 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
                                     Duration.ofMinutes(30),
                                     0.3,
                                     4,
-                                    day.getDate(),
+                                    DayType.SATURDAY,
                                     1
                             );
-                    branch.updateAppointmentInfo(day.getDate(), branchAppointmentInfo, LocalTime.of(8,0), LocalTime.of(17,0));
+                    branch.updateAppointmentInfo(DayType.SATURDAY, branchAppointmentInfo, LocalTime.of(8,0), LocalTime.of(17,0));
 
                 }
 

@@ -1,8 +1,8 @@
 package capitec.branch.appointment.location.infrastructure.api;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
-import capitec.branch.appointment.day.app.GetDateOfNextDaysQuery;
-import capitec.branch.appointment.day.domain.Day;
+import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
 import capitec.branch.appointment.location.domain.BranchLocation;
 import capitec.branch.appointment.exeption.BranchLocationServiceException;
 import capitec.branch.appointment.location.domain.Coordinates;
