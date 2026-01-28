@@ -5,6 +5,7 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.branch.app.*;
 import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
 import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
@@ -184,7 +185,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         6,
                         Duration.ofMinutes(30),
                         0.6,
-                        day.getDate(),
+                        DayType.valueOf(day.getDate().getDayOfWeek().name()),
                         2
                 );
                 addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
@@ -194,7 +195,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         4,
                         Duration.ofMinutes(30),
                         0.3,
-                        day.getDate(),
+                        DayType.valueOf(day.getDate().getDayOfWeek().name()),
                         1
                 );
                 addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
