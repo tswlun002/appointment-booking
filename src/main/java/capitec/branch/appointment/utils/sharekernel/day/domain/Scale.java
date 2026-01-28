@@ -1,4 +1,4 @@
-package capitec.branch.appointment.day.domain;
+package capitec.branch.appointment.utils.sharekernel.day.domain;
 
 import java.time.LocalDate;
 import java.time.Year;

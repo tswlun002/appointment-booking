@@ -1,4 +1,4 @@
-package capitec.branch.appointment.day.infrastructure.config;
+package capitec.branch.appointment.utils.sharekernel.day.infrastructure.config;
 
 
 import org.springframework.beans.factory.annotation.Qualifier;

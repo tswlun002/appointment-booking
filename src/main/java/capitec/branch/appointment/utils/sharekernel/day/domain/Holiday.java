@@ -1,4 +1,4 @@
-package capitec.branch.appointment.slots.domain;
+package capitec.branch.appointment.utils.sharekernel.day.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

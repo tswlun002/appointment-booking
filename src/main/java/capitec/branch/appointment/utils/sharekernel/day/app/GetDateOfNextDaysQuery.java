@@ -1,9 +1,11 @@
-package capitec.branch.appointment.day.app;
+package capitec.branch.appointment.utils.sharekernel.day.app;
 
-import capitec.branch.appointment.day.domain.Day;
-import capitec.branch.appointment.day.domain.Scale;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Scale;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
+import org.springframework.util.Assert;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 @UseCase
 @RequiredArgsConstructor
+@Validated
 public class GetDateOfNextDaysQuery {
 
     private final CheckHolidayQuery checkHolidayQuery;
@@ -58,6 +61,36 @@ public class GetDateOfNextDaysQuery {
            date = date.plusDays(1);
        }
        return days;
+
+    }
+    public Set<Day> execute(LocalDate fromDay, LocalDate toDay) {
+        Assert.notNull(fromDay, "The fromDay must not be null");
+        Assert.notNull(toDay, "The toDay must not be null");
+        LocalDate date = fromDay;
+        Set<Day> days = new HashSet<>();
+        while(true) {
+
+            boolean isHoliday = checkHolidayQuery.execute(date);
+            Day day = new Day(date.getDayOfWeek(), date);
+            day.setIsHoliday(isHoliday);
+            days.add(day);
+
+            if (date.equals(toDay)) {
+                break;
+            }
+
+            date = date.plusDays(1);
+        }
+        return days;
+
+    }
+    public Day execute( LocalDate day) {
+        Assert.notNull(day, "The day must not be null");
+        boolean isHoliday = checkHolidayQuery.execute(day);
+        Day day1 = new Day(day.getDayOfWeek(), day);
+        day1.setIsHoliday(isHoliday);
+
+        return day1;
 
     }
 }

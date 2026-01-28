@@ -1,4 +1,4 @@
-package capitec.branch.appointment.day.domain;
+package capitec.branch.appointment.utils.sharekernel.day.domain;
 
 import org.springframework.util.Assert;
 
@@ -30,6 +30,11 @@ public class Day{
             case SATURDAY,SUNDAY -> false;
             case MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY -> true;
         };
+    }
+    public static boolean isWeekend(DayOfWeek date) {
+
+        return date== DayOfWeek.SATURDAY ||
+                date == DayOfWeek.SUNDAY;
     }
 
     public DayOfWeek getValue() {
