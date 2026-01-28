@@ -1,5 +1,6 @@
 package capitec.branch.appointment.branch.app;
 
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -14,7 +15,7 @@ public record BranchAppointmentInfoDTO(
         @NotNull
         double utilizationFactor,
         @NotNull
-        LocalDate day,
+        DayType day,
         @Min(1)
         int maxBookingCapacity
 ) {

@@ -1,6 +1,7 @@
 package capitec.branch.appointment.branch.domain;
 
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -53,7 +54,7 @@ public class Branch {
         Assert.notNull(info,"Branch Appointment Info cannot be null");
         Optional<OperationHoursOverride> optionalOperationHoursOverride = operationHoursOverride==null?Optional.empty(): operationHoursOverride
                 .stream()
-                .filter(h -> Objects.equals(h.effectiveDate(), info.day()))
+                .filter(h -> Objects.equals(h.effectiveDate().getDayOfWeek().name(), info.day().name()))
                 .findFirst();
         if(optionalOperationHoursOverride.isPresent()) {
 
@@ -73,7 +74,7 @@ public class Branch {
         }
     }
 
-    public  void updateAppointmentInfo(@NotNull LocalDate day, @NotNull BranchAppointmentInfo branchAppointmentInfo, LocalTime openTime, LocalTime closingTime) {
+    public  void updateAppointmentInfo(@NotNull DayType day, @NotNull BranchAppointmentInfo branchAppointmentInfo, LocalTime openTime, LocalTime closingTime) {
         if(this.branchAppointmentInfo == null) {
             this.branchAppointmentInfo = new ArrayList<>();
         }
@@ -116,7 +117,7 @@ public class Branch {
         if(this.branchAppointmentInfo != null && !this.branchAppointmentInfo.isEmpty()) {
             branchAppointmentInfo.stream()
                     .filter(op->
-                            op.day().isEqual(operationHoursOverride.effectiveDate())
+                            op.day().name().equals(operationHoursOverride.effectiveDate().getDayOfWeek().name())
                     )
                     .findFirst()
                     .ifPresent(op->{

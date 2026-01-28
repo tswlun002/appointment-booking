@@ -1,6 +1,7 @@
-package capitec.branch.appointment.branch.infrastructure;
+package capitec.branch.appointment.branch.infrastructure.dao;
 
 
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import org.springframework.data.jdbc.repository.query.Modifying;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -43,8 +44,8 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
                 max_booking_capacity= EXCLUDED.max_booking_capacity
             """)
     int addBranchAppointmentConfigInfo(@Param("branchId") String branchId, @Param("slotDuration") int slotDuration,
-                                       @Param("utilizationFactor") double utilizationFactor,@Param("staffCount") int staffCount,
-                                       @Param("day") LocalDate day, @Param("maxBookingCapacity")  int maxBookingCapacity);
+                                       @Param("utilizationFactor") double utilizationFactor, @Param("staffCount") int staffCount,
+                                       @Param("day") DayType day, @Param("maxBookingCapacity")  int maxBookingCapacity);
 
     @Modifying
     @Transactional

@@ -13,11 +13,11 @@ public record BranchAppointmentInfo(
         double utilizationFactor,
         int staffCount,
         @NotNull
-        LocalDate day,
+        DayType day,
         int maxBookingCapacity
 ) {
 
-    public BranchAppointmentInfo(Duration slotDuration, double utilizationFactor, int staffCount, LocalDate day,int maxBookingCapacity
+    public BranchAppointmentInfo(Duration slotDuration, double utilizationFactor, int staffCount, DayType day,int maxBookingCapacity
                                  ) {
 
         Assert.notNull(slotDuration, "Slot duration cannot be null");

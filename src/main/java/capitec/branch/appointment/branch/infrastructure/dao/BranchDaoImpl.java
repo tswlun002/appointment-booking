@@ -1,8 +1,9 @@
-package capitec.branch.appointment.branch.infrastructure;
+package capitec.branch.appointment.branch.infrastructure.dao;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverrideService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import jakarta.validation.Valid;
@@ -144,7 +145,7 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
     @Override
     @CacheEvict(value = CACHE_NAME, cacheManager = CACHE_MANAGER_NAME, key = "#branch.getBranchId()",condition = "#result == true")
-    public boolean addBranchAppointmentConfigInfo(@NotNull LocalDate day, @Valid Branch branch) {
+    public boolean addBranchAppointmentConfigInfo(@NotNull DayType day, @Valid Branch branch) {
 
         var branchAppointmentInfo = branch.getBranchAppointmentInfo()
                 .stream()

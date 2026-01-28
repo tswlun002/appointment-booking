@@ -1,7 +1,8 @@
-package capitec.branch.appointment.branch.infrastructure;
+package capitec.branch.appointment.branch.infrastructure.dao;
 
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import org.mapstruct.*;
 
@@ -30,11 +31,11 @@ interface BranchMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", expression = "java(java.time.LocalDateTime.now())")
     @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
-    @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapAppointmentInfoToMap(domain))")
-    @Mapping(target = "operationHoursOverride", expression = "java(capitec.branch.appointment.branch.infrastructure.BranchMapper.mapOperationHoursOverrideToMap(domain))")
+    @Mapping(target = "branchAppointmentInfo", expression = "java(capitec.branch.appointment.branch.infrastructure.dao.BranchMapper.mapAppointmentInfoToMap(domain))")
+    @Mapping(target = "operationHoursOverride", expression = "java(capitec.branch.appointment.branch.infrastructure.dao.BranchMapper.mapOperationHoursOverrideToMap(domain))")
     BranchEntity toEntity(Branch domain);
 
-    static   Map<LocalDate, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
+    static   Map<String, BranchAppointmentInfoEntity> mapAppointmentInfoToMap(Branch branch) {
         if(branch == null) {
             return null;
         }
@@ -44,19 +45,19 @@ interface BranchMapper {
         }
         return infos.stream()
                 .collect(Collectors.toMap(
-                        BranchAppointmentInfo::day,
+                        info -> info.day().name(),
                         info -> new BranchAppointmentInfoEntity(
                                 branch.getBranchId(),
                                 Math.toIntExact(info.slotDuration().toMinutes()),
                                 info.utilizationFactor(),
                                 info.staffCount(),
-                                info.day(),
+                                info.day().name(),
                                 info.maxBookingCapacity()
                         )
                 ));
     }
 
-  static    List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<LocalDate, BranchAppointmentInfoEntity> map) {
+  static    List<BranchAppointmentInfo> mapAppointmentInfoToList(Map<String, BranchAppointmentInfoEntity> map) {
         if (map == null || map.isEmpty()) {
             return Collections.emptyList();
         }
@@ -65,7 +66,7 @@ interface BranchMapper {
                         Duration.ofMinutes(entry.getValue().slotDuration()),
                         entry.getValue().utilizationFactor(),
                         entry.getValue().staffCount(),
-                        entry.getKey(),
+                        DayType.valueOf(entry.getKey()),
                         entry.getValue().maxBookingCapacity()
                 ))
                 .toList();

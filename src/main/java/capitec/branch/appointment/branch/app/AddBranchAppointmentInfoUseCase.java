@@ -8,6 +8,8 @@ import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmen
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,9 +17,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalTime;
+import java.time.*;
+import java.util.Comparator;
 import java.util.List;
 
+import java.util.Objects;
 import java.util.function.Supplier;
 
 @Slf4j
@@ -30,6 +34,7 @@ public class AddBranchAppointmentInfoUseCase {
     private final BranchService branchService;
     private final BranchAppointmentInfoService branchAppointmentInfoService;
     private final BranchOperationHoursPort branchOperationHoursPort;
+    private final GetDateOfNextDaysQuery getDateOfNextDaysQuery;
 
     public boolean execute(String branchId, @Valid BranchAppointmentInfoDTO dto) {
 
@@ -95,11 +100,47 @@ public class AddBranchAppointmentInfoUseCase {
     }
 
     private OperationHourDetails getOperationHoursOrThrow(String branchId, BranchAppointmentInfoDTO dto) {
-        return branchOperationHoursPort.getOperationHours(COUNTRY, branchId, dto.day())
-                .orElseThrow(() -> {
-                    log.warn("No operation hours found for the day {}", dto.day());
-                    return new ResponseStatusException(HttpStatus.BAD_REQUEST, "No operation hours found for the day");
-                });
+        var isHoliday  = switch (dto.day()){
+            case PUBLIC_HOLIDAY -> true;
+            case MONDAY, TUESDAY ,WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY -> false;
+        };
+
+        if (isHoliday) {
+            LocalDate now = LocalDate.now();
+            LocalDate lastDayOfYear = now.withDayOfYear(now.lengthOfYear());
+
+            // Get all holidays dates from now to the last day of the year
+            List<Day> holidays = getDateOfNextDaysQuery.execute(now, lastDayOfYear)
+                    .stream()
+                    .filter(Day::isHoliday)
+                    .toList();
+
+            // Get operation hours on holidays and find the one with the shortest duration
+            // to ensure slot config fits all holiday schedules
+            return holidays.stream()
+                    .map(day -> branchOperationHoursPort.getOperationHours(COUNTRY, branchId, day.getDate()).orElse(null))
+                    .filter(Objects::nonNull)
+                    .min(Comparator.comparing(op -> Duration.between(op.openTime(), op.closingTime())))
+                    .orElseThrow(() -> {
+                        log.warn("Branch is closed on public holiday, " +
+                                "override branch operation hours for the day. branchId:{} day:{}", branchId, dto.day());
+                        return new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                                "No operation hours found for the day, branch operation hours for the day");
+                    });
+        }
+        else {
+            DayOfWeek dayOfWeek = DayOfWeek.valueOf(dto.day().name());
+            LocalDate now = LocalDate.now();
+
+            // Find the next occurrence of the day of the week
+            LocalDate targetDate = now.with(java.time.temporal.TemporalAdjusters.nextOrSame(dayOfWeek));
+
+            return branchOperationHoursPort.getOperationHours(COUNTRY, branchId, targetDate)
+                    .orElseThrow(() -> {
+                        log.warn("No operation hours found for the day {}", dto.day());
+                        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "No operation hours found for the day");
+                    });
+        }
     }
 
     private void validateBranchIsOpen(OperationHourDetails operationHourDetails) {

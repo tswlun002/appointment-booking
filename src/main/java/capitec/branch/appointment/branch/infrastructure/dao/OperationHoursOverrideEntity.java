@@ -1,4 +1,4 @@
-package capitec.branch.appointment.branch.infrastructure;
+package capitec.branch.appointment.branch.infrastructure.dao;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;

@@ -1,6 +1,6 @@
 package capitec.branch.appointment.branch.infrastructure.config;
 
-import capitec.branch.appointment.branch.infrastructure.BranchDaoImpl;
+import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.caffeine.CaffeineCacheManager;

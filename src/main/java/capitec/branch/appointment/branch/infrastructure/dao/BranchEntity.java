@@ -1,4 +1,4 @@
-package capitec.branch.appointment.branch.infrastructure;
+package capitec.branch.appointment.branch.infrastructure.dao;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -20,7 +20,7 @@ import java.util.Map;
         @Column("branch_name")
         String branchName,
         @MappedCollection(idColumn = "branch_id", keyColumn = "branch_key")
-        Map<LocalDate, BranchAppointmentInfoEntity> branchAppointmentInfo,
+        Map<String, BranchAppointmentInfoEntity> branchAppointmentInfo,
         @MappedCollection(idColumn = "branch_id", keyColumn = "branch_key")
         Map<LocalDate,OperationHoursOverrideEntity> operationHoursOverride,
         @CreatedDate
