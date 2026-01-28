@@ -26,7 +26,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 @Slf4j
 @RestController
-@RequestMapping(value = "users-service/auth")
+@RequestMapping(value = "/api/v1/users/auth")
 @RequiredArgsConstructor
 @Validated
 public class UserAuthController {
