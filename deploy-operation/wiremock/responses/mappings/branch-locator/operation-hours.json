@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/branches/[a-zA-Z0-9-]+/operation-hours.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "transformers": ["response-template"],
+    "jsonBody": {
+      "openTime": "08:00:00",
+      "closingTime": "17:00:00",
+      "closed": false
+    }
+  }
+}

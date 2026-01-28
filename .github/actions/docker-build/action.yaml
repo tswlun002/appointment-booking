@@ -22,9 +22,6 @@ inputs:
   REGISTRY_REGION:
     required: true
 
-
-
-
 outputs:
   IMAGE_NAME:
     value: ${{ steps.variables.outputs.IMAGE_NAME }}

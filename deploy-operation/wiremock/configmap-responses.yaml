@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wiremock-responses
+  namespace: appointment-booking
+  labels:
+    app: wiremock
+    component: mock-server
+data:
+  branches-search.json: |
+    [
+      {"branchId": "470010", "branchCode": "470010", "name": "Rondebosch", "address": "20 Belmont Road, Rondebosch, Cape Town", "city": "Cape Town", "province": "Western Cape", "postalCode": "7700", "latitude": -33.960553, "longitude": 18.473562, "distance": 0.0, "operationTimes": {"2026-01-26": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-27": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-28": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-29": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-30": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-31": {"openAt": "09:00:00", "closeAt": "13:00:00", "closed": false}, "2026-02-01": {"openAt": "00:00:00", "closeAt": "00:00:00", "closed": true}}},
+      {"branchId": "470020", "branchCode": "470020", "name": "Claremont", "address": "Cavendish Square, Claremont, Cape Town", "city": "Cape Town", "province": "Western Cape", "postalCode": "7708", "latitude": -33.981234, "longitude": 18.465432, "distance": 2.5, "operationTimes": {"2026-01-26": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-27": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-28": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-29": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-30": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-31": {"openAt": "09:00:00", "closeAt": "13:00:00", "closed": false}, "2026-02-01": {"openAt": "00:00:00", "closeAt": "00:00:00", "closed": true}}},
+      {"branchId": "470030", "branchCode": "470030", "name": "Sandton City", "address": "Sandton City Mall, Sandton, Johannesburg", "city": "Johannesburg", "province": "Gauteng", "postalCode": "2196", "latitude": -26.107567, "longitude": 28.056702, "distance": 0.0, "operationTimes": {"2026-01-26": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-27": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-28": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-29": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-30": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-31": {"openAt": "09:00:00", "closeAt": "13:00:00", "closed": false}, "2026-02-01": {"openAt": "00:00:00", "closeAt": "00:00:00", "closed": true}}}
+    ]
+  branches-by-country.json: |
+    [
+      {"branchId": "470010", "branchCode": "470010", "name": "Rondebosch", "address": "20 Belmont Road, Rondebosch, Cape Town", "city": "Cape Town", "province": "Western Cape", "postalCode": "7700", "latitude": -33.960553, "longitude": 18.473562, "operationTimes": {"2026-01-26": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-27": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-28": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-29": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-30": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-31": {"openAt": "09:00:00", "closeAt": "13:00:00", "closed": false}, "2026-02-01": {"openAt": "00:00:00", "closeAt": "00:00:00", "closed": true}}},
+      {"branchId": "470020", "branchCode": "470020", "name": "Claremont", "address": "Cavendish Square, Claremont, Cape Town", "city": "Cape Town", "province": "Western Cape", "postalCode": "7708", "latitude": -33.981234, "longitude": 18.465432, "operationTimes": {"2026-01-26": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-27": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-28": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-29": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-30": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-31": {"openAt": "09:00:00", "closeAt": "13:00:00", "closed": false}, "2026-02-01": {"openAt": "00:00:00", "closeAt": "00:00:00", "closed": true}}},
+      {"branchId": "470030", "branchCode": "470030", "name": "Sandton City", "address": "Sandton City Mall, Sandton, Johannesburg", "city": "Johannesburg", "province": "Gauteng", "postalCode": "2196", "latitude": -26.107567, "longitude": 28.056702, "operationTimes": {"2026-01-26": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-27": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-28": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-29": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-30": {"openAt": "08:00:00", "closeAt": "17:00:00", "closed": false}, "2026-01-31": {"openAt": "09:00:00", "closeAt": "13:00:00", "closed": false}, "2026-02-01": {"openAt": "00:00:00", "closeAt": "00:00:00", "closed": true}}}
+    ]
+  za-holidays-2025.json: |
+    [
+      {"date": "2025-01-01", "localName": "New Year's Day", "name": "New Year's Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-03-21", "localName": "Human Rights Day", "name": "Human Rights Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-04-18", "localName": "Good Friday", "name": "Good Friday", "countryCode": "ZA", "fixed": false, "global": true},
+      {"date": "2025-04-21", "localName": "Family Day", "name": "Family Day", "countryCode": "ZA", "fixed": false, "global": true},
+      {"date": "2025-04-27", "localName": "Freedom Day", "name": "Freedom Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-05-01", "localName": "Workers' Day", "name": "Workers' Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-06-16", "localName": "Youth Day", "name": "Youth Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-08-09", "localName": "National Women's Day", "name": "National Women's Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-09-24", "localName": "Heritage Day", "name": "Heritage Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-12-16", "localName": "Day of Reconciliation", "name": "Day of Reconciliation", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-12-25", "localName": "Christmas Day", "name": "Christmas Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2025-12-26", "localName": "Day of Goodwill", "name": "Day of Goodwill", "countryCode": "ZA", "fixed": true, "global": true}
+    ]
+  za-holidays-2026.json: |
+    [
+      {"date": "2026-01-01", "localName": "New Year's Day", "name": "New Year's Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-03-21", "localName": "Human Rights Day", "name": "Human Rights Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-04-03", "localName": "Good Friday", "name": "Good Friday", "countryCode": "ZA", "fixed": false, "global": true},
+      {"date": "2026-04-06", "localName": "Family Day", "name": "Family Day", "countryCode": "ZA", "fixed": false, "global": true},
+      {"date": "2026-04-27", "localName": "Freedom Day", "name": "Freedom Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-05-01", "localName": "Workers' Day", "name": "Workers' Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-06-16", "localName": "Youth Day", "name": "Youth Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-08-09", "localName": "National Women's Day", "name": "National Women's Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-09-24", "localName": "Heritage Day", "name": "Heritage Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-12-16", "localName": "Day of Reconciliation", "name": "Day of Reconciliation", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-12-25", "localName": "Christmas Day", "name": "Christmas Day", "countryCode": "ZA", "fixed": true, "global": true},
+      {"date": "2026-12-26", "localName": "Day of Goodwill", "name": "Day of Goodwill", "countryCode": "ZA", "fixed": true, "global": true}
+    ]
+  specific-client.json: |
+    {"username": "9001015009087", "email": "john.doe@example.com", "firstname": "John", "lastname": "Doe", "idNumber": "9001015009087", "isCapitecClient": true, "status": "ACTIVE", "verified": true, "enabled": true, "dateOfBirth": "1990-01-01", "cellphone": "+27821234567"}

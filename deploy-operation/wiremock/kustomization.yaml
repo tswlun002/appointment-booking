@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: appointment-booking
+
+resources:
+  - namespace.yaml
+  - configmap-mappings.yaml
+  - configmap-responses.yaml
+  - deployment.yaml
+  - service.yaml
+
+commonLabels:
+  app.kubernetes.io/name: wiremock
+  app.kubernetes.io/component: mock-server
+  app.kubernetes.io/part-of: appointment-booking
+  environment: demo

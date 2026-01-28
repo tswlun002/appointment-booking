@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wiremock-mappings
+  namespace: appointment-booking
+  labels:
+    app: wiremock
+    component: mock-server
+data:
+  branch-locator-search.json: |
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/v1/branches/search.*"
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "bodyFileName": "branch-locator/branches-search.json"
+      }
+    }
+  branch-locator-by-country.json: |
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/v1/branches/country/[a-zA-Z ]+"
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "bodyFileName": "branch-locator/branches-by-country.json"
+      }
+    }
+  branch-locator-operation-hours.json: |
+    {
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/v1/branches/[a-zA-Z0-9-]+/operation-hours.*"
+      },
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "transformers": ["response-template"],
+        "jsonBody": {"openTime": "08:00:00", "closingTime": "17:00:00", "closed": false}
+      }
+    }
+  nager-holidays-2025.json: |
+    {
+      "priority": 1,
+      "request": {"method": "GET", "url": "/api/v3/PublicHolidays/2025/ZA"},
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "bodyFileName": "nager-holidays/za-holidays-2025.json"
+      }
+    }
+  nager-holidays-2026.json: |
+    {
+      "priority": 1,
+      "request": {"method": "GET", "url": "/api/v3/PublicHolidays/2026/ZA"},
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "bodyFileName": "nager-holidays/za-holidays-2026.json"
+      }
+    }
+  nager-holidays-generic.json: |
+    {
+      "priority": 5,
+      "request": {"method": "GET", "urlPathPattern": "/api/v3/PublicHolidays/[0-9]{4}/ZA"},
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "bodyFileName": "nager-holidays/za-holidays-2026.json"
+      }
+    }
+  client-domain-by-id.json: |
+    {
+      "priority": 5,
+      "request": {"method": "GET", "urlPathPattern": "/api/v1/clients/[0-9]{13}"},
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "transformers": ["response-template"],
+        "jsonBody": {
+          "username": "{{request.pathSegments.[3]}}",
+          "email": "client-{{request.pathSegments.[3]}}@example.com",
+          "firstname": "John", "lastname": "Doe",
+          "idNumber": "{{request.pathSegments.[3]}}",
+          "isCapitecClient": true, "status": "ACTIVE", "verified": true, "enabled": true
+        }
+      }
+    }
+  client-domain-specific.json: |
+    {
+      "priority": 1,
+      "request": {"method": "GET", "url": "/api/v1/clients/9001015009087"},
+      "response": {
+        "status": 200,
+        "headers": {"Content-Type": "application/json"},
+        "bodyFileName": "client-domain/specific-client.json"
+      }
+    }
+  client-domain-not-found.json: |
+    {
+      "priority": 1,
+      "request": {"method": "GET", "url": "/api/v1/clients/0000000000000"},
+      "response": {
+        "status": 404,
+        "headers": {"Content-Type": "application/json"},
+        "jsonBody": {"error": "Client not found", "message": "No client found with the provided ID number"}
+      }
+    }

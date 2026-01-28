@@ -1,0 +1,102 @@
+# WireMock Helm Values for Bitnami Chart
+# Chart: https://github.com/bitnami/charts/tree/main/bitnami/wiremock
+
+# Global settings
+global:
+  storageClass: ""
+
+# Image configuration
+image:
+  registry: docker.io
+  repository: bitnami/wiremock
+  tag: "3.5.4"
+  pullPolicy: IfNotPresent
+
+# Replica count
+replicaCount: 1
+
+# WireMock configuration
+wiremock:
+  # Enable global response templating
+  args:
+    - "--global-response-templating"
+    - "--verbose"
+
+# Resource limits
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# Service configuration
+service:
+  type: ClusterIP
+  ports:
+    http: 8080
+
+# Probes
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 15
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  httpGet:
+    path: /__admin/health
+    port: http
+
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+  httpGet:
+    path: /__admin/health
+    port: http
+
+# Persistence for mappings (disabled - using ConfigMaps instead)
+persistence:
+  enabled: false
+
+# Extra volumes for mappings and responses from ConfigMaps
+extraVolumes:
+  - name: wiremock-mappings
+    configMap:
+      name: wiremock-mappings
+  - name: wiremock-responses
+    configMap:
+      name: wiremock-responses
+
+extraVolumeMounts:
+  - name: wiremock-mappings
+    mountPath: /app/mappings
+  - name: wiremock-responses
+    mountPath: /app/__files
+
+# Pod annotations
+podAnnotations: {}
+
+# Node selector (optional)
+nodeSelector: {}
+
+# Tolerations (optional)
+tolerations: []
+
+# Affinity (optional)
+affinity: {}
+
+# Security context
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+
+
