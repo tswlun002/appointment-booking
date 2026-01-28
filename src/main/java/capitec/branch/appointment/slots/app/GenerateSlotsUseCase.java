@@ -21,14 +21,14 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GenerateSlotsUseCase {
     private final static String COUNTRY= "South Africa";
-    private final int SLOTS_DISTRIBUTION_FACTOR = 2;
+    private final static int SLOTS_DISTRIBUTION_FACTOR = 2;
     private final GetActiveBranchesForSlotGenerationPort activeBranchesForSlotGenerationPort;
     private final SlotService slotStorage;
     private static final int ROLLING_WINDOW_DAYS = 7;
 
     /**
      * Command to generate and save time slots for the next given days, by default 7 days.
-     * @param  fromDate default to next day. The first day of slots that will be generated
+     * @param  fromDate default to the next day. The first day of slots that will be generated
      * @param nextDays default 7 days. The number of days of slots that will be generated starting from fromDate
      *
      */
@@ -143,8 +143,8 @@ public class GenerateSlotsUseCase {
         LocalTime openTime = operationTimesDetails.openAt();
         LocalTime closingTime = operationTimesDetails.closeAt();
 
-        // Calculate difference in hours/minutes (e.g., 17:00 - 08:00 = 9 hours)
-        long workingMinutes = java.time.Duration.between(openTime, closingTime).toMinutes();
+        // Calculate the difference in hours/minutes (e.g., 17:00-08:00 = 9 hours)
+        long workingMinutes = Duration.between(openTime, closingTime).toMinutes();
 
         // 2. Calculate theoretical slots per staff
         long slotDurationMinutes = appointmentInfoDetails.slotDuration().toMinutes();
