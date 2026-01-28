@@ -620,4 +620,4 @@ Copyright © 2026 Capitec Bank. All rights reserved.
 
 ## 📞 Support
 
-For questions or issues, contact the Branch Appointment Team at support@capitecbank.co.za
+For questions or issues, contact the Branch Appointment Team.
