@@ -546,12 +546,12 @@ components:
           example: "john.doe@example.com"
         password:
           type: string
-          minLength: 8,
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$",
           description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
           example: "SecurePass123!"
         confirmPassword:
           type: string
-          minLength: 8
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
           description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
           example: "SecurePass123!"
         firstname:
@@ -612,7 +612,7 @@ components:
           example: "123456"
         newPassword:
           type: string
-          minLength: 8
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
           description: New password
           example: "NewSecurePass123!"
 
