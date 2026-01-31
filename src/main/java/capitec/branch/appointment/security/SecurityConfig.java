@@ -79,9 +79,12 @@ public class SecurityConfig {
         return exchange -> {
 
             exchange
-                    .requestMatchers("/authentication-service/auth/*").permitAll()
-                    .requestMatchers("/users-service/auth/*").permitAll()
-                    .requestMatchers("/actuator/*").permitAll()
+                    .requestMatchers("/actuator/**").permitAll()
+                    .requestMatchers("/api/v1/users/auth/**").permitAll()
+                    .requestMatchers("/api/v1/locations/**").permitAll()
+                    .requestMatchers("/api/v1/auth/login/**").permitAll()
+                    .requestMatchers("/api/v1/auth/refresh/**").authenticated()
+                    .requestMatchers("/api/v1/**").authenticated()
                     .anyRequest().authenticated();
         };
     }
