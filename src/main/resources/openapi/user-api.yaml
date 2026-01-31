@@ -607,7 +607,6 @@ components:
       properties:
         email:
           type: string
-          min: 6
           minLength: email
           description: User's email address
           example: "john.doe@example.com"
