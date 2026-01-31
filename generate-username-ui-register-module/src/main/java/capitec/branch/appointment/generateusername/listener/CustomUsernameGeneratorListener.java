@@ -91,7 +91,7 @@ public class CustomUsernameGeneratorListener implements EventListenerProvider {
             var uuid = UUID.randomUUID().toString();
             logger.info("Generating unique username for user ID: " + uuid);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create("http://appointment-booking:8083:users-service/auth/generate/username"))
+                    .uri(URI.create("http://appointment-booking:8083:/api/v1/users/auth/generate/username"))
                     .timeout(Duration.ofSeconds(10))
                     .header("Trace-Id", uuid)
                     .GET()
