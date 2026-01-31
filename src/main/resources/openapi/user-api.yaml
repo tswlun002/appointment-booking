@@ -61,6 +61,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        "401":
+          description: User try to register with ID that exist at Capitec client domain but names or email do match with existing record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
           description: User already exists
           content:
@@ -93,7 +99,7 @@ paths:
               $ref: '#/components/schemas/VerificationRequest'
       responses:
         '200':
-          description: User verified successfully
+          description: User verified successfully and auto logged user
           headers:
             Set-Cookie:
               description: Refresh token cookie
@@ -103,12 +109,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
+        '202':
+          description: User verified successfully but failed to auto logged user. User need to manually login
+          content:
+            application/json:
+              schema:
+                type: string
+        '204':
+          description: User Verified successfully but failed to add response(token/string) to response
         '400':
           description: Invalid OTP or verification failed
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '417':
+          description: OTP is valid  but failed to update user status to verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
         '500':
           description: Internal server error
           content:
@@ -541,12 +562,13 @@ components:
       properties:
         email:
           type: string
+          minLength: 6
           format: email
           description: User's email address
           example: "john.doe@example.com"
         password:
           type: string
-          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$",
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
           description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
           example: "SecurePass123!"
         confirmPassword:
@@ -574,7 +596,6 @@ components:
         isCapitecClient:
           type: boolean
           description: Whether user is an existing Capitec client
-          default: false
 
     VerificationRequest:
       type: object
@@ -582,16 +603,22 @@ components:
       required:
         - email
         - otp
+        - isCapitecClient
       properties:
         email:
           type: string
-          format: email
+          min: 6
+          minLength: email
           description: User's email address
           example: "john.doe@example.com"
         otp:
           type: string
           description: One-time password sent to email
+          minLength: 6
           example: "123456"
+        isCapitecClient:
+          type: boolean
+          description: Whether user is an existing Capitec client
 
     PasswordResetRequest:
       type: object

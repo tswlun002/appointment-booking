@@ -10,11 +10,11 @@ import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.user.domain.*;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
@@ -47,7 +47,7 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
             user = createUserExistingClientFactory.createUser(() ->
                     clientDomain.findByUsername(registerDTO.idNumber()).orElseThrow(() -> {
                 log.error("User is not found with idNumber {}, traceId:{}", registerDTO.idNumber(), traceId);
-                return new NotFoundException("User not found");
+                return new ResponseStatusException(HttpStatus.NOT_FOUND,"User does not exist as  a capitec client");
             }));
 
         }
@@ -85,13 +85,14 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
         return user;
     }
 
+    @Transactional
     public TokenResponse verifyUser(String username, String otp, boolean isCapitecClient, String traceId) {
         log.info("Verifying user, traceId:{}", traceId);
 
         var user = userService.getUserByUsername(username).orElseThrow(() -> {
 
             log.error("User is not found with username {}, traceId:{}", username, traceId);
-            return new NotFoundException("User not found");
+            return new ResponseStatusException(HttpStatus.NOT_FOUND,"User not found");
         });
 
         var validate = false;
@@ -141,22 +142,18 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
             } catch (Exception e) {
 
                 log.warn("Failed to auto login, user must manually login to complete account setup and access services, traceId:{}", traceId, e);
-
-                throw new ResponseStatusException(HttpStatus.ACCEPTED, "OTP verified successfully. Please login manually");
+                 return null;
             }
 
             return tokenResponse;
         } else {
 
-            log.warn("Failed to verify user username, traceId:{}", traceId);
-            return null;
+            log.warn("Failed to set user verification status to verified, username:{}, traceId:{}",username, traceId);
+            throw new ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Temporary failed to updated verification status, please try again.");
         }
 
     }
 
-    public TokenResponse verifyUser(String username, String otp, String traceId) {
-        return verifyUser(username, otp, false, traceId);
-    }
 
     private void assignDefaultRoles(String username, boolean isCapitecClient, String traceId) {
 
@@ -184,7 +181,7 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
     public User getUser(String username) {
         return userService.getUserByUsername(username).orElseThrow(() -> {
             log.error("User not found with username:{}", username);
-            return new NotFoundException("User is not found");
+            return new ResponseStatusException(HttpStatus.NOT_FOUND,"User is not found");
         });
     }
 
@@ -192,7 +189,7 @@ public class RegistrationUserCase implements ImpersonateUserLogin{
         return userService.getUserByEmail(email).orElseThrow(
                 () -> {
                     log.error("User is not found with email:{}", email);
-                    return new NotFoundException("User not found");
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND,"User not found");
                 }
         );
     }

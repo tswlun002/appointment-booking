@@ -10,14 +10,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 
@@ -53,15 +51,21 @@ public class UserAuthController {
 
         var user = registrationUserCase.getUserByEmail(verification.email());
 
-        var tokenResponse=registrationUserCase.verifyUser(user.getUsername(), verification.otp(), traceId);
+        var tokenResponse=registrationUserCase.verifyUser(user.getUsername(), verification.otp(), verification.isCapitecClient(), traceId);
 
-        if(tokenResponse==null){
+        if(tokenResponse == null) {
 
-            log.error("Failed to verify user, traceId:{}", traceId);
-            throw  new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to verify user, OTP incorrect");
+            log.info("Auto login user failed, traceId:{}",traceId);
+            response.setStatus(HttpStatus.ACCEPTED.value());
+            try {
+                new ObjectMapper().writeValue(response.getOutputStream(), "OTP verified successfully. Please can login");
+            } catch (IOException e) {
+                log.warn("Failed to set response body, traceId:{}",traceId,e);
+                response.setStatus(HttpStatus.NO_CONTENT.value());
+            }
         }
 
-        addTokenToCookie(tokenResponse, response, traceId);
+        else addTokenToCookie(tokenResponse, response, traceId);
     }
 
     private  void addTokenToCookie(TokenResponse token, HttpServletResponse response, String traceId) {
@@ -88,8 +92,9 @@ public class UserAuthController {
             new ObjectMapper().writeValue(response.getOutputStream(), token);
 
         } catch (IOException e) {
-            log.error("Failed to write token to response, traceId:{}", traceId,e);
-            throw new InternalServerErrorException("Internal Server Error");
+            log.warn("Failed to write token to response, traceId:{}", traceId,e);
+            response.setStatus(HttpStatus.NO_CONTENT.value());
+
         }
     }
 
