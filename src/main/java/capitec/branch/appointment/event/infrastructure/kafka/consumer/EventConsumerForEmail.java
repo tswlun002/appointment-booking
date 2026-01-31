@@ -12,24 +12,26 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+
 import java.util.function.Function;
 
 @Slf4j
 @RequiredArgsConstructor
-@Component
+@Service
 public class EventConsumerForEmail {
 
     private final ApplicationEventPublisher eventPublisher;
     private  final EventMapperToEmail eventMapperToEmail;
 
-    private Function<EventValue<String,?>,String>  getOriginalTopic =(eventValue)-> eventValue.topic().substring(0, eventValue.topic().lastIndexOf("."));
+    private final Function<EventValue<String,?>,String>  getOriginalTopic =(eventValue)-> eventValue.topic().substring(0, eventValue.topic().lastIndexOf("."));
 
     @KafkaListener(topics = {
             "#{T(capitec.branch.appointment.event.app.Topics).REGISTRATION_EVENT}",
             "#{T(capitec.branch.appointment.event.app.Topics).DELETE_USER_ACCOUNT_REQUEST_EVENT}",
             "#{T(capitec.branch.appointment.event.app.Topics).PASSWORD_RESET_REQUEST_EVENT}",
     },
-            groupId = "otp-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "otp-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public  void OTPEvents(ConsumerRecord<String, EventValue<String, OTPMetadata>> consumerRecord)  {
 
         var metadata = consumerRecord.value();
@@ -41,7 +43,7 @@ public class EventConsumerForEmail {
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.event.app.Topics).OTPEmailPattern()}",
-            groupId = "otp-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "otp-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void recoveryOTPEvents(ConsumerRecord<String, EventValue<String, OTPMetadata>> consumerRecord) {
 
         var metadata = consumerRecord.value();
@@ -62,7 +64,7 @@ public class EventConsumerForEmail {
             "#{T(capitec.branch.appointment.event.app.Topics).DELETE_USER_ACCOUNT_EVENT}",
             "#{T(capitec.branch.appointment.event.app.Topics).PASSWORD_UPDATED_EVENT}",
     },
-            groupId = "confirmation-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "confirmation-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void confirmationEvents(ConsumerRecord<String, EventValue<String, OTPMetadata>>  consumerRecord)  {
 
         var metadata = consumerRecord.value();
@@ -75,7 +77,7 @@ public class EventConsumerForEmail {
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.event.app.Topics).confirmationEmailPattern()}",
-            groupId = "confirmation-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "confirmation-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void recoveryConfirmationEvents(ConsumerRecord<String, EventValue<String,OTPMetadata>> consumerRecord) {
 
         var metadata = consumerRecord.value();
@@ -92,7 +94,7 @@ public class EventConsumerForEmail {
             "#{T(capitec.branch.appointment.event.app.Topics).APPOINTMENT_RESCHEDULED}",
             "#{T(capitec.branch.appointment.event.app.Topics).APPOINTMENT_BOOKED}",
     },
-            groupId = "booked-appointment-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "booked-appointment-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void bookedAppointmentEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord)  {
 
         var metadata = consumerRecord.value();
@@ -104,7 +106,7 @@ public class EventConsumerForEmail {
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.event.app.Topics).bookedAppointmentPattern()}",
-            groupId = "booked-appointment-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "booked-appointment-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void recoveryBookedAppointmentEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord) {
 
         var metadata = consumerRecord.value();
@@ -120,7 +122,7 @@ public class EventConsumerForEmail {
             "#{T(capitec.branch.appointment.event.app.Topics).APPOINTMENT_CANCELED}",
             "#{T(capitec.branch.appointment.event.app.Topics).ATTENDED_APPOINTMENT}"
     },
-            groupId = "appointment-updates-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "appointment-updates-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void appointmentUpdatesEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord)  {
 
         var metadata = consumerRecord.value();
@@ -132,7 +134,7 @@ public class EventConsumerForEmail {
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.event.app.Topics).appointmentUpdatesPattern()}",
-            groupId = "appointment-updates-events",autoStartup = "${kafka.listen.auto.start:true}")
+            groupId = "appointment-updates-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void recoveryAppointmentUpdatesEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord) {
 
         var metadata = consumerRecord.value();

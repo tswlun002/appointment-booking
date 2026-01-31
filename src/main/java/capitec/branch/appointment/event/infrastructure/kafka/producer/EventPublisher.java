@@ -50,6 +50,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         var metadata = new OTPMetadata(fullname, username, email, otpCode);
         String key = username + otpCode;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
+        log.debug("Sending registration event to kafka {}", eventValue);
         return publishAsync(eventValue);
     }
 
@@ -61,7 +62,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         LocalDateTime now = LocalDateTime.now();
         var key = username + now;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, now);
-
+        log.debug("Sending verified event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
@@ -72,7 +73,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         var metadata = new OTPMetadata(fullname, username, email, otp);
         var key = username + otp;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending delete user event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
@@ -84,7 +85,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         var metadata = new OTPMetadata(fullname, username, email, otp);
         var key = username + otp;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending password updated event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
@@ -99,7 +100,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         var metadata = new OTPMetadata(fullname, username, email, OTP);
         var key = username + OTP;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending password reset request event to kafka {}", eventValue);
         return publishAsync(eventValue);
     }
 
@@ -115,7 +116,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         var key = username + OTP;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,metadata, traceId, topic, key, LocalDateTime.now());
 
-
+        log.debug("Sending user request event to kafka {}", eventValue);
         return publishAsync(eventValue);
     }
 
@@ -132,7 +133,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         var appointmentMetadata = new AppointmentMetadata(id, reference, branchId, customerUsername,occurredAt , map);
         String key = id + reference;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending booked appointment event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
 
     }
@@ -158,7 +159,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
         String key = appointmentId + appointmentReference;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending attend appointment event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
@@ -184,7 +185,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         );
         String key = appointmentId + reference;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending cancel event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
 
     }
@@ -207,7 +208,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         );
         String key = appointmentId + reference;
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
-
+        log.debug("Sending  reschedule event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 

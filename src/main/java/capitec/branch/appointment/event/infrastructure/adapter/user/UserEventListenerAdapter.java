@@ -46,8 +46,15 @@ public class UserEventListenerAdapter {
     @EventListener(UserCreatedEvent.class)
     public void onUserCreated(@Valid UserCreatedEvent event) {
         log.info("Received user registration event, traceId: {}", event.traceId());
-        var otp = otpPort.generateOTP(event.username(), event.email(),"EMAIL_VERIFICATION");
-        otpCreationService.sendRegistrationEvent(event.username(), event.email(), event.fullname(), otp, event.traceId());
+        var otp = otpPort.generateOTP(event.username(), event.traceId(),"EMAIL_VERIFICATION");
+        otpCreationService.sendRegistrationEvent(event.username(), event.email(), event.fullname(), otp, event.traceId())
+                .whenComplete((resp, throwable) -> {
+                    if (throwable != null) {
+                        log.error("Failed to send registration event, traceId: {}", event.traceId(), throwable);
+                    }
+                    else log.info("Sending registration event, state:{} traceId: {}",resp, event.traceId());
+                });
+
 
     }
 
@@ -55,14 +62,30 @@ public class UserEventListenerAdapter {
     public void onPasswordResetRequest(@Valid PasswordResetRequestEvent event) {
         log.info("Received password reset request event, traceId: {}", event.traceId());
         var otp = otpPort.generateOTP(event.username(), event.email(), "PASSWORD_RESET");
-        otpCreationService.sendPasswordResetRequestEvent(event.username(), event.email(), event.fullname(), otp, event.traceId());
+        otpCreationService.sendPasswordResetRequestEvent(event.username(), event.email(), event.fullname(), otp, event.traceId())
+                .whenComplete((resp, throwable) -> {
+                    if (throwable != null) {
+                        log.error("Failed to send reset request event, traceId: {}", event.traceId(), throwable);
+                    }
+                    else{
+                        log.info("Sending reset request event, state:{} traceId: {} ", resp, event.traceId());
+                    }
+                });
     }
 
     @EventListener(DeleteUserRequestEvent.class)
     public void onDeleteUserRequest(@Valid DeleteUserRequestEvent event) {
         log.info("Received delete user request event, traceId: {}", event.traceId());
         var otp = otpPort.generateOTP(event.username(), event.email(), "ACCOUNT_DELETION");
-        otpCreationService.deleteUserRequestEvent(event.username(), event.email(), event.fullname(), otp, event.traceId());
+        otpCreationService.deleteUserRequestEvent(event.username(), event.email(), event.fullname(), otp, event.traceId())
+        .whenComplete((resp, throwable) -> {
+            if (throwable != null) {
+                log.error("Failed to delete user request event, traceId: {}", event.traceId(), throwable);
+            }
+            else{
+                log.info("Sending delete user request event, state:{} traceId: {} ",  resp, event.traceId());
+            }
+        });
     }
 
 }
