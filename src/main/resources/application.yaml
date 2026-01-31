@@ -94,8 +94,8 @@ kafka:
 # Email
 mail:
   host: ${MAIL_HOST}
-  protocol: "smtp"
-  port: 465
+  protocol: ${MAIL_PROTOCOL:smtp}
+  port: ${MAIL_PORT:465}
   username: ${MAIL_USERNAME}
   password: ${MAIL_PASSWORD}
 # CLIENT-DOMAIN
