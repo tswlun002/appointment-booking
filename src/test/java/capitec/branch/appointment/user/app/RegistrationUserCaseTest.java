@@ -120,7 +120,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
 
-        TokenResponse tokenResponse = registrationUserCase.verifyUser(user.getUsername(), otp.getCode(), traceId);
+        TokenResponse tokenResponse = registrationUserCase.verifyUser(user.getUsername(), otp.getCode(),false, traceId);
 
         assertThat(tokenResponse).isNotNull();
 
@@ -155,7 +155,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
 
-        TokenResponse tokenResponse = registrationUserCase.verifyUser(user.getUsername(), otp.getCode(), traceId);
+        TokenResponse tokenResponse = registrationUserCase.verifyUser(user.getUsername(), otp.getCode(),false, traceId);
 
         assertThat(tokenResponse).isNotNull();
 
@@ -192,14 +192,14 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         var otp = otpService.find(user.getUsername(),otp1.getCode()).orElseThrow();
 
         OTP finalOtp1 = otp;
-        assertThatThrownBy(()->registrationUserCase.verifyUser(user.getUsername(), finalOtp1.getCode()+"+", "fef516c1-bd53-4ae1-b2bf-f18cfc0071c9"))
+        assertThatThrownBy(()->registrationUserCase.verifyUser(user.getUsername(), finalOtp1.getCode()+"+", false,"fef516c1-bd53-4ae1-b2bf-f18cfc0071c9"))
                 .isInstanceOf(ResponseStatusException.class);;
 
         OTP finalOtp = otp;
-        assertThatThrownBy(()->registrationUserCase.verifyUser(user.getUsername(), finalOtp.getCode()+"#", "b36948d9-e735-4313-9492-aef05e9c4228"))
+        assertThatThrownBy(()->registrationUserCase.verifyUser(user.getUsername(), finalOtp.getCode()+"#", false,"b36948d9-e735-4313-9492-aef05e9c4228"))
                 .isInstanceOf(ResponseStatusException.class);
 
-        assertThatThrownBy(()-> registrationUserCase.verifyUser(user.getUsername(), "25hgsf", "7297ef81-6bdd-4956-8e29-a17940971db8"))
+        assertThatThrownBy(()-> registrationUserCase.verifyUser(user.getUsername(), "25hgsf", false,"7297ef81-6bdd-4956-8e29-a17940971db8"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Too many attempt to verify OTP");
         var verifiedUser = registrationUserCase.getUser(user.getUsername());
