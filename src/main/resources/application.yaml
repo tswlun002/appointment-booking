@@ -60,8 +60,12 @@ otp:
 kafka:
   replica: ${KAFKA_REPLICAS:3}
   listen:
-    auto:
-      start: false
+    produce:
+      auto:
+        start: false
+    consumer:
+      auto:
+        start: true
   error:
     persistence:
       enabled: true
@@ -148,3 +152,23 @@ capitec:
   #       initial-interval: 300ms
   #       multiplier: 2.0
   #       randomization-factor: 0.3
+
+# LOGGING
+logging:
+  level:
+    capitec:
+      branch:
+        appointment:
+          platform:
+            application: ${APPLICATION_LOGGING_LEVEL:INFO}
+    org:
+      apache:
+        kafka:  ${ KAFKA_LOGGING_LEVEL:INFO}
+      keycloak: ${KEYCLOAK_LOGGING_LEVEL:INFO}
+      org:
+        springframework:
+          kafka: ${ KAFKA_LOGGING_LEVEL:INFO}
+    #    metrics-log: DEBUG
+    #    platform-log: DEBUG
+    #    general-log: DEBUG
+    root: ${ROOT_LOGGING_LEVEL:INFO}
