@@ -662,6 +662,9 @@ components:
           type: string
           description: Token scope
           example: "openid profile email"
+        id_token:
+          type: string
+          description: JWT identity token
 
     # ==================== User Profile Schemas ====================
     UserResponse:
