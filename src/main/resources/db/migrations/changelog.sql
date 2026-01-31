@@ -53,7 +53,7 @@ CREATE TABLE branch_appointment_info
     last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
     branch_id          SERIAL           NOT NULL REFERENCES branch (id) ON DELETE CASCADE,
     branch_business_id VARCHAR(36)      NOT NULL,
-    branch_key         DATE             NOT NULL,
+    branch_key         VARCHAR(16)      NOT NULL,
     slot_duration      INTEGER          NOT NULL,
     utilization_factor DOUBLE PRECISION NOT NULL,
     staff_count        INTEGER          NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE branch_appointment_info
     CONSTRAINT check_slot_duration_positive CHECK (slot_duration > 0),
     CONSTRAINT check_utilization_factor_range CHECK (utilization_factor > 0 AND utilization_factor <= 1),
     CONSTRAINT check_staff_count_positive CHECK (staff_count > 0),
-    CONSTRAINT check_day_branch_key_equal CHECK (day =branch_key),
+    CONSTRAINT check_day_branch_key_equal CHECK (day = branch_key),
     CONSTRAINT check_max_booking_capacity_positive CHECK (max_booking_capacity>0)
 );
 --ROLLBACK DROP TABLE branch_appointment_info
@@ -101,7 +101,7 @@ CREATE INDEX idx_branch_id_username_status ON staff (branch_id, username, status
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='staff';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'username';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_entity' AND column_name = 'username';
-ALTER TABLE staff ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES user_entity (username) ON DELETE RESTRICT;
+---ALTER TABLE staff ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES user_entity (username) ON DELETE RESTRICT;
 -- ROLLBACK ALTER TABLE staff DROP CONSTRAINT fk_username;
 
 -- changeset Lunga:8
@@ -284,7 +284,7 @@ ALTER TABLE appointment ADD CONSTRAINT fk_assigned_consultant_id FOREIGN KEY (as
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='appointment';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'appointment' AND column_name = 'customer_username';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_entity' AND column_name = 'username';
-ALTER TABLE appointment ADD CONSTRAINT fk_customer_username FOREIGN KEY (customer_username) REFERENCES user_entity (username) ON DELETE RESTRICT;
+--ALTER TABLE appointment ADD CONSTRAINT fk_customer_username FOREIGN KEY (customer_username) REFERENCES user_entity (username) ON DELETE RESTRICT;
 -- ROLLBACK ALTER TABLE appointment DROP CONSTRAINT fk_customer_username;
 
 
@@ -316,8 +316,7 @@ CREATE INDEX idx_username_status ON otp (username, status);
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM  information_schema.tables  where table_name='otp';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'otp' AND column_name = 'username';
 -- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_entity' AND column_name = 'username';
-ALTER TABLE otp
-    ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES user_entity (value) ON DELETE CASCADE;
+--ALTER TABLE otp ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES user_entity (value) ON DELETE CASCADE;
 -- Foreign key reference
 -- ROLLBACK ALTER TABLE otp DROP CONSTRAINT unique_username;
 
