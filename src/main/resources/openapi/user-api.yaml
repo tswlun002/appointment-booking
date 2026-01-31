@@ -559,10 +559,10 @@ components:
         - confirmPassword
         - firstname
         - lastname
+        - isCapitecClient
       properties:
         email:
           type: string
-          minLength: 6
           format: email
           description: User's email address
           example: "john.doe@example.com"
