@@ -8,7 +8,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Slf4j
 @Component
@@ -20,7 +23,8 @@ public class UserEventListenerAdapter {
 
     private final OTPPort otpPort;
 
-    @EventListener(UserVerifiedEvent.class)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, classes = UserVerifiedEvent.class)
+    @Async
     public void onUserVerified(@Valid UserVerifiedEvent event) {
         log.info("Received user verified event, traceId: {}", event.traceId());
 
