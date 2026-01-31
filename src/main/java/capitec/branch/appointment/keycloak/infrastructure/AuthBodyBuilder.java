@@ -53,9 +53,10 @@ public class AuthBodyBuilder {
         LinkedMultiValueMap<String, String> params = createBaseParams();
         params.add("grant_type", GRANT_TYPE_TOKEN_EXCHANGE);
         params.add("subject_token_type", SUBJECT_TOKEN_TYPE);
-        params.add("scope", DEFAULT_SCOPE);
+        params.set("scope", DEFAULT_SCOPE);
         params.add("subject_token", token);
         params.add("requested_subject", impersonate.username());
+        params.add("requested_token_type", REQUESTED_TOKEN_TYPE);
         return params;
     }
 
