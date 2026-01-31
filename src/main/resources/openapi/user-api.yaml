@@ -607,7 +607,7 @@ components:
       properties:
         email:
           type: string
-          minLength: email
+          format: email
           description: User's email address
           example: "john.doe@example.com"
         otp:
