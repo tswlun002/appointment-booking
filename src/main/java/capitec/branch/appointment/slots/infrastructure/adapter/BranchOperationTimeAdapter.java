@@ -3,6 +3,7 @@ package capitec.branch.appointment.slots.infrastructure.adapter;
 import capitec.branch.appointment.branch.app.GetBranchQuery;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.location.app.NearbyBranchDTO;
 import capitec.branch.appointment.location.app.SearchBranchesByAreaQuery;
@@ -12,38 +13,44 @@ import capitec.branch.appointment.slots.app.port.BranchOperationTimesDetails;
 import capitec.branch.appointment.slots.app.port.GetActiveBranchesForSlotGenerationPort;
 import capitec.branch.appointment.slots.app.port.OperationTimesDetails;
 import java.time.LocalDate;
+import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.*;
+import java.util.Map;
+import java.util.Collection;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
+
 
 @Service
 @Slf4j
-
-
 public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGenerationPort {
 
     private final SearchBranchesByAreaUseCase searchBranchesByAreaUseCase;
     private final GetBranchQuery getBranchQuery;
     private final AsyncTaskExecutor taskExecutor;
-
-    Set<LocalDate> nextSevenDays = Stream.iterate(LocalDate.now(), d -> d.plusDays(1))
-            .limit(7)
-            .collect(Collectors.toSet());
+    private final GetDateOfNextDaysQuery getDateOfNextDaysQuery;
 
     public BranchOperationTimeAdapter(SearchBranchesByAreaUseCase searchBranchesByAreaUseCase, GetBranchQuery getBranchQuery,
-                                      @Qualifier("applicationTaskExecutor") AsyncTaskExecutor taskExecutor) {
+                                      @Qualifier("applicationTaskExecutor") AsyncTaskExecutor taskExecutor,
+                                      GetDateOfNextDaysQuery getDateOfNextDaysQuery) {
         this.searchBranchesByAreaUseCase = searchBranchesByAreaUseCase;
         this.getBranchQuery = getBranchQuery;
         this.taskExecutor = taskExecutor;
+        this.getDateOfNextDaysQuery = getDateOfNextDaysQuery;
+
     }
 
     @Override
@@ -118,16 +125,10 @@ public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGener
         Branch dbBranch = dbBrainchIdMap.get(branchId);
         NearbyBranchDTO apiBranch = apiBranchIdMap.get(branchId);
 
+        Map<@NotNull DayType, BranchAppointmentInfo> branchInfoPartitionByDayType = dbBranch.getBranchAppointmentInfo().stream().collect(Collectors.toMap(BranchAppointmentInfo::day, b -> b));
 
-        Map<LocalDate, AppointmentInfoDetails> finalAppointmentMap = dbBranch.getBranchAppointmentInfo()
-                .stream()
-                .filter(b->
-                        nextSevenDays.stream().anyMatch(date -> date.equals(b.day()))
-                )
-                .collect(Collectors.toMap(
-                        BranchAppointmentInfo::day,
-                        this::mapToAppointmentInfo
-                ));
+        Map<LocalDate, AppointmentInfoDetails> finalAppointmentMap  = mapToAppointmentInfo(branchId,branchInfoPartitionByDayType);
+
 
         Map<LocalDate, OperationTimesDetails> finalOperationMap = new HashMap<>();
 
@@ -174,6 +175,52 @@ public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGener
         }
 
         return new BranchOperationTimesDetails(branchId, finalOperationMap, finalAppointmentMap);
+    }
+
+    private Map<LocalDate, AppointmentInfoDetails> mapToAppointmentInfo( String branchId, Map<@NotNull DayType, BranchAppointmentInfo> branchInfoPartitionByDayType ){
+        LocalDate now = LocalDate.now();
+        Set<Day> nextSevenDays = getDateOfNextDaysQuery.execute(now, now.plusDays(6));
+
+        Map<LocalDate, AppointmentInfoDetails>  finalAppointmentMap= new HashMap<>();
+
+        for (Day day : nextSevenDays) {
+
+            if(day.isHoliday()){
+
+                var appointmentInfo = branchInfoPartitionByDayType.get(DayType.PUBLIC_HOLIDAY);
+                if(appointmentInfo==null){
+                    log.info("Branch {} has no appointment information for day:{}", branchId, day);                }
+                else {
+                    AppointmentInfoDetails value = this.mapToAppointmentInfo(appointmentInfo);
+                    finalAppointmentMap.put(day.getDate(), value);
+                }
+
+            }
+            else {
+
+                String upperCase = day.getDate().getDayOfWeek().name().toUpperCase();
+                DayType key = switch (upperCase){
+                    case  "MONDAY" ,"TUESDAY", "WEDNESDAY","THURSDAY",
+                          "FRIDAY", "SATURDAY","SUNDAY"-> DayType.valueOf(upperCase);
+                    default -> null;
+                };
+                if(key==null){
+
+                    log.warn("The day:{} is not one the DayType system has.",day);
+                    continue;
+                }
+
+                var appointmentInfo = branchInfoPartitionByDayType.get(key);
+                if(appointmentInfo == null){
+                    log.info("Branch {} has no appointment information for day:{}", branchId, day);
+                }
+                else {
+                    AppointmentInfoDetails value = this.mapToAppointmentInfo(appointmentInfo);
+                    finalAppointmentMap.put(day.getDate(), value);
+                }
+            }
+        }
+        return finalAppointmentMap;
     }
 
     private AppointmentInfoDetails mapToAppointmentInfo(BranchAppointmentInfo info) {
