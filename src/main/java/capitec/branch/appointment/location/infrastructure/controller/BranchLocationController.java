@@ -8,6 +8,7 @@ import capitec.branch.appointment.location.app.SearchBranchesByAreaUseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,6 +37,7 @@ public class BranchLocationController {
      * @return list of branches matching the search criteria
      */
     @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('app_user')")
     public ResponseEntity<BranchSearchResponse> searchBranchesByArea(
             @RequestParam("searchText")
             String searchText,
@@ -63,6 +65,7 @@ public class BranchLocationController {
      * @return list of nearby branches sorted by distance
      */
     @GetMapping("/nearby")
+    @PreAuthorize("hasAnyRole('app_user')")
     public ResponseEntity<NearbyBranchesResponse> findNearestBranches(
             @RequestParam("latitude")
             Double latitude,
