@@ -86,9 +86,9 @@ interface ApiToDomainMapper {
                         operationHours.put(day.getDate(), operationTime);
                     }
                 }
-                case WEEK_DAYS->{
+                case MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY->{
                     var dates = dateOfTheWeek.stream().filter(Day::isWeekday).collect(Collectors.toSet());
-                    OperationTimeResponse operationTimeResponse = operationHourApiResponseMap.get(DayTypeResponse.WEEK_DAYS);
+                    OperationTimeResponse operationTimeResponse = operationHourApiResponseMap.get(dayTypeResponse);
                     for(var day: dates) {
                         OperationTime operationTime = mapToOperationTime(operationTimeResponse, false, day.getDate(), day.getDate());
                         operationHours.put(day.getDate(), operationTime);
