@@ -6,8 +6,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.stereotype.Component;
-
-import java.util.*;
+import java.util.HashSet;
+import java.util.Collections;
+import java.util.List;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -27,27 +30,16 @@ public class KeycloakRoleConverter implements Converter<Jwt, Collection<GrantedA
     }
 
     private Collection<GrantedAuthority> extractResourceRoles(Jwt source) {
-        Map<String, Object> resourceAccess = source.getClaim("resource_access");
+        List<String> rolesString = source.getClaim("roles");
 
-        if (resourceAccess == null || resourceAccess.isEmpty()) {
+        if (rolesString == null || rolesString.isEmpty()) {
             return Collections.emptyList();
         }
 
-        Collection<GrantedAuthority> roles = new HashSet<>();
+        Collection<GrantedAuthority> roles = rolesString.stream().map(
+                role->new SimpleGrantedAuthority("ROLE_" + role)
+        ).collect(Collectors.toSet());;
 
-        // Extract roles from all clients
-        resourceAccess.forEach((client, resource) -> {
-            if (resource instanceof Map) {
-                Map<String, Object> resourceMap = (Map<String, Object>) resource;
-                Object rolesObj = resourceMap.get("roles");
-
-                if (rolesObj instanceof Collection) {
-                    ((Collection<String>) rolesObj).forEach(role ->
-                            roles.add(new SimpleGrantedAuthority("ROLE_" + role))
-                    );
-                }
-            }
-        });
 
         return roles;
     }
