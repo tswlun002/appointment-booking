@@ -122,6 +122,8 @@ management:
       enabled: true
 server:
   port: 8083
+cookie:
+  samesite: ${COOKIE_SAMESITE_TYPE:STRICT}
 
 holidays-client:
   baseurl: ${HOLIDAYS_CLIENT_API:https://dateOfSlots.nager.at}
