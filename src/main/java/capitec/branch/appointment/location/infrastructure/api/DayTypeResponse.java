@@ -2,7 +2,11 @@ package capitec.branch.appointment.location.infrastructure.api;
 
 public enum DayTypeResponse {
 
-    WEEK_DAYS,
+    MONDAY,
+    TUESDAY,
+    WEDNESDAY,
+    THURSDAY,
+    FRIDAY,
     SATURDAY,
     SUNDAY,
     PUBLIC_HOLIDAY,
