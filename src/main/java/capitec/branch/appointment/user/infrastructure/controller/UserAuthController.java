@@ -10,8 +10,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.ws.rs.core.NewCookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -31,6 +33,8 @@ public class UserAuthController {
 
     private  final RegistrationUserCase registrationUserCase;
     private final PasswordResetUseCase passwordResetUseCase;
+    @Value("${cookie.samesite}")
+    private NewCookie.SameSite samesiteCookie;
 
 
     @PostMapping("/register")
@@ -76,13 +80,9 @@ public class UserAuthController {
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setAttribute("scope", token.getScope());
-        cookie.setPath("/"); // global cookie accessible everywhere
+        cookie.setAttribute("samesite", samesiteCookie.name());
+        cookie.setPath("/");
         response.addCookie(cookie);
-
-        //Add access token response body
-        //Map<String, TokenResponse> tokens = new HashMap<>();
-       // tokens.put("access_token", token);
-
         response.setContentType(APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.OK.value());
         try {
@@ -91,7 +91,7 @@ public class UserAuthController {
             token.setRefreshExpiresIn(0);
             new ObjectMapper().writeValue(response.getOutputStream(), token);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.warn("Failed to write token to response, traceId:{}", traceId,e);
             response.setStatus(HttpStatus.NO_CONTENT.value());
 

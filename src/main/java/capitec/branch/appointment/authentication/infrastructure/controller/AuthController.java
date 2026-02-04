@@ -6,9 +6,10 @@ import capitec.branch.appointment.authentication.domain.AuthUseCase;
 import capitec.branch.appointment.authentication.domain.TokenResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.ws.rs.InternalServerErrorException;
+import jakarta.ws.rs.core.NewCookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,8 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
@@ -34,6 +33,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 public class AuthController {
 
     private final AuthUseCase authUseCase;
+    @Value("${cookie.samesite}")
+    private NewCookie.SameSite sameSite;
 
     /**
      * User login.
@@ -107,6 +108,7 @@ public class AuthController {
      * @param traceId  unique trace identifier for request tracking
      */
     @PostMapping("/logout")
+    @PreAuthorize("hasAnyRole('app_user')")
     public void logout(@RequestHeader(HttpHeaders.COOKIE) String cookies, @RequestHeader("Trace-Id") String traceId) {
         String[] cookiesKeyValue = cookies.split(";");
         var refreshToken = Arrays.stream(cookiesKeyValue)
@@ -128,22 +130,21 @@ public class AuthController {
         cookie.setSecure(true);
         cookie.setHttpOnly(true);
         cookie.setAttribute("scope", token.getScope());
+        cookie.setAttribute("samesite", sameSite.name());
         cookie.setPath("/");
         response.addCookie(cookie);
-
-        // Add access token to response body
-        Map<String, TokenResponse> tokens = new HashMap<>();
-        tokens.put("access_token", token);
-
         response.setContentType(APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.OK.value());
         try {
+
             token.setRefreshToken(null);
             token.setRefreshExpiresIn(0);
-            new ObjectMapper().writeValue(response.getOutputStream(), tokens);
-        } catch (IOException e) {
-            log.error("Failed to write token to response, traceId:{}", traceId, e);
-            throw new InternalServerErrorException("Internal Server Error");
+            new ObjectMapper().writeValue(response.getOutputStream(), token);
+
+        } catch (Exception e) {
+            log.warn("Failed to write token to response, traceId:{}", traceId,e);
+            response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+
         }
     }
 }
