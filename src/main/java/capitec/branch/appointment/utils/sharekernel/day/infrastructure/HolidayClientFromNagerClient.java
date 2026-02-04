@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -21,12 +22,21 @@ import java.util.Set;
 public class HolidayClientFromNagerClient implements HolidayClient {
 
     private final RestClient holidaysRestClient;
+    public   static  final  String HOLIDAY_CACHE_MANAGER ="holidayCacheManager";
+    public   static  final  String HOLIDAY_CACHE_NAME ="holidayCache";
+    public  static final int CACHE_DURATION = 24;
 
     public HolidayClientFromNagerClient(@Qualifier("holidaysRestClient") RestClient holidaysRestClient) {
         this.holidaysRestClient = holidaysRestClient;
     }
 
     @Override
+    @Cacheable(
+            value = HOLIDAY_CACHE_NAME,
+            key = "#countryCode + '-' + #year",
+            cacheManager = HOLIDAY_CACHE_MANAGER,
+            unless = "#result == null || #result.isEmpty()"
+    )
     public Set<Holiday> getHolidays(String countryCode, int year) {
 
         Set<Holiday> exchange;
