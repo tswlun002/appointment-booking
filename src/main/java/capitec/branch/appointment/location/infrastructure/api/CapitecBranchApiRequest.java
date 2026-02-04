@@ -4,12 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
  sealed interface CapitecBranchApiRequest {
 
-    int DEFAULT_TAKE = 3000;
+    int DEFAULT_TAKE = 50;
 
     record AreaSearchRequest(
-            @JsonProperty("Query")
+            @JsonProperty("query")
             String query,
-            @JsonProperty("Take")
+            @JsonProperty("take")
             int take
     ) implements CapitecBranchApiRequest {
         public AreaSearchRequest(String query) {
@@ -19,11 +19,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 
     record CoordinatesSearchRequest(
-            @JsonProperty("Latitude")
+            @JsonProperty("latitude")
             double latitude,
-            @JsonProperty("Longitude")
+            @JsonProperty("longitude")
             double longitude,
-            @JsonProperty("Take")
+            @JsonProperty("take")
             int take
     ) implements CapitecBranchApiRequest {
         public CoordinatesSearchRequest(double latitude, double longitude) {

@@ -10,53 +10,53 @@ import java.util.Map;
  * Maps to: https://www.capitecbank.co.za/api/Branch
  */
 record CapitecBranchApiResponse(
-        @JsonProperty("Branches")
+        @JsonProperty("branches")
         List<CapitecBranchDto> branches
 ) {
     record CapitecBranchDto(
-            @JsonProperty("Id")
+            @JsonProperty("id")
             String id,
 
-            @JsonProperty("Code")
+            @JsonProperty("code")
             String code,
 
-            @JsonProperty("Latitude")
+            @JsonProperty("latitude")
             Double latitude,
 
-            @JsonProperty("Longitude")
+            @JsonProperty("longitude")
             Double longitude,
 
-            @JsonProperty("Name")
+            @JsonProperty("name")
             String name,
 
-            @JsonProperty("AddressLine1")
+            @JsonProperty("addressLine1")
             String addressLine1,
 
-            @JsonProperty("AddressLine2")
+            @JsonProperty("addressline2")
             String addressLine2,
 
-            @JsonProperty("OperationHours")
+            @JsonProperty("operationhours")
             Map<DayTypeResponse,OperationTimeResponse> operationHours,
 
-            @JsonProperty("City")
+            @JsonProperty("city")
             String city,
 
-            @JsonProperty("Province")
+            @JsonProperty("province")
             String province,
 
-            @JsonProperty("IsAtm")
+            @JsonProperty("isAtm")
             Boolean isAtm,
 
-            @JsonProperty("CashAccepting")
+            @JsonProperty("cashAccepting")
             Boolean cashAccepting,
 
-            @JsonProperty("HandlesHomeLoans")
+            @JsonProperty("handlesHomeLoans")
             Boolean handlesHomeLoans,
 
             @JsonProperty("IsClosed")
             Boolean isClosed,
 
-            @JsonProperty("BusinessBankCenter")
+            @JsonProperty("businessBankCenter")
             Boolean businessBankCenter
     ) {
         boolean isActualBranch() {

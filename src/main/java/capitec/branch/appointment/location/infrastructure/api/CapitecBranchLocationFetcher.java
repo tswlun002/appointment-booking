@@ -19,6 +19,7 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.DayOfWeek;
 import java.util.*;
@@ -118,7 +119,7 @@ public class CapitecBranchLocationFetcher implements BranchLocationFetcher, GetN
 
     private List<BranchLocation> fetchBranches(CapitecBranchApiRequest request) {
         CapitecBranchApiResponse response = restClient.post()
-                .uri(branchApiUrl + "/Branch")
+                .uri(branchApiUrl)
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
                 .body(request)
@@ -136,7 +137,7 @@ public class CapitecBranchLocationFetcher implements BranchLocationFetcher, GetN
                 .filter(Objects::nonNull)
                 .toList();
 
-        log.info("Fetched {} actual branches (filtered out ATMs)", branches.size());
+        log.debug("Fetched actual branches (filtered out ATMs):{}", branches);
         return branches;
     }
    private  Set<Day> getDateOfTheWeek(){
