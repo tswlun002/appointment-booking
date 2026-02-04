@@ -257,7 +257,7 @@ components:
           example: "john.doe@example.com"
         password:
           type: string
-          minLength: 8
+          minLength: 6
           description: User's password
           example: "SecurePass123!"
 
@@ -276,7 +276,7 @@ components:
           example: "john.doe123"
         Password:
           type: string
-          minLength: 8
+          minLength: 6
           description: User's password
           example: "SecurePass123!"
 
@@ -285,23 +285,24 @@ components:
       description: Authentication token response
       properties:
         access_token:
-          type: object
-          properties:
-            accessToken:
-              type: string
-              description: JWT access token
-            tokenType:
-              type: string
-              description: Token type
-              example: "Bearer"
-            expiresIn:
-              type: integer
-              description: Token expiry in seconds
-              example: 3600
-            scope:
-              type: string
-              description: Token scope
-              example: "openid profile email"
+          type: string
+          description: JWT access token
+        token_type:
+          type: string
+          description: Token type
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+          example: 3600
+        scope:
+          type: string
+          description: Token scope
+          example: "openid profile email"
+        id_token:
+          type: string
+          description: JWT identity token
+
 
     ErrorResponse:
       type: object
