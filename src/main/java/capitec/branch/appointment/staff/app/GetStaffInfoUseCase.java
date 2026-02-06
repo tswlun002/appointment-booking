@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @UseCase
 @RequiredArgsConstructor
 @Validated
-class GetStaffInfoUseCase {
+public class GetStaffInfoUseCase {
 
     private final StaffService staffService;
 

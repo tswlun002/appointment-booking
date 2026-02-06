@@ -17,7 +17,7 @@ import java.util.Optional;
 @UseCase
 @RequiredArgsConstructor
 @Validated
-class UpdateStaffWorkStatusUseCase {
+public class UpdateStaffWorkStatusUseCase {
 
     private final StaffService staffService;
 

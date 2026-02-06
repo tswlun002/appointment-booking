@@ -19,11 +19,14 @@ import org.springframework.web.server.ResponseStatusException;
 @UseCase
 @RequiredArgsConstructor
 @Validated
-class AddStaffUseCase {
+public class AddStaffUseCase {
 
     private final StaffService staffService;
+    private final UserPortService userPortService;
 
     public boolean execute(@Valid StaffDTO staffDTO) {
+        checkUserExists(staffDTO.username());
+
         var isAdded = false;
 
         try {
@@ -43,5 +46,13 @@ class AddStaffUseCase {
         }
 
         return isAdded;
+    }
+
+    void checkUserExists(String username) {
+        userPortService.execute(username)
+                .orElseThrow(() ->{
+                    log.error("Username {} does not exist in this branch", username);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found at company system.");
+                });
     }
 }
