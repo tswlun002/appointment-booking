@@ -1,20 +1,18 @@
-package capitec.branch.appointment.appointment.app.dto;
+package capitec.branch.appointment.event.app.port.appointment;
 
 import capitec.branch.appointment.utils.sharekernel.EventTrigger;
-import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record CustomerRescheduledAppointmentEvent(
+public record StaffCanceledAppointmentEvent(
         UUID appointmentId,
         String reference,
         String customerUsername,
-        AppointmentStatus previousState,
-        AppointmentStatus appointmentStatus,
         String branchId,
+        String previousState,
+        String appointmentStatus,
         EventTrigger triggeredBy,
         LocalDateTime createdAt
-
 ) {
 }

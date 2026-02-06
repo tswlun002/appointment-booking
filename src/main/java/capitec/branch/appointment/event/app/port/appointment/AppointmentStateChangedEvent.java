@@ -1,7 +1,6 @@
-package capitec.branch.appointment.appointment.app.dto;
+package capitec.branch.appointment.event.app.port.appointment;
 
 import capitec.branch.appointment.utils.sharekernel.EventTrigger;
-import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 
 import capitec.branch.appointment.utils.Username;
 import jakarta.validation.constraints.NotBlank;
@@ -22,9 +21,9 @@ public record AppointmentStateChangedEvent(
         String customerUsername,
         @NotBlank
         String branchId,
-        AppointmentStatus fromState,
+        String fromState,
         @NotNull
-        AppointmentStatus toState,
+        String  toState,
         EventTrigger triggeredBy,
         @NotNull
         LocalDateTime occurredAt,
@@ -46,7 +45,7 @@ public record AppointmentStateChangedEvent(
                 customerUsername,
                 branchId,
                 null,
-                AppointmentStatus.BOOKED,
+                "BOOKED",
                 EventTrigger.CUSTOMER,
                 LocalDateTime.now(),
                 Map.of(
@@ -62,8 +61,8 @@ public record AppointmentStateChangedEvent(
             String appointmentReference,
             String customerUsername,
             String branchId,
-            AppointmentStatus fromState,
-            AppointmentStatus toState,
+            String fromState,
+            String toState,
             EventTrigger triggeredBy,
             Map<String, Object> metadata
     ) {

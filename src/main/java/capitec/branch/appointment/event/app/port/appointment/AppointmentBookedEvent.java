@@ -1,4 +1,4 @@
-package capitec.branch.appointment.appointment.app.dto;
+package capitec.branch.appointment.event.app.port.appointment;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
