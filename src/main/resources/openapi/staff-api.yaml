@@ -3,7 +3,7 @@ info:
   title: Staff API
   description: |
     API for managing staff members at Capitec branches.
-    Supports adding, updating status, deleting, and querying staff members.
+    Supports adding, updating status, and querying staff members.
   version: 1.0.0
   contact:
     name: Capitec Branch Appointment Team
@@ -36,12 +36,8 @@ paths:
             schema:
               $ref: '#/components/schemas/AddStaffRequest'
       responses:
-        '201':
+        '204':
           description: Staff member added successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StaffResponse'
         '400':
           description: Invalid request parameters
           content:
@@ -107,45 +103,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /branches/{branchId}/count:
-    get:
-      tags:
-        - Staff Management
-      summary: Get working staff count for a branch
-      description: |
-        Returns the count of staff members with WORKING status for a specific branch.
-      operationId: getStaffCount
-      parameters:
-        - name: branchId
-          in: path
-          required: true
-          description: Branch identifier
-          schema:
-            type: string
-            minLength: 2
-            maxLength: 50
-          example: "470010"
-        - $ref: '#/components/parameters/TraceId'
-      responses:
-        '200':
-          description: Successfully retrieved staff count
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StaffCountResponse'
-        '400':
-          description: Invalid request parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
   /{username}/status:
     patch:
       tags:
@@ -185,41 +142,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Staff not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /{username}:
-    delete:
-      tags:
-        - Staff Management
-      summary: Delete a staff member
-      description: |
-        Removes a staff member from the system.
-      operationId: deleteStaff
-      parameters:
-        - name: username
-          in: path
-          required: true
-          description: Staff username
-          schema:
-            type: string
-            minLength: 5
-            maxLength: 50
-          example: "john.doe123"
-        - $ref: '#/components/parameters/TraceId'
-      responses:
-        '204':
-          description: Staff deleted successfully
         '404':
           description: Staff not found
           content:
@@ -311,22 +233,6 @@ components:
           type: integer
           description: Total number of staff members
           example: 2
-
-    StaffCountResponse:
-      type: object
-      description: Response containing staff count for a branch
-      required:
-        - branchId
-        - count
-      properties:
-        branchId:
-          type: string
-          description: Branch identifier
-          example: "470010"
-        count:
-          type: integer
-          description: Number of working staff members
-          example: 5
 
     StaffStatus:
       type: string
