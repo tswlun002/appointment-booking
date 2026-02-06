@@ -33,7 +33,7 @@ public class UpdateSlotStatusUseCase {
                 log.error("Slot not found for id: {}", slotId);
                 return new ResponseStatusException(HttpStatus.NOT_FOUND, "Slot not found.");
             });
-
+//9ba4a2b4-831a-459f-9900-f3b7a88e4537
             try {
 
                 slot = transitionAction.execute(slot);
@@ -62,9 +62,9 @@ public class UpdateSlotStatusUseCase {
                 log.warn("Slot with id: {} is fully booked. Current bookings: {}, Max capacity: {}", slotId, slot.getBookingCount(), slot.getMaxBookingCapacity());
                 throw  new ResponseStatusException(HttpStatus.CONFLICT, "Slot is fully booked.",ex);
             }
-            catch (IllegalStateException ex) {
+            catch (IllegalStateException | IllegalArgumentException ex) {
                 log.warn("Slot with id: {} is not booked", slotId, ex);
-                throw ex;
+                throw  new  ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
             }
             catch (Exception e) {
                 log.error("Unexpected error updating slot status for id: {}", slotId, e);
