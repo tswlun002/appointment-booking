@@ -4,7 +4,6 @@ import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
 import capitec.branch.appointment.location.domain.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,12 +24,11 @@ interface ApiToDomainMapper {
             }
 
             Coordinates coordinates = new Coordinates(dto.latitude(), dto.longitude());
-
             BranchAddress address = new BranchAddress(
-                    dto.addressLine1() != null ? dto.addressLine1() : "Unknown",
+                    dto.addressLine1(),
                     dto.addressLine2(),
-                    dto.city() != null ? dto.city() : "Unknown",
-                    dto.province() != null ? dto.province() : "Unknown"
+                    dto.city(),
+                    dto.province()
             );
 
             var dayTypeResponseOperationTimeResponseMap = dto.operationHours();
@@ -60,55 +58,33 @@ interface ApiToDomainMapper {
         for (DayTypeResponse dayTypeResponse : operationHourApiResponseMap.keySet()) {
 
             switch (dayTypeResponse) {
-                case SATURDAY ->{
-                    var dateOption = dateOfTheWeek.stream().filter(day->DayOfWeek.SATURDAY.equals(day.getValue())).findFirst();
-                    OperationTimeResponse operationTimeResponse = operationHourApiResponseMap.get(DayTypeResponse.SATURDAY);
-                    if(dateOption.isPresent()) {
-                        LocalDate date = dateOption.get().getDate();
-                        OperationTime operationTime = mapToOperationTime(operationTimeResponse, false, date, date);
-                        operationHours.put(date, operationTime);
-                    }
-                }
-                case SUNDAY ->{
-                    var dateOption = dateOfTheWeek.stream().filter(day->DayOfWeek.SUNDAY.equals(day.getValue())).findFirst();
-                    OperationTimeResponse operationTimeResponse = operationHourApiResponseMap.get(DayTypeResponse.SUNDAY);
-                    if(dateOption.isPresent()) {
-                        LocalDate date = dateOption.get().getDate();
-                        OperationTime operationTime = mapToOperationTime(operationTimeResponse, false, date, date);
-                        operationHours.put(date, operationTime);
-                    }
-                }
                 case PUBLIC_HOLIDAY ->{
                     var dates = dateOfTheWeek.stream().filter(Day::isHoliday).collect(Collectors.toSet());
                     OperationTimeResponse operationTimeResponse = operationHourApiResponseMap.get(DayTypeResponse.PUBLIC_HOLIDAY);
                     for(var day : dates) {
-                        OperationTime operationTime = mapToOperationTime(operationTimeResponse, true, day.getDate(), day.getDate());
+                        OperationTime operationTime = mapToOperationTime(operationTimeResponse, true,day.getDate());
                         operationHours.put(day.getDate(), operationTime);
                     }
                 }
-                case MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY->{
-                    var dates = dateOfTheWeek.stream().filter(Day::isWeekday).collect(Collectors.toSet());
+                case MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY->{
+                    var day = dateOfTheWeek.stream().filter(d->d.getDate().getDayOfWeek().name().equals(dayTypeResponse.name())).findFirst();
                     OperationTimeResponse operationTimeResponse = operationHourApiResponseMap.get(dayTypeResponse);
-                    for(var day: dates) {
-                        OperationTime operationTime = mapToOperationTime(operationTimeResponse, false, day.getDate(), day.getDate());
-                        operationHours.put(day.getDate(), operationTime);
+                    if(day.isPresent()) {
+                        OperationTime operationTime = mapToOperationTime(operationTimeResponse, false,day.get().getDate());
+                        operationHours.put(day.get().getDate(), operationTime);
                     }
 
                 }
             }
         }
-
-
-
-
     }
 
     private  static OperationTime mapToOperationTime(OperationTimeResponse resp,boolean isHoliday,
-                                              LocalDate fromDate, LocalDate toDate) {
+                                              LocalDate fromDate) {
         if(resp.closed()){
 
-            return new OperationTime(null,null, true,isHoliday, fromDate,toDate);
+            return new OperationTime(null,null, true,isHoliday, fromDate);
         }
-        return  new OperationTime(resp.openAt(),resp.closeAt(), false,isHoliday, fromDate,toDate);
+        return  new OperationTime(resp.openAt(),resp.closeAt(), false,isHoliday, fromDate);
     }
 }
