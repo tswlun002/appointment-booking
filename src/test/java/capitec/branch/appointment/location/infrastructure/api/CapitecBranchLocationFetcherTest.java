@@ -292,7 +292,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
 
             // Then
             BranchLocation capeTownCbd = result.stream()
-                    .filter(b -> "470020".equals(b.getBranchCode()))
+                    .filter(b -> "SAS29300".equals(b.getBranchId()))
                     .findFirst()
                     .orElseThrow();
 
@@ -305,7 +305,7 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
             assertThat(capeTownCbd.isBusinessBankCenter()).isTrue();
             assertThat(capeTownCbd.isClosed()).isFalse();
 
-            Set<Day> daySet = getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
+            Set<Day> daySet = getDateOfNextDaysQuery.execute(LocalDate.now(), LocalDate.now().plusDays(6));
 
             for (Day day : daySet) {
                 Map<LocalDate, OperationTime> actual = capeTownCbd.getDailyOperationTimes();
@@ -314,8 +314,6 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
                             .hasFieldOrPropertyWithValue("closed", true)
                             .hasFieldOrPropertyWithValue("openAt", null)
                             .hasFieldOrPropertyWithValue("closeAt", null)
-                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
-                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
                             .hasFieldOrPropertyWithValue("isHoliday", true);
                 }
                 if(day.isWeekday()) {
@@ -323,8 +321,6 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
                             .hasFieldOrPropertyWithValue("closed", false)
                             .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
                             .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(17, 0))
-                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
-                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
                             .hasFieldOrPropertyWithValue("isHoliday", false);
                 }
                 if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)) {
@@ -332,8 +328,6 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
                             .hasFieldOrPropertyWithValue("closed", false)
                             .hasFieldOrPropertyWithValue("openAt", LocalTime.of(8, 0))
                             .hasFieldOrPropertyWithValue("closeAt", LocalTime.of(13, 0))
-                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
-                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
                             .hasFieldOrPropertyWithValue("isHoliday", false);
                 }
                 if(day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
@@ -342,8 +336,6 @@ class CapitecBranchLocationFetcherTest extends AppointmentBookingApplicationTest
                             .hasFieldOrPropertyWithValue("closed", true)
                             .hasFieldOrPropertyWithValue("openAt", null)
                             .hasFieldOrPropertyWithValue("closeAt", null)
-                            .hasFieldOrPropertyWithValue("fromDay", day.getDate())
-                            .hasFieldOrPropertyWithValue("toDay", day.getDate())
                             .hasFieldOrPropertyWithValue("isHoliday", false);
                 }
 

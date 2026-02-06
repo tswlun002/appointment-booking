@@ -184,7 +184,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
             assertThat(cbdBranch.fullAddress()).contains("Adderley Street");
             assertThat(cbdBranch.latitude()).isEqualTo(-33.925839);
             assertThat(cbdBranch.longitude()).isEqualTo(18.423622);
-            Set<Day> daySet = getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
+            Set<Day> daySet = getDateOfNextDaysQuery.execute(LocalDate.now(), LocalDate.now().plusDays(6));
 
             for (Day day : daySet) {
                 Map<LocalDate, OperationTimeDTO> actual = cbdBranch.operationTimes();

@@ -280,7 +280,7 @@ class FindNearestBranchesUseCaseTest extends LocationTestBase {
         if (branch != null) {
             assertThat(branch.branchCode()).isEqualTo("470010");
             assertThat(branch.fullAddress()).contains("Rondebosch");
-            Set<Day> daySet = getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
+            Set<Day> daySet = getDateOfNextDaysQuery.execute(LocalDate.now(), LocalDate.now().plusDays(6));
 
             for (Day day : daySet) {
                 Map<LocalDate, OperationTimeDTO> actual = branch.operationTimes();
