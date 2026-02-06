@@ -112,7 +112,7 @@ class UserAuthControllerTest extends AppointmentBookingApplicationTests {
         User user = userService.getUserByEmail(email).orElseThrow();
         var otpEntity = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();;
-        VerificationDTO verificationDTO = new VerificationDTO(email, otpEntity.getCode());
+        VerificationDTO verificationDTO = new VerificationDTO(email, otpEntity.getCode(),false);
         ResponseEntity<Map<String, JsonNode>> exchange = restClientForController.put()
                 .uri("/auth/verify")
                 .headers(h -> h.add("Trace-Id", UUID.randomUUID().toString()))
@@ -151,7 +151,7 @@ class UserAuthControllerTest extends AppointmentBookingApplicationTests {
 
         // User user = userService.getUserByEmail(email).orElseThrow();
         //OTPEntity otpEntity = otpService.find(user.getUsername()).orElseThrow();
-        VerificationDTO verificationDTO = new VerificationDTO(email, "123456");
+        VerificationDTO verificationDTO = new VerificationDTO(email, "123456",false);
         IntStream.range(1,4).forEach(i-> {
             ResponseEntity<AppException> exchange = restClientForController.put()
                     .uri("/auth/verify")

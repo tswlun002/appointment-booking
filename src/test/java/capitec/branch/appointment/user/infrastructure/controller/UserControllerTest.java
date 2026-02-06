@@ -80,7 +80,7 @@ class UserControllerTest extends AppointmentBookingApplicationTests {
         var otpEntity = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
 
-        VerificationDTO verificationDTO = new VerificationDTO(email, otpEntity.getCode());
+        VerificationDTO verificationDTO = new VerificationDTO(email, otpEntity.getCode(),false);
 
         ResponseEntity<Map<String, JsonNode>> exchange = restClientForController.put()
                 .uri("/auth/verify")
