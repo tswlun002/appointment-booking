@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,20 +26,20 @@ public class BranchOperationHoursAdapter implements BranchOperationHoursPort {
     @Override
     public Optional<OperationHourDetails> getOperationHours(String country, String branchId, LocalDate day) {
 
-        return searchBranchesByAreaUseCase.execute(new SearchBranchesByAreaQuery(country))
-                .stream()
-                .filter(b-> b.branchId().equals(branchId))
-                .map(b->{
-                    
-                    Map<LocalDate, OperationTimeDTO> operationTimeMap = b.operationTimes();
-                    OperationTimeDTO operationTime = operationTimeMap.get(day);
+        List<NearbyBranchDTO> branchDTOList = searchBranchesByAreaUseCase.execute(new SearchBranchesByAreaQuery(country));
 
-                    return operationTime==null?null: new OperationHourDetails(
-                            operationTime.openAt(), operationTime.closeAt(),
-                            operationTime.closed());
+        for (NearbyBranchDTO nearbyBranchDTO : branchDTOList) {
 
-                })
-                .findFirst();
+            Map<LocalDate, OperationTimeDTO> operationTimeMap = nearbyBranchDTO.operationTimes();
+            OperationTimeDTO operationTime = operationTimeMap.get(day);
+
+            if( nearbyBranchDTO.branchId().equals(branchId) && operationTime !=null){
+                return Optional.of(new OperationHourDetails(
+                        operationTime.openAt(), operationTime.closeAt(),
+                        operationTime.closed()));
+            }
+        }
+        return Optional.empty();
     }
 
     @Override
