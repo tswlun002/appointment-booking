@@ -1,10 +1,9 @@
 package capitec.branch.appointment.event.infrastructure.kafka.producer;
 
-import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.event.app.Topics;
-import capitec.branch.appointment.event.app.port.AppointmentEventPort;
 import capitec.branch.appointment.event.app.port.OTPEventProducerServicePort;
 import capitec.branch.appointment.event.app.port.UserEventListenerPort;
+import capitec.branch.appointment.event.app.port.appointment.*;
 import capitec.branch.appointment.kafka.app.EventPublishUseCase;
 import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.kafka.domain.EventValue;
@@ -16,15 +15,16 @@ import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.validation.annotation.Validated;
-import java.time.LocalDate;
+
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -34,7 +34,7 @@ import java.util.function.BiConsumer;
 @RequiredArgsConstructor
 @Component
 @Validated
-public class EventPublisher implements OTPEventProducerServicePort, UserEventListenerPort, AppointmentEventPort {
+public class EventPublisher implements OTPEventProducerServicePort, UserEventListenerPort {
 
     private final KafkaProperties kafkaProperties;
     private final EventPublishUseCase<String, MetaData> eventPublishUseCase;
@@ -121,97 +121,117 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
     }
 
 
-    @Override
-    public void publishEventAppointmentBooked(UUID id, String reference, String branchId, String customerUsername, LocalDate day,
-                                              LocalTime startTime, LocalTime endTime,LocalDateTime occurredAt) {
+    @TransactionalEventListener( phase = TransactionPhase.AFTER_COMMIT,classes = AppointmentBookedEvent.class)
+    @Async
+    public void publishEventAppointmentBooked(AppointmentBookedEvent event) {
         var traceId = UUID.randomUUID().toString();
 
         String topic = Topics.APPOINTMENT_BOOKED;
         validateTopic(topic, traceId);
 
-        Map<String, Object> map = Map.of("day", day, "startTime", startTime, "endTime", endTime);
-        var appointmentMetadata = new AppointmentMetadata(id, reference, branchId, customerUsername,occurredAt , map);
-        String key = id + reference;
+        Map<String, Object> map = Map.of("day", event.day(), "startTime", event.startTime(), "endTime", event.endTime());
+        var appointmentMetadata = new AppointmentMetadata(event.id(), event.reference(), event.branchId(),
+                event.customerUsername(),event.occurredAt() , map);
+        String key = event.id() + event.reference();
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
         log.debug("Sending booked appointment event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
 
     }
 
-    @Override
-    public void publishEventAttendAppointment(@NotNull UUID appointmentId, @NotBlank String appointmentReference,
-                                              @Username String customerUsername, String branchId, AppointmentStatus fromState,
-                                              @NotNull AppointmentStatus toState, String triggeredBy, @NotNull
-                                              LocalDateTime occurredAt) {
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT,classes = AppointmentStateChangedEvent.class)
+    @Async
+    public void publishEventAttendAppointment(AppointmentStateChangedEvent event) {
         var traceId = UUID.randomUUID().toString();
 
         String topic = Topics.ATTENDED_APPOINTMENT;
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
-                "fromState", fromState,
-                "toState", toState, "triggerBy",
-                triggeredBy, "occurredAt", occurredAt
+                "fromState", event.fromState(),
+                "toState", event.toState(), "triggerBy",
+                event.triggeredBy(), "occurredAt", event.occurredAt()
         );
         var appointmentMetadata = new AppointmentMetadata(
-                appointmentId, appointmentReference,
-                branchId, customerUsername, occurredAt, map
+                event.appointmentId(), event.appointmentReference(),
+                event.branchId(), event.customerUsername(), event.occurredAt(), map
         );
 
-        String key = appointmentId + appointmentReference;
+        String key = event.appointmentId() + event.appointmentReference();
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
         log.debug("Sending attend appointment event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
 
-    @Override
-    public void publishEventCustomerCancelAppointment(UUID appointmentId, String reference, String customerUsername, String branchId,
-                                                      AppointmentStatus previousState, AppointmentStatus appointmentStatus,
-                                                      String triggeredBy,
-                                                      @NotNull LocalDateTime occurredAt) {
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT,classes = StaffCanceledAppointmentEvent.class)
+    @Async
+    public void publishEventStaffCancelAppointment(StaffCanceledAppointmentEvent event) {
         var traceId = UUID.randomUUID().toString();
-        log.debug("To published  appointment cancel event, branchId:{}, reference:{},appointmentId:{},occurred at:{}, trigger by:{} ",branchId,reference,appointmentId,
-                occurredAt,triggeredBy);
 
         String topic = Topics.APPOINTMENT_CANCELED;
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
-                "fromState", previousState.name(),
-                "toState", appointmentStatus.name(),
-                "triggerBy", triggeredBy
+                "fromState", event.previousState(),
+                "toState",event.appointmentStatus(),
+                "triggerBy", event.triggeredBy()
         );
         var appointmentMetadata = new AppointmentMetadata(
-                appointmentId, reference, branchId,
-                customerUsername, occurredAt, map
+                event.appointmentId(), event.reference(), event.branchId(),
+                event.customerUsername(), event.createdAt(), map
         );
-        String key = appointmentId + reference;
+        String key = event.appointmentId() + event.reference();
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
         log.debug("Sending cancel event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
 
     }
 
-    @Override
-    public void publishEventCustomerRescheduleAppointment(UUID appointmentId, String reference, String customerUsername,
-                                                          AppointmentStatus previousState, AppointmentStatus appointmentStatus,
-                                                          String branchId, String triggeredBy, @NotNull LocalDateTime occurredAt) {
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT,classes = CustomerCanceledAppointmentEvent.class)
+   @Async
+    public void publishEventCustomerCancelAppointment(CustomerCanceledAppointmentEvent event) {
+        var traceId = UUID.randomUUID().toString();
+
+        String topic = Topics.APPOINTMENT_CANCELED;
+        validateTopic(topic, traceId);
+        Map<String, Object> map = Map.of(
+                "fromState", event.previousState(),
+                "toState",event.appointmentStatus(),
+                "triggerBy", event.triggeredBy()
+        );
+        var appointmentMetadata = new AppointmentMetadata(
+                event.appointmentId(), event.reference(), event.branchId(),
+                event.customerUsername(), event.createdAt(), map
+        );
+        String key = event.appointmentId() + event.reference();
+        EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
+        log.debug("Sending cancel event to kafka {}", eventValue);
+        sendMessage().accept(publishAsync(eventValue), eventValue);
+
+    }
+
+
+    @TransactionalEventListener(phase =  TransactionPhase.AFTER_COMMIT,classes = CustomerRescheduledAppointmentEvent.class)
+    @Async
+    public void publishEventCustomerRescheduleAppointment(CustomerRescheduledAppointmentEvent event) {
         var traceId = UUID.randomUUID().toString();
 
         String topic = Topics.APPOINTMENT_RESCHEDULED;
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
-                "fromState", previousState.name(),
-                "toState", appointmentStatus.name(),
-                "triggerBy", triggeredBy
+                "fromState", event.previousState(),
+                "toState", event.appointmentStatus(),
+                "triggerBy", event.triggeredBy()
         );
         var appointmentMetadata = new AppointmentMetadata(
-                appointmentId, reference, branchId, customerUsername, occurredAt, map
+                event.appointmentId(), event.reference(), event.branchId(),
+                event.customerUsername(), event.createdAt(), map
         );
-        String key = appointmentId + reference;
+        String key = event.appointmentId() + event.reference();
         EventValue<String,MetaData> eventValue = new EventValue.OriginEventValue<>(key,appointmentMetadata, traceId, topic, key, LocalDateTime.now());
         log.debug("Sending  reschedule event to kafka {}", eventValue);
         sendMessage().accept(publishAsync(eventValue), eventValue);
     }
-
 
     public  CompletableFuture<Boolean> publishAsync(EventValue<String,MetaData> eventValue) {
         return eventPublishUseCase.publishEventAsync(eventValue);
