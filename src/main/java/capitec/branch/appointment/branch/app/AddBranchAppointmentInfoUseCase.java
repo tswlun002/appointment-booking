@@ -6,6 +6,7 @@ import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
@@ -56,9 +57,18 @@ public class AddBranchAppointmentInfoUseCase {
             List<OperationHoursOverride> operationHoursOverride = branch.getOperationHoursOverride();
 
             if(operationHoursOverride != null && !operationHoursOverride.isEmpty()){
+                //check if there override hours future day, we use it
                 var hoursOverride = operationHoursOverride
                                     .stream()
-                                    .filter(op -> dto.day().equals(op.effectiveDate()))
+                                    .filter(op ->{
+                                         if(dto.day()== DayType.PUBLIC_HOLIDAY && !getDateOfNextDaysQuery.execute(op.effectiveDate()).isHoliday()){
+                                             return false;
+                                         }
+                                         else if (dto.day()== DayType.PUBLIC_HOLIDAY && getDateOfNextDaysQuery.execute(op.effectiveDate()).isHoliday()){
+                                             return true;
+                                         }
+                                        return dto.day().name().equals(op.effectiveDate().getDayOfWeek().name());
+                                    })
                                     .findFirst();
 
                 if(hoursOverride.isPresent()){
@@ -125,7 +135,7 @@ public class AddBranchAppointmentInfoUseCase {
                         log.warn("Branch is closed on public holiday, " +
                                 "override branch operation hours for the day. branchId:{} day:{}", branchId, dto.day());
                         return new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                                "No operation hours found for the day, branch operation hours for the day");
+                                "No operation hours found for the day. Please add branch operation hours for the day first.");
                     });
         }
         else {
