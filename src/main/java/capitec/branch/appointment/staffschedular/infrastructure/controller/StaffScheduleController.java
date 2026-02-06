@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -43,6 +44,7 @@ public class StaffScheduleController {
      * @return success response
      */
     @PostMapping("/weekly")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<BranchStaffScheduleResponse> setWeeklySchedule(
             @Valid @RequestBody SetWeeklyScheduleRequest request,
             @RequestHeader("Trace-Id") String traceId
@@ -79,6 +81,7 @@ public class StaffScheduleController {
      * @return success response
      */
     @PostMapping("/branches/{branchId}/assign")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<Void> assignStaffToDay(
             @PathVariable("branchId") String branchId,
             @Valid @RequestBody AssignStaffToDayRequest request,
@@ -108,6 +111,7 @@ public class StaffScheduleController {
      * @return branch staff schedule
      */
     @GetMapping("/branches/{branchId}")
+    @PreAuthorize("hasAnyRole('app_staff')")
     public ResponseEntity<BranchStaffScheduleResponse> getBranchSchedule(
             @PathVariable("branchId") String branchId,
             @RequestHeader("Trace-Id") String traceId
@@ -139,6 +143,7 @@ public class StaffScheduleController {
      * @return working staff for the date
      */
     @GetMapping("/branches/{branchId}/working")
+    @PreAuthorize("hasAnyRole('app_staff')")
     public ResponseEntity<WorkingStaffResponse> getWorkingStaff(
             @PathVariable("branchId") String branchId,
             @RequestParam(value = "date", required = false) LocalDate date,
@@ -174,6 +179,7 @@ public class StaffScheduleController {
      * @return no content
      */
     @DeleteMapping("/branches/{branchId}/days")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<Void> cancelWorkingDays(
             @PathVariable("branchId") String branchId,
             @Valid @RequestBody CancelWorkingDaysRequest request,
