@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -43,6 +44,7 @@ public class BranchController {
      * @return the created branch
      */
     @PostMapping
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<BranchResponse> addBranch(
             @Valid @RequestBody AddBranchRequest request,
             @RequestHeader("Trace-Id") String traceId
@@ -65,6 +67,7 @@ public class BranchController {
      * @return the branch details
      */
     @GetMapping("/{branchId}")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<BranchResponse> getBranch(
             @PathVariable("branchId") String branchId,
             @RequestHeader("Trace-Id") String traceId
@@ -87,6 +90,7 @@ public class BranchController {
      * @return list of branches
      */
     @GetMapping
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<BranchListResponse> getAllBranches(
             @RequestParam(value = "offset", defaultValue = "0") int offset,
             @RequestParam(value = "limit", defaultValue = "20") int limit,
@@ -113,6 +117,7 @@ public class BranchController {
      * @return no content
      */
     @DeleteMapping("/{branchId}")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<Void> deleteBranch(
             @PathVariable("branchId") String branchId,
             @RequestHeader("Trace-Id") String traceId
@@ -136,6 +141,7 @@ public class BranchController {
      * @return success response
      */
     @PutMapping("/{branchId}/appointment-info/{dayType}")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<Void> addBranchAppointmentInfo(
             @PathVariable("branchId") String branchId,
             @PathVariable("dayType") DayType dayType,
@@ -170,6 +176,7 @@ public class BranchController {
      * @return success response
      */
     @PutMapping("/{branchId}/operation-hours-override/{effectiveDate}")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<Void> addOperationHoursOverride(
             @PathVariable("branchId") String branchId,
             @PathVariable("effectiveDate") LocalDate effectiveDate,
