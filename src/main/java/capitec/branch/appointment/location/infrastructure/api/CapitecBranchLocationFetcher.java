@@ -19,10 +19,14 @@ import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.DayOfWeek;
-import java.util.*;
+import java.time.LocalDate;
+import java.util.List;
+import  java.util.Map;
+import java.util.Collections;
+import  java.util.Collection;
+import  java.util.Objects;
+import  java.util.Set;
 import java.util.function.Supplier;
 
 
@@ -66,7 +70,8 @@ public class CapitecBranchLocationFetcher implements BranchLocationFetcher, GetN
     }
 
     @Override
-    @Cacheable(value = BRANCH_LOCATIONS_BY_COORDINATES_CACHE,cacheManager = CACHE_MANAGER, key = "#coordinates.latitude() + '_' + #coordinates.longitude()")
+    @Cacheable(value = BRANCH_LOCATIONS_BY_COORDINATES_CACHE,cacheManager = CACHE_MANAGER, key = "#coordinates.latitude() + '_' + #coordinates.longitude()"
+    ,unless = "#result == null || #result.isEmpty()" )
     public List<BranchLocation> fetchByCoordinates(Coordinates coordinates) {
         log.info("Fetching branches by coordinates: lat={}, lon={}", coordinates.latitude(), coordinates.longitude());
 
@@ -79,7 +84,8 @@ public class CapitecBranchLocationFetcher implements BranchLocationFetcher, GetN
     }
 
     @Override
-    @Cacheable(value = BRANCH_LOCATIONS_BY_AREA_CACHE,cacheManager = CACHE_MANAGER, key = "#searchText.toLowerCase()")
+    @Cacheable(value = BRANCH_LOCATIONS_BY_AREA_CACHE,cacheManager = CACHE_MANAGER, key = "#searchText.toLowerCase()",
+    unless = "#result == null || #result.isEmpty()" )
     public List<BranchLocation> fetchByArea(String searchText) {
         log.info("Fetching branches by area: {}", searchText);
 
@@ -141,7 +147,8 @@ public class CapitecBranchLocationFetcher implements BranchLocationFetcher, GetN
         return branches;
     }
    private  Set<Day> getDateOfTheWeek(){
-       return getDateOfNextDaysQuery.execute(DayOfWeek.MONDAY, DayOfWeek.SUNDAY);
+       LocalDate now = LocalDate.now();
+       return getDateOfNextDaysQuery.execute(now, now.plusDays(6));
    }
 
 
