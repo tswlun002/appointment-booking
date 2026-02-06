@@ -2,89 +2,122 @@ package capitec.branch.appointment.appointment.infrastructure.adapter;
 
 import capitec.branch.appointment.appointment.app.AppointmentEventService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
-import capitec.branch.appointment.event.app.port.AppointmentEventPort;
-import capitec.branch.appointment.appointment.app.dto.AppointmentBookedEvent;
-import capitec.branch.appointment.appointment.app.dto.AppointmentStateChangedEvent;
-import capitec.branch.appointment.appointment.app.dto.CustomerCanceledAppointmentEvent;
-import capitec.branch.appointment.appointment.app.dto.CustomerRescheduledAppointmentEvent;
+import capitec.branch.appointment.event.app.port.appointment.*;
+import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-import java.util.Objects;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class AppointmentNotificationAdapter implements AppointmentEventService {
 
-    private final AppointmentEventPort appointmentEventPort;
+    private final ApplicationEventPublisher publisher;
 
-    @Override
-    public void publishEvent(AppointmentBookedEvent event) {
-        appointmentEventPort.publishEventAppointmentBooked(
-                event.id(),
-                event.reference(),
-                event.branchId(),
-                event.customerUsername(),
-                event.day(),
-                event.startTime(),
-                event.endTime(),
-                event.occurredAt()
-        );
+
+    public void publishEventBookAppointment( UUID id, String reference, String branchId,
+                              String customerUsername, LocalDate day, LocalTime startTime, LocalTime endTime,
+                              LocalDateTime occurredAt) {
+        publisher.publishEvent(new AppointmentBookedEvent(
+                id, reference, branchId, customerUsername,
+                day, startTime, endTime, occurredAt));
     }
 
     @Override
-    public void publishEvent(AppointmentStateChangedEvent event) {
-        if (event.toState() == AppointmentStatus.CANCELLED) {
-            appointmentEventPort.publishEventCustomerCancelAppointment(
-                    event.appointmentId(),
-                    event.appointmentReference(),
-                    event.customerUsername(),
-                    event.branchId(),
-                    event.fromState(),
-                    event.toState(),
-                    event.triggeredBy().name(),
-                    event.occurredAt()
-            );
+    public void publishEventChangeStatus( UUID appointmentId, String reference, String customerUsername, String branchId,
+                              AppointmentStatus previousState, AppointmentStatus appointmentStatus, EventTrigger triggeredBy,
+                               LocalDateTime occurredAt) {
+        this.publishEventChangeStatus(appointmentId,reference,customerUsername,
+                branchId,previousState,appointmentStatus,triggeredBy,occurredAt, Collections.emptyMap());
+
+    }
+
+    @Override
+    public void publishEventChangeStatus(UUID appointmentId, String reference, String customerUsername,
+                                         String branchId, AppointmentStatus previousState, AppointmentStatus
+                                                     appointmentStatus, EventTrigger triggeredBy, LocalDateTime occurredAt
+            , Map<String, Object> otherData) {
+        if (appointmentStatus == AppointmentStatus.CANCELLED) {
+            publisher.publishEvent(new StaffCanceledAppointmentEvent(
+                    appointmentId,
+                    reference,
+                    customerUsername,
+                    branchId,
+                    previousState.name(),
+                    appointmentStatus.name(),
+                    triggeredBy,
+                    occurredAt
+            ));
         }
         else {
-            appointmentEventPort.publishEventAttendAppointment(
-                    event.appointmentId(),
-                    event.appointmentReference(),
-                    event.customerUsername(),
-                    event.branchId(),
-                    event.fromState(),
-                    event.toState(),
-                    event.triggeredBy().name(),
-                    event.occurredAt()
-            );
+            publisher.publishEvent(AppointmentStateChangedEvent.transition(
+                    appointmentId,
+                    reference,
+                    customerUsername,
+                    branchId,
+                    previousState.name(),
+                    appointmentStatus.name(),
+                    triggeredBy,
+                    Collections.emptyMap()
+            ));
         }
+
     }
 
     @Override
-    public void publishEvent(CustomerCanceledAppointmentEvent event) {
-        appointmentEventPort.publishEventCustomerCancelAppointment(
-                event.appointmentId(),
-                event.reference(),
-                event.customerUsername(),
-                event.branchId(),
-                event.previousState(),
-                event.appointmentStatus(),
-                event.triggeredBy().name(),
-                event.createdAt()
-        );
+    public void publishCustomerCanceledAppointment(UUID appointmentId,
+                                                String reference,
+                                                String customerUsername,
+                                                String branchId,
+                                                AppointmentStatus previousState,
+                                                AppointmentStatus appointmentStatus,
+                                                EventTrigger triggeredBy,
+                                                LocalDateTime occurredAt) {
+        publisher.publishEvent(new CustomerCanceledAppointmentEvent(
+                appointmentId,
+                reference,
+                customerUsername,
+                branchId,
+                previousState.name(),
+                appointmentStatus.name(),
+                triggeredBy,
+                occurredAt
+        ));
     }
 
     @Override
-    public void publishEvent(CustomerRescheduledAppointmentEvent event) {
-        appointmentEventPort.publishEventCustomerRescheduleAppointment(
-                event.appointmentId(),
-                event.reference(),
-                event.customerUsername(),
-                event.previousState(),
-                event.appointmentStatus(),
-                event.branchId(),
-                event.triggeredBy().name(),
-                event.createdAt()
-        );
+    public void publishStaffCanceledAppointment(UUID appointmentId, String reference, String customerUsername, String branchId,
+                                                AppointmentStatus previousState, AppointmentStatus appointmentStatus,
+                                                EventTrigger triggeredBy, LocalDateTime occurredAt, Map<String, Object> otherData) {
+        publishEventChangeStatus(appointmentId,reference,customerUsername,branchId,previousState,
+                appointmentStatus,triggeredBy,occurredAt,otherData);
+    }
+
+    @Override
+    public void publishEventReschedule( UUID appointmentId,
+                              String reference,
+                              String customerUsername,
+                              AppointmentStatus previousState,
+                              AppointmentStatus appointmentStatus,
+                              String branchId,
+                                        EventTrigger triggeredBy,
+                               LocalDateTime occurredAt) {
+        publisher.publishEvent(new CustomerRescheduledAppointmentEvent(
+                appointmentId,
+                reference,
+                customerUsername,
+                previousState.name(),
+                appointmentStatus.name(),
+                branchId,
+                triggeredBy,
+                occurredAt
+        ));
     }
 }

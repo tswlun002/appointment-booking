@@ -4,7 +4,6 @@ import capitec.branch.appointment.appointment.app.port.UpdateSlotStatePort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
-import capitec.branch.appointment.appointment.app.dto.AppointmentBookedEvent;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +67,9 @@ public class BookAppointmentUseCase {
 
     }
     private void publishBookedEvent(Appointment appointment, AppointmentDTO dto) {
-        AppointmentBookedEvent event = new AppointmentBookedEvent(
+
+        log.info("Appointment booked: {}", dto);
+        appointmentEventService.publishEventBookAppointment(
                 appointment.getId(),
                 appointment.getReference(),
                 appointment.getBranchId(),
@@ -76,10 +77,7 @@ public class BookAppointmentUseCase {
                 dto.day(),
                 dto.startTime(),
                 dto.endTime(),
-                LocalDateTime.now()
-        );
-        log.info("Appointment booked: {}", event);
-        appointmentEventService.publishEvent(event);
+                LocalDateTime.now());
 
     }
 

@@ -6,8 +6,6 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
-import capitec.branch.appointment.appointment.app.dto.CustomerCanceledAppointmentEvent;
-import capitec.branch.appointment.appointment.app.dto.CustomerRescheduledAppointmentEvent;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
@@ -71,7 +69,8 @@ public class CustomerUpdateAppointmentUseCase {
 
         switch (action) {
             case CustomerUpdateAppointmentAction.Reschedule ignored -> {
-                var event = new CustomerRescheduledAppointmentEvent(
+                log.info("Customer {} appointment  event.",action.getEventName());
+                appointmentEventService.publishEventReschedule(
                         appointment.getId(),
                         appointment.getReference(),
                         appointment.getCustomerUsername(),
@@ -80,15 +79,14 @@ public class CustomerUpdateAppointmentUseCase {
                         appointment.getBranchId(),
                         EventTrigger.CUSTOMER,
                         LocalDateTime.now()
-
                 );
-                log.info("Customer {} appointment  event:{}.",action.getEventName(), event);
-                appointmentEventService.publishEvent(event);
             }
 
 
             case CustomerUpdateAppointmentAction.Cancel ignored ->{
-                var event = new CustomerCanceledAppointmentEvent(
+
+                log.info("Customer {} appointment  event.",action.getEventName());
+                appointmentEventService.publishCustomerCanceledAppointment(
                         appointment.getId(),
                         appointment.getReference(),
                         appointment.getCustomerUsername(),
@@ -98,8 +96,6 @@ public class CustomerUpdateAppointmentUseCase {
                         EventTrigger.CUSTOMER,
                         LocalDateTime.now()
                 );
-                log.info("Customer {} appointment  event:{}.",action.getEventName(), event);
-                appointmentEventService.publishEvent(event);
             }
 
 

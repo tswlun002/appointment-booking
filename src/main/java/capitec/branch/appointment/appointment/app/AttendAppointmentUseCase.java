@@ -5,7 +5,6 @@ import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
-import capitec.branch.appointment.appointment.app.dto.AppointmentStateChangedEvent;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.utils.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
@@ -74,9 +73,10 @@ public class AttendAppointmentUseCase {
     }
 
     private void publishEvent(AttendingAppointmentStateTransitionAction action, Appointment appointment, AppointmentStatus previousStatus) {
-        var event = switch (action) {
+        log.info("Publishing event....");
+        switch (action) {
             case AttendingAppointmentStateTransitionAction.CheckIn(_, _, String customerUsername) ->
-                    AppointmentStateChangedEvent.transition(
+                    publisher.publishEventChangeStatus(
                             appointment.getId(),
                             appointment.getReference(),
                             customerUsername,
@@ -84,10 +84,11 @@ public class AttendAppointmentUseCase {
                             previousStatus,
                             AppointmentStatus.CHECKED_IN,
                             EventTrigger.CUSTOMER,
-                            Map.of()
+                            LocalDateTime.now()
+
                     );
             case AttendingAppointmentStateTransitionAction.StartService(_, String staffUsername) ->
-                    AppointmentStateChangedEvent.transition(
+                    publisher.publishEventChangeStatus(
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
@@ -95,10 +96,11 @@ public class AttendAppointmentUseCase {
                             previousStatus,
                             AppointmentStatus.IN_PROGRESS,
                             EventTrigger.STAFF,
+                            LocalDateTime.now(),
                             Map.of("staffUsername", staffUsername)
                     );
             case AttendingAppointmentStateTransitionAction.CompleteAttendingAppointment(_, _) ->
-                    AppointmentStateChangedEvent.transition(
+                    publisher.publishEventChangeStatus(
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
@@ -106,10 +108,10 @@ public class AttendAppointmentUseCase {
                             previousStatus,
                             AppointmentStatus.COMPLETED,
                             EventTrigger.STAFF,
-                            Map.of()
+                            LocalDateTime.now()
                     );
             case AttendingAppointmentStateTransitionAction.CancelByStaff(String staffUsername, String reason, _) ->
-                    AppointmentStateChangedEvent.transition(
+                    publisher.publishStaffCanceledAppointment(
                             appointment.getId(),
                             appointment.getReference(),
                             appointment.getCustomerUsername(),
@@ -117,12 +119,11 @@ public class AttendAppointmentUseCase {
                             previousStatus,
                             AppointmentStatus.CANCELLED,
                             EventTrigger.STAFF,
+                            LocalDateTime.now(),
                             Map.of("reason", reason, "staffUsername", staffUsername)
                     );
         };
 
-        log.info("Publishing event: {}", event);
-        publisher.publishEvent(event);
     }
 
 
