@@ -74,6 +74,7 @@ paths:
       summary: Get appointments for a customer
       description: |
         Retrieves all appointments for a customer, optionally filtered by status.
+        Supports pagination via offset and limit parameters.
       operationId: getCustomerAppointments
       parameters:
         - name: customerUsername
@@ -91,6 +92,25 @@ paths:
           description: Filter appointments by status
           schema:
             $ref: '#/components/schemas/AppointmentStatus'
+        - name: offset
+          in: query
+          required: false
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 50
         - $ref: '#/components/parameters/TraceId'
       responses:
         '200':
