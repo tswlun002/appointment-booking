@@ -10,11 +10,6 @@ public record OperationTimeResponse(
         @JsonProperty("closeAt")
         LocalTime closeAt,
         @JsonProperty(value = "closed")
-        boolean closed,
-        @JsonProperty("fromDay")
-        String fromDay,
-        @JsonProperty("toDay")
-        String toDay
+        boolean closed
 ) {
 }
-//latitude=-33.960553&longitude=18.470156&limit=10&maxDistanceKm=25
