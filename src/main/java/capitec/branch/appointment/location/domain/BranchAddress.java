@@ -1,5 +1,6 @@
 package capitec.branch.appointment.location.domain;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.util.Asserts;
 
 import java.util.Objects;
@@ -17,10 +18,15 @@ public record BranchAddress(
     }
 
     public String getFullAddress() {
-        if (addressLine2 != null && !addressLine2.isBlank()) {
+        if (StringUtils.isNotBlank(addressLine1)) {
             return String.format("%s, %s, %s, %s", addressLine1, addressLine2, city, province);
         }
-        return String.format("%s, %s, %s", addressLine1, city, province);
+        else if (StringUtils.isNotBlank(addressLine1)) {
+            return String.format("%s, %s, %s", addressLine1, city, province);
+        }
+        else{
+            return String.format("%s, %s", city, province);
+        }
     }
 
     @Override
