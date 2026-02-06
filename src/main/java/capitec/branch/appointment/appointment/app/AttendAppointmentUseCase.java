@@ -28,14 +28,15 @@ public class AttendAppointmentUseCase {
     private final AppointmentEventService publisher;
 
     @Transactional
-    public void execute(AttendingAppointmentStateTransitionAction action) {
+    public Appointment execute(AttendingAppointmentStateTransitionAction action) {
         Appointment appointment = resolveAppointment(action);
         AppointmentStatus previousStatus = appointment.getStatus();
 
         action.execute(appointment, LocalDateTime.now());
 
         try {
-            appointmentService.update(appointment);
+            appointment = appointmentService.update(appointment);
+
         }
         catch (IllegalStateException  | IllegalArgumentException e){
             log.error("Illegal state/argument exception. Appointment id {}", appointment.getId(), e);
@@ -48,6 +49,7 @@ public class AttendAppointmentUseCase {
         }
 
         publishEvent(action, appointment,previousStatus);
+        return appointment;
     }
 
     private Appointment resolveAppointment(AttendingAppointmentStateTransitionAction action) {
