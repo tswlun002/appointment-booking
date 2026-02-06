@@ -10,6 +10,7 @@ import capitec.branch.appointment.slots.domain.SlotStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +45,7 @@ public class SlotController {
      * @return the slot details
      */
     @GetMapping("/{slotId}")
+    @PreAuthorize("hasAnyRole('app_user')")
     public ResponseEntity<SlotResponse> getSlot(
             @PathVariable("slotId") UUID slotId,
             @RequestHeader("Trace-Id") String traceId
@@ -66,6 +68,7 @@ public class SlotController {
      * @return list of slots for the day
      */
     @GetMapping("/branches/{branchId}/daily")
+    @PreAuthorize("hasAnyRole('app_user')")
     public ResponseEntity<DailySlotsResponse> getDailySlots(
             @PathVariable("branchId") String branchId,
             @RequestParam("date") LocalDate date,
@@ -100,6 +103,7 @@ public class SlotController {
      * @return slots grouped by day
      */
     @GetMapping("/branches/{branchId}/week")
+    @PreAuthorize("hasAnyRole('app_user')")
     public ResponseEntity<SlotsResponse> getWeeklySlots(
             @PathVariable("branchId") String branchId,
             @RequestParam(value = "fromDate", required = false) LocalDate fromDate,
@@ -144,6 +148,7 @@ public class SlotController {
      * @return the blocked slot
      */
     @PatchMapping("/{slotId}/block")
+    @PreAuthorize("hasAnyRole('app_admin')")
     public ResponseEntity<SlotResponse> blockSlot(
             @PathVariable("slotId") UUID slotId,
             @RequestHeader("Trace-Id") String traceId
@@ -168,6 +173,7 @@ public class SlotController {
      * @return the released slot
      */
     @PatchMapping("/{slotId}/release")
+    @PreAuthorize("hasAnyRole('app_staff')")
     public ResponseEntity<SlotResponse> releaseSlot(
             @PathVariable("slotId") UUID slotId,
             @RequestHeader("Trace-Id") String traceId
