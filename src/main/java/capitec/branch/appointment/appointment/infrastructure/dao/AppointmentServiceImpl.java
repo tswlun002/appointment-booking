@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -23,6 +22,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Validated
 public class AppointmentServiceImpl implements AppointmentService {
+
 
     private final AppointmentRepository appointmentRepository;
     private final AppointmentMapper appointmentMapper;
@@ -155,6 +155,18 @@ public class AppointmentServiceImpl implements AppointmentService {
             return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
         } catch (Exception e) {
             log.error("Failed to get appointment from DB.\n", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public Collection<Appointment> findByCustomerUsername(String customerUsername, AppointmentStatus status, int offset, int limit) {
+        try {
+            String statusValue = status != null ? status.name() : null;
+            Collection<AppointmentEntity> appointments = appointmentRepository.findByCustomerUsername(customerUsername, statusValue, offset, limit);
+            return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
+        } catch (Exception e) {
+            log.error("Failed to get customer appointments from DB. Customer: {}, Status: {}", customerUsername, status, e);
             throw e;
         }
     }

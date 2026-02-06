@@ -1,11 +1,8 @@
 package capitec.branch.appointment.appointment.infrastructure.controller;
 
-import capitec.branch.appointment.appointment.app.AppointmentDTO;
-import capitec.branch.appointment.appointment.app.AttendAppointmentUseCase;
-import capitec.branch.appointment.appointment.app.BookAppointmentUseCase;
-import capitec.branch.appointment.appointment.app.CustomerUpdateAppointmentUseCase;
+import capitec.branch.appointment.appointment.app.*;
 import capitec.branch.appointment.appointment.domain.Appointment;
-import capitec.branch.appointment.appointment.domain.AppointmentService;
+import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import jakarta.validation.Valid;
@@ -15,8 +12,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -34,7 +31,8 @@ public class CustomerAppointmentController {
     private final BookAppointmentUseCase bookAppointmentUseCase;
     private final CustomerUpdateAppointmentUseCase customerUpdateAppointmentUseCase;
     private final AttendAppointmentUseCase attendAppointmentUseCase;
-    private final AppointmentService appointmentService;
+    private final GetAppointmentByIdUseCase getAppointmentByIdUseCase;
+    private final GetCustomerAppointmentsUseCase getCustomerAppointmentsUseCase;
 
     /**
      * Book a new appointment.
@@ -74,6 +72,8 @@ public class CustomerAppointmentController {
      *
      * @param customerUsername the customer username
      * @param status           optional status filter
+     * @param offset           offset for pagination (default 0)
+     * @param limit            number of results per page (default 50, max 100)
      * @param traceId          unique trace identifier for request tracking
      * @return list of appointments
      */
@@ -81,14 +81,26 @@ public class CustomerAppointmentController {
     public ResponseEntity<AppointmentsResponse> getCustomerAppointments(
             @PathVariable("customerUsername") String customerUsername,
             @RequestParam(value = "status", required = false) String status,
+            @RequestParam(value = "offset", required = false, defaultValue = "0") int offset,
+            @RequestParam(value = "limit", required = false, defaultValue = "50") int limit,
             @RequestHeader("Trace-Id") String traceId
     ) {
-        log.info("Getting appointments for customer: {}, status: {}, traceId: {}",
-                customerUsername, status, traceId);
+        log.info("Getting appointments for customer: {}, status: {}, offset: {}, limit: {}, traceId: {}",
+                customerUsername, status, offset, limit, traceId);
 
-        // TODO: Implement query for customer appointments
-        // For now, return empty list - needs implementation of GetCustomerAppointmentsQuery
-        return ResponseEntity.ok(new AppointmentsResponse(List.of(), 0));
+        AppointmentStatus statusFilter = status != null ? AppointmentStatus.valueOf(status) : null;
+        GetCustomerAppointmentsQuery query = new GetCustomerAppointmentsQuery(customerUsername, statusFilter, offset, limit);
+
+        Collection<Appointment> appointments = getCustomerAppointmentsUseCase.execute(query);
+
+        List<AppointmentResponse> responses = appointments.stream()
+                .map(this::toResponse)
+                .toList();
+
+        log.info("Found {} appointments for customer: {}, traceId: {}",
+                responses.size(), customerUsername, traceId);
+
+        return ResponseEntity.ok(new AppointmentsResponse(responses, responses.size()));
     }
 
     /**
@@ -105,8 +117,8 @@ public class CustomerAppointmentController {
     ) {
         log.info("Getting appointment by ID: {}, traceId: {}", appointmentId, traceId);
 
-        Appointment appointment = appointmentService.findById(appointmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        GetAppointmentByIdQuery query = new GetAppointmentByIdQuery(appointmentId);
+        Appointment appointment = getAppointmentByIdUseCase.execute(query);
 
         return ResponseEntity.ok(toResponse(appointment));
     }
@@ -184,8 +196,8 @@ public class CustomerAppointmentController {
     ) {
         log.info("Check-in for appointment: {}, traceId: {}", appointmentId, traceId);
 
-        Appointment appointment = appointmentService.findById(appointmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        GetAppointmentByIdQuery query = new GetAppointmentByIdQuery(appointmentId);
+        Appointment appointment = getAppointmentByIdUseCase.execute(query);
 
         var action = new AttendingAppointmentStateTransitionAction.CheckIn(
                 appointment.getBranchId(),
@@ -193,10 +205,7 @@ public class CustomerAppointmentController {
                 appointment.getCustomerUsername()
         );
 
-        attendAppointmentUseCase.execute(action);
-
-        // Reload to get updated state
-        appointment = appointmentService.findById(appointmentId).orElseThrow();
+        appointment = attendAppointmentUseCase.execute(action);
 
         log.info("Check-in successful for appointment: {}, traceId: {}", appointmentId, traceId);
 

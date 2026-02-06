@@ -110,4 +110,41 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
         
         """)
     Set<AppointmentEntity> getUnAttendedAppointments(@Param("appointmentDate") LocalDate appointmentDate, @Param("lastProcessedId") UUID lastProcessedId, @Param("limit") int limit);
+
+    @Query("""
+            SELECT
+            id,
+            slot_id,
+            branch_id,
+            customer_username,
+            service_type,
+            status,
+            reference,
+            date_time,
+            version,
+            created_at,
+            updated_at,
+            checked_in_at,
+            in_progress_at,
+            completed_at,
+            terminated_at,
+            terminated_by,
+            termination_reason,
+            termination_notes,
+            assigned_consultant_id,
+            service_notes,
+            previous_slot_id,
+            reschedule_count
+            FROM appointment
+            WHERE customer_username = :customerUsername
+            AND (:status IS NULL OR status = :status)
+            ORDER BY date_time DESC
+            OFFSET :offset LIMIT :limit
+        """)
+    Set<AppointmentEntity> findByCustomerUsername(
+            @Param("customerUsername") String customerUsername,
+            @Param("status") String status,
+            @Param("offset") int offset,
+            @Param("limit") int limit
+    );
 }
