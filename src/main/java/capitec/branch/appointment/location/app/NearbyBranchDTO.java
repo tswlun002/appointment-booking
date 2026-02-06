@@ -34,7 +34,7 @@ public record NearbyBranchDTO(
                 Math.round(distanceKm * 100.0) / 100.0,
                 branch.getDailyOperationTimes().values()
                         .stream()
-                        .collect(Collectors.toMap(OperationTime::fromDay,
+                        .collect(Collectors.toMap(OperationTime::day,
                                 operationTime ->
                                         new OperationTimeDTO(operationTime.openAt(),operationTime.closeAt(),operationTime.closed(),
                                                 operationTime.isHoliday())
