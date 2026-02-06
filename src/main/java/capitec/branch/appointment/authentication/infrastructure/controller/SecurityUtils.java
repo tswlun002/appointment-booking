@@ -20,7 +20,7 @@ public class SecurityUtils {
         }
 
         HttpServletRequest request = attributes.getRequest();
-        return request.getHeader("X-User-Email");  // Extract Email from header
+        return request.getHeader("email");
     }
 
     public static String getUsernameFromHeader() {
@@ -31,7 +31,7 @@ public class SecurityUtils {
         }
 
         HttpServletRequest request = attributes.getRequest();
-        return request.getHeader("X-User-Username");  // Extract Username from header
+        return request.getHeader("username");
     }
     public boolean isUsernameMatching(Authentication authentication, String resourceUsername) {
 
