@@ -3,6 +3,7 @@ package capitec.branch.appointment.role.infrastructure.keycloak;
 import jakarta.ws.rs.core.Response;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.Role;
+import capitec.branch.appointment.role.domain.RoleDomainException;
 import capitec.branch.appointment.role.domain.RoleService;
 import capitec.branch.appointment.role.domain.RoleType;
 import jakarta.validation.Valid;
@@ -16,7 +17,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.server.ResponseStatusException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -106,7 +106,7 @@ public class RoleServiceImpl implements RoleService {
                                                     orElseThrow(() -> {
 
                                                         log.error("Role:{} is not found", roleId);
-                                                        return new NotFoundException("Role not found");
+                                                        return new RoleDomainException("Role not found: " + roleId);
                                                     })
                                     ).toList()
                             );
@@ -114,7 +114,8 @@ public class RoleServiceImpl implements RoleService {
                     log.info("Role created: {}", roleType);
                     return true;
                 }
-                throw new ResponseStatusException(status, response.getStatusInfo().getReasonPhrase());
+                log.error("Failed to create role type. status: {}, reason: {}", status, response.getStatusInfo().getReasonPhrase());
+                throw new RoleDomainException("Failed to create role type: " + response.getStatusInfo().getReasonPhrase());
             }
 
         }, " create role type/group", RoleType.class);
