@@ -356,11 +356,110 @@ paths:
                 type: string
                 example: "Password updated successfully"
         '400':
-          description: Invalid OTP or password format
+          description: Invalid password format
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: |
+            Unauthorized - Invalid OTP:
+            - OTP code does not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid OTP code"
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '404':
+          description: |
+            User not found:
+            - No user exists with the provided email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User is not found"
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '410':
+          description: |
+            Gone - OTP has expired:
+            - A new OTP has been sent to the user's email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 410
+                error: "Gone"
+                message: "OTP has expired. A new OTP has been sent to your email."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '417':
+          description: |
+            Expectation Failed:
+            - Password update operation failed
+            - User should retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to update password. Please try again."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '423':
+          description: |
+            Locked - Too many failed OTP attempts:
+            - User account has been disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 423
+                error: "Locked"
+                message: "Too many failed OTP attempts. Account has been locked."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '425':
+          description: |
+            Too Early - OTP resend cooldown not passed:
+            - User must wait before requesting a new OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 425
+                error: "Too Early"
+                message: "Please wait few minutes before requesting a new OTP."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '429':
+          description: |
+            Too Many Requests - OTP resend rate limit exceeded:
+            - Maximum OTP resend requests exceeded within time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many OTP requests. Please try again in 60 minutes."
+                path: "/api/v1/users/auth/credentials/password/reset"
         '500':
           description: Internal server error
           content:
@@ -565,17 +664,124 @@ paths:
                 type: string
                 example: "Password updated successfully"
         '400':
-          description: Invalid OTP or password format
+          description: Invalid password format
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: |
+            Unauthorized - Invalid OTP:
+            - OTP code does not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid OTP code"
+                path: "/api/v1/users/credentials/password/update"
         '403':
-          description: Access denied - username mismatch
+          description: |
+            Forbidden:
+            - Access denied - username mismatch with authenticated user
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 403
+                error: "Forbidden"
+                message: "Access denied"
+                path: "/api/v1/users/credentials/password/update"
+        '404':
+          description: |
+            User not found:
+            - No user exists with the provided username
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User is not found"
+                path: "/api/v1/users/credentials/password/update"
+        '410':
+          description: |
+            Gone - OTP has expired:
+            - A new OTP has been sent to the user's email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 410
+                error: "Gone"
+                message: "OTP has expired. A new OTP has been sent to your email."
+                path: "/api/v1/users/credentials/password/update"
+        '417':
+          description: |
+            Expectation Failed:
+            - Password update operation failed
+            - User should retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to update password. Please try again."
+                path: "/api/v1/users/credentials/password/update"
+        '423':
+          description: |
+            Locked - Too many failed OTP attempts:
+            - User account has been disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 423
+                error: "Locked"
+                message: "Too many failed OTP attempts. Account has been locked."
+                path: "/api/v1/users/credentials/password/update"
+        '425':
+          description: |
+            Too Early - OTP resend cooldown not passed:
+            - User must wait before requesting a new OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 425
+                error: "Too Early"
+                message: "Please wait few minutes before requesting a new OTP."
+                path: "/api/v1/users/credentials/password/update"
+        '429':
+          description: |
+            Too Many Requests - OTP resend rate limit exceeded:
+            - Maximum OTP resend requests exceeded within time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many OTP requests. Please try again in 60 minutes."
+                path: "/api/v1/users/credentials/password/update"
         '500':
           description: Internal server error
           content:

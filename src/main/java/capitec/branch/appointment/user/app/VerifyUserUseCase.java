@@ -5,7 +5,6 @@ import capitec.branch.appointment.exeption.TokenExpiredException;
 import capitec.branch.appointment.user.app.event.UserCreatedEvent;
 import capitec.branch.appointment.user.app.event.UserVerifiedEvent;
 import capitec.branch.appointment.user.app.port.AuthenticationPort;
-import capitec.branch.appointment.user.app.port.OtpResendRateLimitPort;
 import capitec.branch.appointment.user.app.port.OtpValidationPort;
 import capitec.branch.appointment.user.app.port.RoleAssignmentPort;
 import capitec.branch.appointment.user.domain.USER_TYPES;
@@ -13,11 +12,14 @@ import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.sharekernel.ratelimit.domain.RateLimitPurpose;
+import capitec.branch.appointment.utils.sharekernel.ratelimit.domain.RateLimitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -35,19 +37,32 @@ public class VerifyUserUseCase {
     private final RoleAssignmentPort roleAssignmentPort;
     private final OtpValidationPort otpValidationPort;
     private final AuthenticationPort authenticationPort;
-    private final OtpResendRateLimitPort otpResendRateLimitPort;
+    private final RateLimitService rateLimitService;
+    private final TransactionTemplate transactionTemplate;
 
-    @Transactional
+    @Value("${rate-limit.otp-resend.max-attempts:5}")
+    private int maxAttempts;
+
+    @Value("${rate-limit.otp-resend.window-minutes:60}")
+    private int windowMinutes;
+
+    @Value("${rate-limit.otp-resend.cooldown-seconds:60}")
+    private int cooldownSeconds;
+
     public Optional<TokenResponse> execute(String username, String otp, boolean isCapitecClient, String traceId) {
 
         log.info("Verifying user registration. username: {}, traceId: {}", username, traceId);
 
-        User user = findUserOrThrow(username, traceId);
-        validateOtp(user, otp, traceId);
-        verifyUserStatus(username, traceId);
-        assignDefaultRoles(username, isCapitecClient, traceId);
-        publishUserVerifiedEvent(user, otp, traceId);
+        // Transactional verification steps
+        transactionTemplate.executeWithoutResult(status -> {
+            User user = findUserOrThrow(username, traceId);
+            validateOtp(user, otp, traceId);
+            verifyUserStatus(username, traceId);
+            assignDefaultRoles(username, isCapitecClient, traceId);
+            publishUserVerifiedEvent(user, otp, traceId);
+        });
 
+        // Non-transactional: auto-login failure won't rollback verification
         return attemptAutoLogin(username, traceId);
     }
 
@@ -65,7 +80,7 @@ public class VerifyUserUseCase {
 
             if (!isValid) {
                 log.warn("OTP validation failed. username: {}, traceId: {}", user.getUsername(), traceId);
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid OTP code");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP code");
             }
 
         } catch (TokenExpiredException e) {
@@ -78,28 +93,8 @@ public class VerifyUserUseCase {
     private void handleExpiredOtp(User user, String traceId, TokenExpiredException e) {
         log.warn("OTP expired. username: {}, traceId: {}", user.getUsername(), traceId);
 
-        // Check cooldown between resends
-        if (!otpResendRateLimitPort.isCooldownPassed(user.getUsername())) {
-            log.warn("OTP resend cooldown not passed. username: {}, traceId: {}", user.getUsername(), traceId);
-            throw new ResponseStatusException(
-                    HttpStatus.TOO_EARLY,
-                    "Please wait few minutes before requesting a new OTP."
-            );
-        }
-
-        // Check rate limit
-        if (!otpResendRateLimitPort.isResendAllowed(user.getUsername())) {
-            long secondsUntilReset = otpResendRateLimitPort.getSecondsUntilReset(user.getUsername());
-            log.warn("OTP resend rate limit exceeded. username: {}, secondsUntilReset: {}, traceId: {}",
-                    user.getUsername(), secondsUntilReset, traceId);
-            throw new ResponseStatusException(
-                    HttpStatus.TOO_MANY_REQUESTS,
-                    String.format("Too many OTP requests. Please try again in %d minutes.", secondsUntilReset / 60 + 1)
-            );
-        }
-
-        // Record the resend attempt
-        otpResendRateLimitPort.recordResendAttempt(user.getUsername());
+        checkRateLimitOrThrow(user.getUsername(), traceId);
+        recordResendAttempt(user.getUsername());
 
         // Resend OTP
         applicationEventPublisher.publishEvent(new UserCreatedEvent(
@@ -135,7 +130,7 @@ public class VerifyUserUseCase {
         }
 
         // Reset OTP resend rate limit on successful verification
-        otpResendRateLimitPort.reset(username);
+        resetRateLimit(username);
 
         log.info("User verification status updated successfully. username: {}, traceId: {}", username, traceId);
     }
@@ -185,5 +180,37 @@ public class VerifyUserUseCase {
             log.warn("Auto-login failed. User must login manually. username: {}, traceId: {}", username, traceId, e);
             return Optional.empty();
         }
+    }
+
+    // ==================== Rate Limit Methods ====================
+
+    private void checkRateLimitOrThrow(String username, String traceId) {
+        if (!rateLimitService.isCooldownPassed(username, RateLimitPurpose.OTP_RESEND, cooldownSeconds)) {
+            log.warn("OTP resend cooldown not passed. username: {}, traceId: {}", username, traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_EARLY,
+                    "Please wait few minutes before requesting a new OTP."
+            );
+        }
+
+        if (rateLimitService.isLimitExceeded(username, RateLimitPurpose.OTP_RESEND, maxAttempts, windowMinutes)) {
+            long secondsUntilReset = rateLimitService.find(username, RateLimitPurpose.OTP_RESEND)
+                    .map(rl -> rl.getSecondsUntilReset(windowMinutes))
+                    .orElse(0L);
+            log.warn("OTP resend rate limit exceeded. username: {}, secondsUntilReset: {}, traceId: {}",
+                    username, secondsUntilReset, traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    String.format("Too many OTP requests. Please try again in %d minutes.", secondsUntilReset / 60 + 1)
+            );
+        }
+    }
+
+    private void recordResendAttempt(String username) {
+        rateLimitService.recordAttempt(username, RateLimitPurpose.OTP_RESEND, windowMinutes);
+    }
+
+    private void resetRateLimit(String username) {
+        rateLimitService.reset(username, RateLimitPurpose.OTP_RESEND);
     }
 }
