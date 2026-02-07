@@ -301,6 +301,16 @@ components:
           type: string
           description: Branch identifier
           example: "470010"
+        branchName:
+          type: string
+          description: Branch name
+          example: "Rondebosch"
+          nullable: true
+        branchAddress:
+          type: string
+          description: Branch full address
+          example: "Shop G21, Cnr Main & Belmont Road, Fountain Centre, Rondebosch, 7700"
+          nullable: true
         customerUsername:
           type: string
           description: Customer username

@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -91,7 +90,7 @@ public class CustomerAppointmentController {
         AppointmentStatus statusFilter = status != null ? AppointmentStatus.valueOf(status) : null;
         GetCustomerAppointmentsQuery query = new GetCustomerAppointmentsQuery(customerUsername, statusFilter, offset, limit);
 
-        Collection<Appointment> appointments = getCustomerAppointmentsUseCase.execute(query);
+        List<AppointmentWithBranchDTO> appointments = getCustomerAppointmentsUseCase.execute(query);
 
         List<AppointmentResponse> responses = appointments.stream()
                 .map(this::toResponse)
@@ -196,20 +195,47 @@ public class CustomerAppointmentController {
     ) {
         log.info("Check-in for appointment: {}, traceId: {}", appointmentId, traceId);
 
-        GetAppointmentByIdQuery query = new GetAppointmentByIdQuery(appointmentId);
-        Appointment appointment = getAppointmentByIdUseCase.execute(query);
+        Appointment appointmentData = getAppointmentByIdUseCase.execute(new GetAppointmentByIdQuery(appointmentId));
 
         var action = new AttendingAppointmentStateTransitionAction.CheckIn(
-                appointment.getBranchId(),
-                appointment.getDateTime().toLocalDate(),
-                appointment.getCustomerUsername()
+                appointmentData.getBranchId(),
+                appointmentData.getDateTime().toLocalDate(),
+                appointmentData.getCustomerUsername()
         );
 
-        appointment = attendAppointmentUseCase.execute(action);
+        Appointment appointment = attendAppointmentUseCase.execute(action);
 
         log.info("Check-in successful for appointment: {}, traceId: {}", appointmentId, traceId);
 
         return ResponseEntity.ok(toResponse(appointment));
+    }
+
+    private AppointmentResponse toResponse(AppointmentWithBranchDTO dto) {
+        return new AppointmentResponse(
+                dto.id(),
+                dto.slotId(),
+                dto.branchId(),
+                dto.branchName(),
+                dto.branchAddress(),
+                dto.customerUsername(),
+                dto.serviceType(),
+                dto.status(),
+                dto.reference(),
+                dto.dateTime(),
+                dto.createdAt(),
+                dto.updatedAt(),
+                dto.checkedInAt(),
+                dto.inProgressAt(),
+                dto.completedAt(),
+                dto.terminatedAt(),
+                dto.terminatedBy(),
+                dto.terminationReason(),
+                dto.terminationNotes(),
+                dto.assignedConsultantId(),
+                dto.serviceNotes(),
+                dto.previousSlotId(),
+                dto.rescheduleCount()
+        );
     }
 
     private AppointmentResponse toResponse(Appointment appointment) {
@@ -217,6 +243,8 @@ public class CustomerAppointmentController {
                 appointment.getId(),
                 appointment.getSlotId(),
                 appointment.getBranchId(),
+                null,
+                null,
                 appointment.getCustomerUsername(),
                 appointment.getServiceType(),
                 appointment.getStatus().name(),

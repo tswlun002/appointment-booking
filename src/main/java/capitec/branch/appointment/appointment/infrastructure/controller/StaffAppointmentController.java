@@ -52,9 +52,7 @@ public class StaffAppointmentController {
                 request.consultantId()
         );
 
-        attendAppointmentUseCase.execute(action);
-
-        Appointment appointment = appointmentService.findById(appointmentId).orElseThrow();
+        Appointment appointment = attendAppointmentUseCase.execute(action);
 
         log.info("Service started for appointment: {}, traceId: {}", appointmentId, traceId);
 
@@ -83,9 +81,7 @@ public class StaffAppointmentController {
                 serviceNotes
         );
 
-        attendAppointmentUseCase.execute(action);
-
-        Appointment appointment = appointmentService.findById(appointmentId).orElseThrow();
+        Appointment appointment = attendAppointmentUseCase.execute(action);
 
         log.info("Appointment completed: {}, traceId: {}", appointmentId, traceId);
 
@@ -116,9 +112,7 @@ public class StaffAppointmentController {
                 appointmentId
         );
 
-        attendAppointmentUseCase.execute(action);
-
-        Appointment appointment = appointmentService.findById(appointmentId).orElseThrow();
+        Appointment appointment = attendAppointmentUseCase.execute(action);
 
         log.info("No-show marked for appointment: {}, traceId: {}", appointmentId, traceId);
 
@@ -165,6 +159,8 @@ public class StaffAppointmentController {
                 appointment.getId(),
                 appointment.getSlotId(),
                 appointment.getBranchId(),
+                null,
+                null,
                 appointment.getCustomerUsername(),
                 appointment.getServiceType(),
                 appointment.getStatus().name(),

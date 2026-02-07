@@ -7,6 +7,8 @@ public record AppointmentResponse(
         UUID id,
         UUID slotId,
         String branchId,
+        String branchName,
+        String branchAddress,
         String customerUsername,
         String serviceType,
         String status,
