@@ -1,4 +1,5 @@
 package capitec.branch.appointment.user.domain;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -19,4 +20,6 @@ public interface UserService extends   FetchUser {
     Optional<User> getUserByEmail(@NotBlank @Email String email);
 
     void updateUseStatus(String username, Boolean useStatus);
+
+    boolean resetPassword(@Valid User user);
 }

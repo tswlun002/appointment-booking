@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.util.Assert;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -44,7 +45,6 @@ public class KeycloakUserServiceImpl implements UserService {
         this.userHelper = userHelper;
     }
 
-    @Valid
     @Override
     public User registerUser(@Valid final User user) {
         var credentialRepresentation = createCredential(user);
@@ -115,7 +115,7 @@ public class KeycloakUserServiceImpl implements UserService {
 
     @Override
     public boolean checkIfUserExists(String username) {
-        return getUserByUsername(username).isPresent();
+        return userHelper.findByUsername(username).isPresent();
     }
 
     @Override
@@ -132,6 +132,32 @@ public class KeycloakUserServiceImpl implements UserService {
         }, "update user status", Boolean.class);
 
         userHelper.evictUserCache(username);
+    }
+
+    @Override
+    public boolean resetPassword(@Valid User user) {
+        Assert.notNull(user, "User must not be null");
+        Assert.hasText(user.getPassword(), "User password must not be blank");
+
+        UserResource userResource = userHelper.getUserResource(user.getUsername());
+
+        boolean result = keyCloakRequest(() -> {
+            CredentialRepresentation credential = new CredentialRepresentation();
+            credential.setValue(user.getPassword());
+            credential.setType(CredentialRepresentation.PASSWORD);
+            credential.setTemporary(Boolean.FALSE);
+
+            userResource.resetPassword(credential);
+
+            log.info("Password reset successful. username: {}", user.getUsername());
+            return true;
+        }, "reset password", Boolean.class);
+
+        if (result) {
+            userHelper.evictUserCache(user.getUsername());
+        }
+
+        return result;
     }
 
     // ==================== Private Helper Methods ====================
@@ -189,6 +215,7 @@ public class KeycloakUserServiceImpl implements UserService {
     }
 
 
+    @NonNull
     private static UserRepresentation createUserRepresentation(
             User user,
             boolean isEnabled,

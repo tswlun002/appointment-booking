@@ -6,8 +6,8 @@ import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
 import capitec.branch.appointment.user.app.event.PasswordResetRequestEvent;
 import capitec.branch.appointment.user.app.event.PasswordUpdatedEvent;
 import capitec.branch.appointment.user.app.port.OtpValidationPort;
-import capitec.branch.appointment.user.domain.ResetPasswordService;
 import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserPasswordService;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.utils.sharekernel.ratelimit.domain.RateLimitPurpose;
@@ -30,7 +30,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class PasswordResetUseCase {
 
     private final UserService userService;
-    private final ResetPasswordService resetPasswordService;
+    private final UserPasswordService userPasswordService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final OtpValidationPort otpValidationPort;
     private final RateLimitService rateLimitService;
@@ -151,11 +151,14 @@ public class PasswordResetUseCase {
     }
 
     private void updatePasswordOrThrow(User user, String newPassword, String traceId) {
-        user.setPassword(newPassword);
-        boolean updated = resetPasswordService.passwordReset(user);
+        // 1. Update password through domain service (validates and updates User domain object)
+        User updatedUser = userPasswordService.changePassword(user, newPassword);
 
-        if (!updated) {
-            log.error("Failed to update password. username: {}, traceId: {}", user.getUsername(), traceId);
+        // 2. Persist the updated user to infrastructure (Keycloak)
+        boolean persisted = userService.resetPassword(updatedUser);
+
+        if (!persisted) {
+            log.error("Failed to persist password. username: {}, traceId: {}", user.getUsername(), traceId);
             throw new ResponseStatusException(
                     HttpStatus.EXPECTATION_FAILED,
                     "Failed to update password. Please try again."
