@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
@@ -20,63 +21,114 @@ import org.springframework.web.server.ResponseStatusException;
 @Validated
 public class RegisterUserUseCase {
 
+    private static final int MAX_USERNAME_GENERATION_ATTEMPTS = 3;
+
     private final UserService userService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final ClientDomain clientDomain;
 
+    @Transactional
     public User execute(@Valid NewUserDtO registerDTO, String traceId) {
+        Assert.hasText(traceId, "traceId must not be blank");
+        validatePasswordsMatch(registerDTO);
 
-        Assert.isTrue(registerDTO.confirmPassword().equals(registerDTO.password()), "Passwords don't match");
-        User user;
+        User user = createUser(registerDTO, traceId);
+        validateEmailNotTaken(user.getEmail(), traceId);
 
+        user = persistUser(user, traceId);
+        publishUserCreatedEvent(user, traceId);
+
+        return user;
+    }
+
+    private void validatePasswordsMatch(NewUserDtO registerDTO) {
+        Assert.isTrue(
+                registerDTO.confirmPassword().equals(registerDTO.password()),
+                "Passwords don't match"
+        );
+    }
+
+    private User createUser(NewUserDtO registerDTO, String traceId) {
         if (registerDTO.isCapitecClient()) {
+            return createCapitecClientUser(registerDTO, traceId);
+        }
+        return createGuestUser(registerDTO, traceId);
+    }
 
-            var createUserExistingClientFactory = new CreateUserExistingClientFactory(
+    private User createCapitecClientUser(NewUserDtO registerDTO, String traceId) {
+        var factory = new CreateUserExistingClientFactory(
+                registerDTO.firstname(),
+                registerDTO.lastname(),
+                registerDTO.email(),
+                registerDTO.password()
+        );
+
+        return factory.createUser(() ->
+                clientDomain.findByUsername(registerDTO.idNumber())
+                        .orElseThrow(() -> {
+                            log.error("Capitec client not found with idNumber: {}, traceId: {}", registerDTO.idNumber(), traceId);
+                            return new ResponseStatusException(HttpStatus.NOT_FOUND, "User does not exist as a Capitec client");
+                        })
+        );
+    }
+
+    private User createGuestUser(NewUserDtO registerDTO, String traceId) {
+        validateNotCapitecClient(registerDTO.idNumber(), traceId);
+        return generateUserWithUniqueUsername(registerDTO);
+    }
+
+    private void validateNotCapitecClient(String idNumber, String traceId) {
+        clientDomain.findByUsername(idNumber).ifPresent(__ -> {
+            log.error("Unauthorized: Non-client registration attempted with existing client data. idNumber: {}, traceId: {}", idNumber, traceId);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized to use other client data");
+        });
+    }
+
+    private User generateUserWithUniqueUsername(NewUserDtO registerDTO) {
+        for (int attempt = 0; attempt < MAX_USERNAME_GENERATION_ATTEMPTS; attempt++) {
+            User user = new User(
+                    registerDTO.email(),
                     registerDTO.firstname(),
                     registerDTO.lastname(),
-                    registerDTO.email(),
                     registerDTO.password()
             );
 
-            user = createUserExistingClientFactory.createUser(() ->
-                    clientDomain.findByUsername(registerDTO.idNumber()).orElseThrow(() -> {
-                        log.error("User is not found with idNumber {}, traceId:{}", registerDTO.idNumber(), traceId);
-                        return new ResponseStatusException(HttpStatus.NOT_FOUND, "User does not exist as a capitec client");
-                    }));
-
-        } else {
-
-            clientDomain.findByUsername(registerDTO.idNumber()).ifPresent(presentUser -> {
-                log.error("UnAuthorized to use other client data. Client try to register as non-capitec client but existing client with existing data {}, traceId:{}", registerDTO.idNumber(), traceId);
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "UnAuthorized to use other client data");
-            });
-
-            do {
-                user = new User(registerDTO.email(), registerDTO.firstname(), registerDTO.lastname(), registerDTO.password());
-            } while (userService.checkIfUserExists(user.getUsername()));
+            if (!userService.checkIfUserExists(user.getUsername())) {
+                return user;
+            }
         }
 
-        // Check if email is taken
-        userService.getUserByEmail(user.getEmail()).ifPresent(u -> {
-            log.error("User already exists with email:{}, traceId:{}", u.getEmail(), traceId);
-            throw new EntityAlreadyExistException("User already exists with email");
+        log.error("Failed to generate unique username after {} attempts for email: {}", MAX_USERNAME_GENERATION_ATTEMPTS, registerDTO.email());
+        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to generate unique username. Please try again.");
+    }
+
+    private void validateEmailNotTaken(String email, String traceId) {
+        userService.getUserByEmail(email).ifPresent(__ -> {
+            log.error("Registration failed: Email already exists. email: {}, traceId: {}", email, traceId);
+            throw new EntityAlreadyExistException("User already exists with this email address");
         });
+    }
 
-        user = userService.registerUser(user);
+    private User persistUser(User user, String traceId) {
+        User registeredUser = userService.registerUser(user);
 
-        if (user == null) {
-            log.error("Failed to register new user, traceId:{}", traceId);
-            throw new ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Failed to register new user");
+        if (registeredUser == null) {
+            log.error("Failed to persist user to identity provider, traceId: {}", traceId);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to register user. Please try again.");
         }
 
-        log.info("Registered user, traceId:{}", traceId);
+        log.info("User registered successfully. username: {}, traceId: {}", registeredUser.getUsername(), traceId);
+        return registeredUser;
+    }
+
+    private void publishUserCreatedEvent(User user, String traceId) {
+        String fullName = user.getFirstname() + " " + user.getLastname();
         applicationEventPublisher.publishEvent(new UserCreatedEvent(
                 user.getUsername(),
                 user.getEmail(),
-                user.getFirstname() + " " + user.getLastname(),
+                fullName,
                 traceId
         ));
-
-        return user;
+        log.debug("UserCreatedEvent published for username: {}, traceId: {}", user.getUsername(), traceId);
     }
 }
