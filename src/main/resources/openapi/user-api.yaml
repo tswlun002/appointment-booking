@@ -56,29 +56,90 @@ paths:
                 type: string
                 example: "Verification code, please confirm it to complete registration"
         '400':
-          description: Invalid request parameters
+          description: |
+            Invalid request parameters:
+            - Passwords don't match
+            - Missing required fields
+            - Invalid email format
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-        "401":
-          description: User try to register with ID that exist at Capitec client domain but names or email do match with existing record
+              examples:
+                passwordMismatch:
+                  summary: Passwords don't match
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Passwords don't match"
+                    path: "/api/v1/users/auth/register"
+        '404':
+          description: |
+            Capitec client not found:
+            - User attempted to register as Capitec client but ID number not found in client domain
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User does not exist as a Capitec client"
+                path: "/api/v1/users/auth/register"
         '409':
-          description: User already exists
+          description: |
+            Conflict with existing data:
+            - Email already registered
+            - ID number belongs to existing Capitec client (when registering as guest)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                emailExists:
+                  summary: Email already registered
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 409
+                    error: "Conflict"
+                    message: "User already exists with this email address"
+                    path: "/api/v1/users/auth/register"
+                idNumberConflict:
+                  summary: ID number belongs to Capitec client
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 409
+                    error: "Conflict"
+                    message: "This ID number is already registered as a Capitec client. Please register as an existing client."
+                    path: "/api/v1/users/auth/register"
         '500':
-          description: Internal server error
+          description: |
+            Internal server error:
+            - Failed to generate unique username after multiple attempts
+            - Failed to persist user to identity provider
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                usernameGeneration:
+                  summary: Username generation failed
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 500
+                    error: "Internal Server Error"
+                    message: "Failed to generate unique username. Please try again."
+                    path: "/api/v1/users/auth/register"
+                persistFailed:
+                  summary: User persistence failed
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 500
+                    error: "Internal Server Error"
+                    message: "Failed to register user. Please try again."
+                    path: "/api/v1/users/auth/register"
 
   /auth/verify:
     put:

@@ -79,8 +79,8 @@ public class RegisterUserUseCase {
 
     private void validateNotCapitecClient(String idNumber, String traceId) {
         clientDomain.findByUsername(idNumber).ifPresent(__ -> {
-            log.error("Unauthorized: Non-client registration attempted with existing client data. idNumber: {}, traceId: {}", idNumber, traceId);
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized to use other client data");
+            log.error("Registration conflict: ID number belongs to existing Capitec client. idNumber: {}, traceId: {}", idNumber, traceId);
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This ID number is already registered as a Capitec client. Please register as an existing client.");
         });
     }
 
