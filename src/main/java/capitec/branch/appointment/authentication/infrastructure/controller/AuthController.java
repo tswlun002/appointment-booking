@@ -1,9 +1,8 @@
 package capitec.branch.appointment.authentication.infrastructure.controller;
 
-import capitec.branch.appointment.authentication.app.LoginDTO;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import capitec.branch.appointment.authentication.domain.AuthUseCase;
+import capitec.branch.appointment.authentication.app.*;
 import capitec.branch.appointment.authentication.domain.TokenResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.ws.rs.core.NewCookie;
@@ -16,7 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -32,99 +30,93 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthUseCase authUseCase;
+    private final LoginUseCase loginUseCase;
+    private final RefreshTokenUseCase refreshTokenUseCase;
+    private final LogoutUseCase logoutUseCase;
+    private final VerifyPasswordUseCase verifyPasswordUseCase;
+    private final ImpersonateUserUseCase impersonateUserUseCase;
+
     @Value("${cookie.samesite}")
     private NewCookie.SameSite sameSite;
 
     /**
      * User login.
-     *
-     * @param loginDTO the login credentials
-     * @param traceId  unique trace identifier for request tracking
-     * @param response HTTP response for setting cookies
      */
     @PostMapping("/login")
     public void login(@RequestBody LoginDTO loginDTO, @RequestHeader("Trace-Id") String traceId, HttpServletResponse response) {
-        log.info("User signing in, traceId:{}", traceId);
-        TokenResponse login = authUseCase.login(loginDTO, traceId);
-        addTokenToCookie(login, response, traceId);
+        log.info("User signing in. traceId: {}", traceId);
+        TokenResponse token = loginUseCase.execute(loginDTO, traceId);
+        addTokenToCookie(token, response, traceId);
     }
 
     /**
      * Refresh access token using refresh token from cookie.
-     *
-     * @param cookies  cookies header containing refresh token
-     * @param traceId  unique trace identifier for request tracking
-     * @param response HTTP response for setting new cookies
      */
     @PostMapping("/refresh")
     public void refresh(@RequestHeader(HttpHeaders.COOKIE) String cookies, @RequestHeader("Trace-Id") String traceId, HttpServletResponse response) {
-        String[] cookiesKeyValue = cookies.split(";");
-        var refreshToken = Arrays.stream(cookiesKeyValue)
-                .filter(cookie -> {
-                    String s = cookie.split("=")[0].trim();
-                    return s.equalsIgnoreCase("refresh_token");
-                })
-                .map(cookie -> cookie.split("=")[1].trim())
-                .collect(Collectors.joining());
+        String refreshToken = extractRefreshToken(cookies);
 
-        log.info("Refresh user token, traceId:{}", traceId);
-
-        TokenResponse tokenResponse = authUseCase.refreshAccessToken(refreshToken, traceId);
+        log.info("Refreshing user token. traceId: {}", traceId);
+        TokenResponse tokenResponse = refreshTokenUseCase.execute(refreshToken, traceId);
         addTokenToCookie(tokenResponse, response, traceId);
     }
 
     /**
      * Verify user's current password.
-     *
-     * @param userCredentialDTO the user credentials
-     * @param traceId           unique trace identifier for request tracking
-     * @return validation result
      */
     @PostMapping("/credentials/password/verify")
-    public ResponseEntity<?> verifyUserCurrentPassword(@RequestBody UserCredentialDTO userCredentialDTO, @RequestHeader("Trace-Id") String traceId) {
-        boolean isValid = authUseCase.verifyCurrentPassword(userCredentialDTO.username(), userCredentialDTO.Password(), traceId);
-        return new ResponseEntity<>(isValid ? "Password is valid." : "Invalid credentials", isValid ? HttpStatus.OK : HttpStatus.UNAUTHORIZED);
+    public ResponseEntity<String> verifyUserCurrentPassword(
+            @RequestBody UserCredentialDTO userCredentialDTO,
+            @RequestHeader("Trace-Id") String traceId) {
+        boolean isValid = verifyPasswordUseCase.execute(
+                userCredentialDTO.username(),
+                userCredentialDTO.Password(),
+                traceId
+        );
+        return new ResponseEntity<>(
+                isValid ? "Password is valid." : "Invalid credentials",
+                isValid ? HttpStatus.OK : HttpStatus.UNAUTHORIZED
+        );
     }
 
     /**
      * Admin impersonate user login.
-     *
-     * @param username the username to impersonate
-     * @param traceId  unique trace identifier for request tracking
-     * @return token response
      */
     @PostMapping("/admin/impersonate/{username}")
     @PreAuthorize("hasAnyRole('impersonate') and hasAnyRole('admin')")
-    public ResponseEntity<TokenResponse> adminImpersonateUser(@PathVariable("username") String username, @RequestHeader("Trace-Id") String traceId) {
-        TokenResponse tokenResponse = authUseCase.adminImpersonateUser(username, traceId);
+    public ResponseEntity<TokenResponse> adminImpersonateUser(
+            @PathVariable("username") String username,
+            @RequestHeader("Trace-Id") String traceId) {
+        TokenResponse tokenResponse = impersonateUserUseCase.execute(username, traceId);
         return ResponseEntity.ok(tokenResponse);
     }
 
     /**
      * User logout.
-     *
-     * @param cookies  cookies header containing refresh token
-     * @param traceId  unique trace identifier for request tracking
      */
     @PostMapping("/logout")
     @PreAuthorize("hasAnyRole('app_user')")
     public void logout(@RequestHeader(HttpHeaders.COOKIE) String cookies, @RequestHeader("Trace-Id") String traceId) {
+        String refreshToken = extractRefreshToken(cookies);
+
+        log.info("User signing out. traceId: {}", traceId);
+        logoutUseCase.execute(refreshToken, traceId);
+    }
+
+    // ==================== Private Helper Methods ====================
+
+    private String extractRefreshToken(String cookies) {
         String[] cookiesKeyValue = cookies.split(";");
-        var refreshToken = Arrays.stream(cookiesKeyValue)
+        return Arrays.stream(cookiesKeyValue)
                 .filter(cookie -> {
-                    String s = cookie.split("=")[0].trim();
-                    return s.equalsIgnoreCase("refresh_token");
+                    String key = cookie.split("=")[0].trim();
+                    return key.equalsIgnoreCase("refresh_token");
                 })
                 .map(cookie -> cookie.split("=")[1].trim())
                 .collect(Collectors.joining());
-
-        log.info("User signing out, traceId:{}", traceId);
-        authUseCase.logout(refreshToken, traceId);
     }
 
     private void addTokenToCookie(TokenResponse token, HttpServletResponse response, String traceId) {
-        // Add refresh token to cookies and secure it
         Cookie cookie = new Cookie("refresh_token", token.getRefreshToken());
         cookie.setMaxAge((int) (token.getRefreshExpiresIn()));
         cookie.setSecure(true);
@@ -135,16 +127,14 @@ public class AuthController {
         response.addCookie(cookie);
         response.setContentType(APPLICATION_JSON_VALUE);
         response.setStatus(HttpStatus.OK.value());
-        try {
 
+        try {
             token.setRefreshToken(null);
             token.setRefreshExpiresIn(0);
             new ObjectMapper().writeValue(response.getOutputStream(), token);
-
         } catch (Exception e) {
-            log.warn("Failed to write token to response, traceId:{}", traceId,e);
+            log.warn("Failed to write token to response. traceId: {}", traceId, e);
             response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-
         }
     }
 }
