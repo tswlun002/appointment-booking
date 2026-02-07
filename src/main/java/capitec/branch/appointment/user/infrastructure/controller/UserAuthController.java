@@ -61,9 +61,9 @@ public class UserAuthController {
 
         var user = getUserQuery.execute(new EmailCommand(verification.email()));
 
-        var tokenResponse = verifyUserUseCase.execute(user.getUsername(), verification.otp(), verification.isCapitecClient(), traceId);
+        var tokenResponseOptional = verifyUserUseCase.execute(user.getUsername(), verification.otp(), verification.isCapitecClient(), traceId);
 
-        if (tokenResponse == null) {
+        if (tokenResponseOptional.isEmpty()) {
 
             log.info("Auto login user failed, traceId:{}", traceId);
             response.setStatus(HttpStatus.ACCEPTED.value());
@@ -74,7 +74,7 @@ public class UserAuthController {
                 response.setStatus(HttpStatus.NO_CONTENT.value());
             }
         } else {
-            addTokenToCookie(tokenResponse, response, traceId);
+            addTokenToCookie(tokenResponseOptional.get(), response, traceId);
         }
     }
 

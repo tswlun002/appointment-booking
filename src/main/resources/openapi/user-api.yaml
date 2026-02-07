@@ -160,7 +160,7 @@ paths:
               $ref: '#/components/schemas/VerificationRequest'
       responses:
         '200':
-          description: User verified successfully and auto logged user
+          description: User verified successfully and auto-logged in
           headers:
             Set-Cookie:
               description: Refresh token cookie
@@ -171,26 +171,112 @@ paths:
               schema:
                 $ref: '#/components/schemas/TokenResponse'
         '202':
-          description: User verified successfully but failed to auto logged user. User need to manually login
+          description: User verified successfully but auto-login failed. User must login manually.
           content:
-            application/json:
+            text/plain:
               schema:
                 type: string
+                example: "OTP verified successfully. Please can login"
         '204':
-          description: User Verified successfully but failed to add response(token/string) to response
-        '400':
-          description: Invalid OTP or verification failed
+          description: User verified successfully but failed to write response body
+        '403':
+          description: |
+            Forbidden - Invalid OTP code:
+            - OTP code does not match
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 403
+                error: "Forbidden"
+                message: "Invalid OTP code"
+                path: "/api/v1/users/auth/verify"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User not found"
+                path: "/api/v1/users/auth/verify"
+        '410':
+          description: |
+            Gone - OTP has expired:
+            - A new OTP has been sent to the user's email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 410
+                error: "Gone"
+                message: "OTP has expired. A new OTP has been sent to your email."
+                path: "/api/v1/users/auth/verify"
         '417':
-          description: OTP is valid  but failed to update user status to verified
+          description: |
+            Expectation Failed - Verification status update failed:
+            - OTP was valid but failed to update user verification status
+            - User should retry
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Temporarily failed to update verification status. Please try again."
+                path: "/api/v1/users/auth/verify"
+        '423':
+          description: |
+            Locked - Too many failed OTP attempts:
+            - User account has been disabled due to too many failed attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 423
+                error: "Locked"
+                message: "Too many failed OTP attempts. Account has been locked."
+                path: "/api/v1/users/auth/verify"
+        '425':
+          description: |
+            Too Early - OTP resend cooldown not passed:
+            - User must wait before requesting a new OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 425
+                error: "Too Early"
+                message: "Please wait few minutes before requesting a new OTP."
+                path: "/api/v1/users/auth/verify"
+        '429':
+          description: |
+            Too Many Requests - OTP resend rate limit exceeded:
+            - Maximum OTP resend requests exceeded within time window
+            - User must wait for the window to reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many OTP requests. Please try again in 60 minutes."
+                path: "/api/v1/users/auth/verify"
         '500':
           description: Internal server error
           content:

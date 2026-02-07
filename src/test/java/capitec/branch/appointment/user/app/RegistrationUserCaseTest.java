@@ -1,7 +1,6 @@
 package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
-import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.event.domain.RecordStatus;
 import capitec.branch.appointment.event.domain.UserDeadLetterService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
@@ -121,9 +120,9 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
 
-        TokenResponse tokenResponse = verifyUserUseCase.execute(user.getUsername(), otp.getCode(), false, traceId);
+        var tokenResponseOptional = verifyUserUseCase.execute(user.getUsername(), otp.getCode(), false, traceId);
 
-        assertThat(tokenResponse).isNotNull();
+        assertThat(tokenResponseOptional).isPresent();
 
         var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()));
         assertThat(verifiedUser)
@@ -156,9 +155,9 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         var otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
 
-        TokenResponse tokenResponse = verifyUserUseCase.execute(user.getUsername(), otp.getCode(), false, traceId);
+        var tokenResponseOptional = verifyUserUseCase.execute(user.getUsername(), otp.getCode(), false, traceId);
 
-        assertThat(tokenResponse).isNotNull();
+        assertThat(tokenResponseOptional).isPresent();
 
         var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()));
         assertThat(verifiedUser)

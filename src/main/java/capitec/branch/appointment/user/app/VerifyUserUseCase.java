@@ -1,13 +1,17 @@
 package capitec.branch.appointment.user.app;
 
-import capitec.branch.appointment.authentication.domain.AuthUseCase;
 import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.exeption.TokenExpiredException;
-import capitec.branch.appointment.otp.app.ValidateOTPService;
-import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.user.app.event.UserCreatedEvent;
 import capitec.branch.appointment.user.app.event.UserVerifiedEvent;
-import capitec.branch.appointment.user.domain.*;
+import capitec.branch.appointment.user.app.port.AuthenticationPort;
+import capitec.branch.appointment.user.app.port.OtpResendRateLimitPort;
+import capitec.branch.appointment.user.app.port.OtpValidationPort;
+import capitec.branch.appointment.user.app.port.RoleAssignmentPort;
+import capitec.branch.appointment.user.domain.USER_TYPES;
+import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserRoleService;
+import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,101 +27,163 @@ import java.util.Optional;
 @UseCase
 @RequiredArgsConstructor
 @Validated
-public class VerifyUserUseCase implements ImpersonateUserLogin {
+public class VerifyUserUseCase {
 
     private final UserService userService;
     private final UserRoleService userRoleService;
     private final ApplicationEventPublisher applicationEventPublisher;
-    private final FetchRoleByNameService fetchRoleByNameService;
-    private final ValidateOTPService validateOTPService;
-    private final AuthUseCase authUseCase;
+    private final RoleAssignmentPort roleAssignmentPort;
+    private final OtpValidationPort otpValidationPort;
+    private final AuthenticationPort authenticationPort;
+    private final OtpResendRateLimitPort otpResendRateLimitPort;
 
     @Transactional
-    public TokenResponse execute(String username, String otp, boolean isCapitecClient, String traceId) {
-        log.info("Verifying user, traceId:{}", traceId);
+    public Optional<TokenResponse> execute(String username, String otp, boolean isCapitecClient, String traceId) {
 
-        var user = userService.getUserByUsername(username).orElseThrow(() -> {
-            log.error("User is not found with username {}, traceId:{}", username, traceId);
-            return new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
-        });
+        log.info("Verifying user registration. username: {}, traceId: {}", username, traceId);
 
-        var validate = false;
+        User user = findUserOrThrow(username, traceId);
+        validateOtp(user, otp, traceId);
+        verifyUserStatus(username, traceId);
+        assignDefaultRoles(username, isCapitecClient, traceId);
+        publishUserVerifiedEvent(user, otp, traceId);
 
+        return attemptAutoLogin(username, traceId);
+    }
+
+    private User findUserOrThrow(String username, String traceId) {
+        return userService.getUserByUsername(username)
+                .orElseThrow(() -> {
+                    log.error("User not found. username: {}, traceId: {}", username, traceId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+                });
+    }
+
+    private void validateOtp(User user, String otp, String traceId) {
         try {
-            validate = validateOTPService.validateOTP(user.getUsername(), otp, traceId);
+            boolean isValid = otpValidationPort.validateOtp(user.getUsername(), otp, traceId);
+
+            if (!isValid) {
+                log.warn("OTP validation failed. username: {}, traceId: {}", user.getUsername(), traceId);
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid OTP code");
+            }
 
         } catch (TokenExpiredException e) {
-            log.error("OTP expired, traceId:{}", traceId, e);
-            applicationEventPublisher.publishEvent(new UserCreatedEvent(
-                    username,
-                    user.getEmail(),
-                    user.getFirstname() + " " + user.getLastname(),
-                    traceId
-            ));
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN.value(), e.getMessage() + ",OTP expired, new OTP was sent to your email", e);
-
+            handleExpiredOtp(user, traceId, e);
         } catch (ResponseStatusException e) {
-            log.error("Invalid OTP, traceId:{}", traceId, e);
-            if (e.getStatusCode().equals(HttpStatus.LOCKED)) {
-                log.error("OTP is locked so disable user, traceId:{}", traceId);
-                userService.updateUseStatus(username, false);
-            }
-            throw e;
+            handleOtpValidationError(user.getUsername(), traceId, e);
+        }
+    }
+
+    private void handleExpiredOtp(User user, String traceId, TokenExpiredException e) {
+        log.warn("OTP expired. username: {}, traceId: {}", user.getUsername(), traceId);
+
+        // Check cooldown between resends
+        if (!otpResendRateLimitPort.isCooldownPassed(user.getUsername())) {
+            log.warn("OTP resend cooldown not passed. username: {}, traceId: {}", user.getUsername(), traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_EARLY,
+                    "Please wait few minutes before requesting a new OTP."
+            );
         }
 
-        if (!validate) {
-            log.error("Failed, OTP is invalid, traceId:{}", traceId);
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Failed, OTP is invalid");
+        // Check rate limit
+        if (!otpResendRateLimitPort.isResendAllowed(user.getUsername())) {
+            long secondsUntilReset = otpResendRateLimitPort.getSecondsUntilReset(user.getUsername());
+            log.warn("OTP resend rate limit exceeded. username: {}, secondsUntilReset: {}, traceId: {}",
+                    user.getUsername(), secondsUntilReset, traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    String.format("Too many OTP requests. Please try again in %d minutes.", secondsUntilReset / 60 + 1)
+            );
         }
 
-        validate = userService.verifyUser(username);
+        // Record the resend attempt
+        otpResendRateLimitPort.recordResendAttempt(user.getUsername());
 
-        if (validate) {
-            assignDefaultRoles(username, isCapitecClient, traceId);
+        // Resend OTP
+        applicationEventPublisher.publishEvent(new UserCreatedEvent(
+                user.getUsername(),
+                user.getEmail(),
+                user.getFirstname() + " " + user.getLastname(),
+                traceId
+        ));
 
-            String fullName = user.getFirstname() + " " + user.getLastname();
-            applicationEventPublisher.publishEvent(new UserVerifiedEvent(
-                    user.getUsername(),
-                    user.getEmail(),
-                    fullName,
-                    otp,
-                    traceId
-            ));
+        log.info("New OTP sent after expiry. username: {}, traceId: {}", user.getUsername(), traceId);
 
-            TokenResponse tokenResponse;
-            try {
-                tokenResponse = adminImpersonateUserLogin(user.getUsername(), traceId);
-            } catch (Exception e) {
-                log.warn("Failed to auto login, user must manually login to complete account setup and access services, traceId:{}", traceId, e);
-                return null;
-            }
+        throw new ResponseStatusException(
+                HttpStatus.GONE, "OTP has expired. A new OTP has been sent to your email.", e);
+    }
 
-            return tokenResponse;
-        } else {
-            log.warn("Failed to set user verification status to verified, username:{}, traceId:{}", username, traceId);
-            throw new ResponseStatusException(HttpStatus.EXPECTATION_FAILED, "Temporary failed to updated verification status, please try again.");
+    private void handleOtpValidationError(String username, String traceId, ResponseStatusException e) {
+        if (HttpStatus.LOCKED.equals(e.getStatusCode())) {
+            log.error("OTP locked due to too many attempts. Disabling user. username: {}, traceId: {}", username, traceId);
+            userService.updateUseStatus(username, false);
         }
+        throw e;
+    }
+
+    private void verifyUserStatus(String username, String traceId) {
+        boolean verified = userService.verifyUser(username);
+
+        if (!verified) {
+            log.error("Failed to update user verification status. username: {}, traceId: {}", username, traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.EXPECTATION_FAILED,
+                    "Temporarily failed to update verification status. Please try again."
+            );
+        }
+
+        // Reset OTP resend rate limit on successful verification
+        otpResendRateLimitPort.reset(username);
+
+        log.info("User verification status updated successfully. username: {}, traceId: {}", username, traceId);
     }
 
     private void assignDefaultRoles(String username, boolean isCapitecClient, String traceId) {
         String groupName = isCapitecClient ? USER_TYPES.USER_CLIENT.name() : USER_TYPES.USER_GUEST.name();
-        Optional<String> groupId = fetchRoleByNameService.getGroupId(groupName, true);
 
-        if (groupId.isPresent()) {
-            boolean isAssigned = userRoleService.addUserToGroup(username, groupId.get());
+        roleAssignmentPort.getGroupId(groupName, true)
+                .ifPresentOrElse(
+                        groupId -> assignUserToGroup(username, groupId, traceId),
+                        () -> log.warn("Default group not found. groupName: {}, username: {}, traceId: {}",
+                                groupName, username, traceId)
+                );
+    }
 
-            if (!isAssigned) {
-                log.warn("Failed to assign default groups/roles to user. Admin must add these role to user. default groups/roles {} is not assigned to user {},traceId:{}", groupId.get(), username, traceId);
-            } else {
-                log.info("User assigned default groups/roles:{} to user {}, traceId:{}", groupId.get(), username, traceId);
-            }
+    private void assignUserToGroup(String username, String groupId, String traceId) {
+        boolean assigned = userRoleService.addUserToGroup(username, groupId);
+
+        if (assigned) {
+            log.info("User assigned to default group. groupId: {}, username: {}, traceId: {}", groupId, username, traceId);
         } else {
-            log.warn("Failed to assign default groups/role to user:{}. Admin must add these default groups/role to user, traceId:{}.", username, traceId);
+            log.warn("Failed to assign user to default group. groupId: {}, username: {}, traceId: {}", groupId, username, traceId);
         }
     }
 
-    @Override
-    public TokenResponse adminImpersonateUserLogin(String username, String traceId) {
-        return authUseCase.adminImpersonateUser(username, traceId);
+    private void publishUserVerifiedEvent(User user, String otp, String traceId) {
+        String fullName = user.getFirstname() + " " + user.getLastname();
+
+        applicationEventPublisher.publishEvent(new UserVerifiedEvent(
+                user.getUsername(),
+                user.getEmail(),
+                fullName,
+                otp,
+                traceId
+        ));
+
+        log.debug("UserVerifiedEvent published. username: {}, traceId: {}", user.getUsername(), traceId);
+    }
+
+    private Optional<TokenResponse> attemptAutoLogin(String username, String traceId) {
+        try {
+            TokenResponse tokenResponse = authenticationPort.impersonateUser(username, traceId);
+            log.info("Auto-login successful. username: {}, traceId: {}", username, traceId);
+            return Optional.ofNullable(tokenResponse);
+
+        } catch (Exception e) {
+            log.warn("Auto-login failed. User must login manually. username: {}, traceId: {}", username, traceId, e);
+            return Optional.empty();
+        }
     }
 }

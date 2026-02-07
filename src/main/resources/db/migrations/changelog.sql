@@ -370,3 +370,21 @@ CREATE TRIGGER set_last_modified_date_event
     ON user_dead_letter_event
     FOR EACH ROW
     EXECUTE FUNCTION update_last_modified_date();
+
+-- changeset Lunga:23
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='rate_limit';
+-- comment: Rate limit table for tracking request limits across different purposes (OTP resend, password reset, etc.)
+CREATE TABLE rate_limit (
+    id BIGSERIAL PRIMARY KEY,
+    identifier VARCHAR(255) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    attempt_count INT NOT NULL DEFAULT 0,
+    window_start_at TIMESTAMP NOT NULL,
+    last_attempt_at TIMESTAMP,
+    CONSTRAINT uk_rate_limit_identifier_purpose UNIQUE (identifier, purpose)
+);
+CREATE INDEX idx_rate_limit_identifier ON rate_limit(identifier);
+CREATE INDEX idx_rate_limit_purpose ON rate_limit(purpose);
+CREATE INDEX idx_rate_limit_window_start ON rate_limit(window_start_at);
+--rollback DROP TABLE rate_limit;
