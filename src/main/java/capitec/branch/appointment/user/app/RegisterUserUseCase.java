@@ -29,16 +29,24 @@ public class RegisterUserUseCase {
 
     @Transactional
     public User execute(@Valid NewUserDtO registerDTO, String traceId) {
-        Assert.hasText(traceId, "traceId must not be blank");
-        validatePasswordsMatch(registerDTO);
+        try {
+            Assert.hasText(traceId, "traceId must not be blank");
+            validatePasswordsMatch(registerDTO);
 
-        User user = createUser(registerDTO, traceId);
-        validateEmailNotTaken(user.getEmail(), traceId);
+            User user = createUser(registerDTO, traceId);
+            validateEmailNotTaken(user.getEmail(), traceId);
 
-        user = persistUser(user, traceId);
-        publishUserCreatedEvent(user, traceId);
+            user = persistUser(user, traceId);
+            publishUserCreatedEvent(user, traceId);
 
-        return user;
+            return user;
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation failed. traceId: {}, error: {}", traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (UserDomainException e) {
+            log.error("User domain error. traceId: {}, error: {}", traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        }
     }
 
     private void validatePasswordsMatch(NewUserDtO registerDTO) {

@@ -9,6 +9,7 @@ import capitec.branch.appointment.user.app.port.OtpValidationPort;
 import capitec.branch.appointment.user.app.port.RoleAssignmentPort;
 import capitec.branch.appointment.user.domain.USER_TYPES;
 import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserDomainException;
 import capitec.branch.appointment.user.domain.UserRoleService;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
@@ -50,20 +51,25 @@ public class VerifyUserUseCase {
     private int cooldownSeconds;
 
     public Optional<TokenResponse> execute(String username, String otp, boolean isCapitecClient, String traceId) {
+        try {
+            log.info("Verifying user registration. username: {}, traceId: {}", username, traceId);
 
-        log.info("Verifying user registration. username: {}, traceId: {}", username, traceId);
-
-        // Transactional verification steps
-        transactionTemplate.executeWithoutResult(status -> {
-            User user = findUserOrThrow(username, traceId);
-            validateOtp(user, otp, traceId);
-            verifyUserStatus(username, traceId);
-            assignDefaultRoles(username, isCapitecClient, traceId);
-            publishUserVerifiedEvent(user, otp, traceId);
-        });
-
-        // Non-transactional: auto-login failure won't rollback verification
-        return attemptAutoLogin(username, traceId);
+            // Transactional verification steps
+            transactionTemplate.executeWithoutResult(status -> {
+                User user = findUserOrThrow(username, traceId);
+                validateOtp(user, otp, traceId);
+                verifyUserStatus(username, traceId);
+                assignDefaultRoles(username, isCapitecClient, traceId);
+                publishUserVerifiedEvent(user, otp, traceId);
+            });
+            return attemptAutoLogin(username, traceId);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation failed. username: {}, traceId: {}, error: {}", username, traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (UserDomainException e) {
+            log.error("User domain error. username: {}, traceId: {}, error: {}", username, traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        }
     }
 
     private User findUserOrThrow(String username, String traceId) {

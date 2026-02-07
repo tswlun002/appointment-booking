@@ -7,6 +7,7 @@ import capitec.branch.appointment.user.app.event.PasswordResetRequestEvent;
 import capitec.branch.appointment.user.app.event.PasswordUpdatedEvent;
 import capitec.branch.appointment.user.app.port.OtpValidationPort;
 import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserDomainException;
 import capitec.branch.appointment.user.domain.UserPasswordService;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
@@ -70,27 +71,43 @@ public class PasswordResetUseCase {
     }
 
     public void passwordReset(@Valid PasswordResetDTO passwordResetDTO, String traceId) {
-        log.info("Password reset initiated. email: {}, traceId: {}", passwordResetDTO.email(), traceId);
+        try {
+            log.info("Password reset initiated. email: {}, traceId: {}", passwordResetDTO.email(), traceId);
 
-        User user = findUserByEmailOrThrow(passwordResetDTO.email(), traceId);
-        validateOtpOrThrow(user, passwordResetDTO.OTP(), traceId);
-        resetRateLimit(user.getUsername());
-        updatePasswordOrThrow(user, passwordResetDTO.newPassword(), traceId);
-        publishPasswordUpdatedEvent(user, passwordResetDTO.OTP(), traceId);
+            User user = findUserByEmailOrThrow(passwordResetDTO.email(), traceId);
+            validateOtpOrThrow(user, passwordResetDTO.OTP(), traceId);
+            resetRateLimit(user.getUsername());
+            updatePasswordOrThrow(user, passwordResetDTO.newPassword(), traceId);
+            publishPasswordUpdatedEvent(user, passwordResetDTO.OTP(), traceId);
 
-        log.info("Password reset completed. username: {}, traceId: {}", user.getUsername(), traceId);
+            log.info("Password reset completed. username: {}, traceId: {}", user.getUsername(), traceId);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation failed. email: {}, traceId: {}, error: {}", passwordResetDTO.email(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (UserDomainException e) {
+            log.error("User domain error. email: {}, traceId: {}, error: {}", passwordResetDTO.email(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        }
     }
 
     public void passwordChange(@Valid ChangePasswordDTO changePasswordDTO, String traceId) {
-        log.info("Password change initiated. username: {}, traceId: {}", changePasswordDTO.username(), traceId);
+        try {
+            log.info("Password change initiated. username: {}, traceId: {}", changePasswordDTO.username(), traceId);
 
-        User user = findUserByUsernameOrThrow(changePasswordDTO.username(), traceId);
-        validateOtpOrThrow(user, changePasswordDTO.OTP(), traceId);
-        resetRateLimit(user.getUsername());
-        updatePasswordOrThrow(user, changePasswordDTO.newPassword(), traceId);
-        publishPasswordUpdatedEvent(user, changePasswordDTO.OTP(), traceId);
+            User user = findUserByUsernameOrThrow(changePasswordDTO.username(), traceId);
+            validateOtpOrThrow(user, changePasswordDTO.OTP(), traceId);
+            resetRateLimit(user.getUsername());
+            updatePasswordOrThrow(user, changePasswordDTO.newPassword(), traceId);
+            publishPasswordUpdatedEvent(user, changePasswordDTO.OTP(), traceId);
 
-        log.info("Password change completed. username: {}, traceId: {}", user.getUsername(), traceId);
+            log.info("Password change completed. username: {}, traceId: {}", user.getUsername(), traceId);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation failed. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (UserDomainException e) {
+            log.error("User domain error. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        }
     }
 
 

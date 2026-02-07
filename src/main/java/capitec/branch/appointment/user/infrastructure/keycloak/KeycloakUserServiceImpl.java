@@ -3,6 +3,7 @@ package capitec.branch.appointment.user.infrastructure.keycloak;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserDomainException;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.user.infrastructure.UserMapperReflection;
 import jakarta.validation.Valid;
@@ -178,12 +179,12 @@ public class KeycloakUserServiceImpl implements UserService {
         if (status.is5xxServerError()) {
             log.error("Failed to register user. username: {}, status: {}, message: {}",
                     user.getUsername(), response.getStatus(), response.getStatusInfo());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to register user");
+            throw new UserDomainException("Failed to register user. Service temporarily unavailable.");
         }
 
         log.error("Unexpected response during registration. username: {}, status: {}",
                 user.getUsername(), response.getStatus());
-        throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to register user");
+        throw new UserDomainException("Failed to register user");
     }
 
     private boolean handleDeleteResponse(Response response, String username) {
