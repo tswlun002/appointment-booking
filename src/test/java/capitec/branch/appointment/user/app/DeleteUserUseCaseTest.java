@@ -1,6 +1,8 @@
 package capitec.branch.appointment.user.app;
 
 
+import capitec.branch.appointment.user.app.dto.NewUserDtO;
+import capitec.branch.appointment.user.app.dto.UsernameCommand;
 import jakarta.ws.rs.NotFoundException;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.otp.domain.OTP;
@@ -18,7 +20,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
 
     @Autowired
-    RegistrationUserCase registrationUserCase;
+    RegisterUserUseCase registerUserUseCase;
+    @Autowired
+    GetUserQuery getUserQuery;
     @Autowired
     OTPService otpService;
     @Autowired
@@ -37,8 +41,8 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
                     "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"
             })
     void deleteExistingUserRequest(String email, String firstname, String lastname, String password, String traceId) {
-        var userRegister = new NewUserDtO(email, firstname, lastname,password, password);
-        var user = registrationUserCase.registerUser(userRegister, traceId);
+        var userRegister = new NewUserDtO(email, firstname, lastname, password, password);
+        var user = registerUserUseCase.execute(userRegister, traceId);
         boolean isDeleted = deleteUserUseCase.deleteUserRequest(user.getUsername(), password, traceId);
         assertThat(isDeleted).isTrue();
     }
@@ -50,17 +54,17 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
                     "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"
             })
     void deleteExistingUser(String email, String firstname, String lastname, String password, String traceId) {
-        var userRegister = new NewUserDtO(email, firstname, lastname,password, password);
-        var user = registrationUserCase.registerUser(userRegister, traceId);
+        var userRegister = new NewUserDtO(email, firstname, lastname, password, password);
+        var user = registerUserUseCase.execute(userRegister, traceId);
         OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
-        otpService.validateOTP(user.getUsername(),otp1.getCode(),3);
+        otpService.validateOTP(user.getUsername(), otp1.getCode(), 3);
         deleteUserUseCase.deleteUserRequest(user.getUsername(), password, traceId);
         OTP otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
         boolean isDeleted = deleteUserUseCase.deleteUser(user.getUsername(), otp.getCode(), traceId);
         assertThat(isDeleted).isTrue();
-        assertThatThrownBy(() -> registrationUserCase.getUser(user.getUsername()))
+        assertThatThrownBy(() -> getUserQuery.execute(new UsernameCommand(user.getUsername())))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("User is not found");
 

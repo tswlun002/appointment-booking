@@ -1,4 +1,4 @@
-package capitec.branch.appointment.user.app;
+package capitec.branch.appointment.user.app.dto;
 
 
 public record ChangePasswordRequestDTO(

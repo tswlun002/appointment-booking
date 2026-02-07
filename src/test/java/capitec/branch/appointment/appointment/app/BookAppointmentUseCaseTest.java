@@ -8,7 +8,7 @@ import capitec.branch.appointment.slots.app.GetSlotQuery;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import capitec.branch.appointment.user.app.GetUserQuery;
-import capitec.branch.appointment.user.app.UsernameCommand;
+import capitec.branch.appointment.user.app.dto.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.utils.sharekernel.EventToJSONMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;

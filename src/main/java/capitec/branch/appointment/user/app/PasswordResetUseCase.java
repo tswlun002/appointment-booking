@@ -1,6 +1,10 @@
 package capitec.branch.appointment.user.app;
 import capitec.branch.appointment.exeption.TokenExpiredException;
 import capitec.branch.appointment.otp.app.ValidateOTPService;
+import capitec.branch.appointment.user.app.dto.ChangePasswordDTO;
+import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
+import capitec.branch.appointment.user.app.event.PasswordResetRequestEvent;
+import capitec.branch.appointment.user.app.event.PasswordUpdatedEvent;
 import capitec.branch.appointment.user.domain.ResetPasswordService;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserService;

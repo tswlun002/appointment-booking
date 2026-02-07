@@ -1,4 +1,4 @@
-package capitec.branch.appointment.user.app;
+package capitec.branch.appointment.user.app.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;

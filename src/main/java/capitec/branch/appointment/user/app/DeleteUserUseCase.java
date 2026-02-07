@@ -2,6 +2,8 @@ package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.exeption.TokenExpiredException;
 import capitec.branch.appointment.otp.app.ValidateOTPService;
+import capitec.branch.appointment.user.app.event.DeleteUserEvent;
+import capitec.branch.appointment.user.app.event.DeleteUserRequestEvent;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.ws.rs.NotFoundException;

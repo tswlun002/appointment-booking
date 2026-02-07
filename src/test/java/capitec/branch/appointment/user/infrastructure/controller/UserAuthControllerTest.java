@@ -9,7 +9,7 @@ import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.exeption.AppException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTPService;
-import capitec.branch.appointment.user.app.NewUserDtO;
+import capitec.branch.appointment.user.app.dto.NewUserDtO;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserService;
 import org.junit.jupiter.api.AfterEach;

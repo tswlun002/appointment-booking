@@ -3,7 +3,7 @@ package capitec.branch.appointment.event.infrastructure.adapter.user;
 import capitec.branch.appointment.event.app.port.OTPEventProducerServicePort;
 import capitec.branch.appointment.event.app.port.OTPPort;
 import capitec.branch.appointment.event.app.port.UserEventListenerPort;
-import capitec.branch.appointment.user.app.*;
+import capitec.branch.appointment.user.app.event.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

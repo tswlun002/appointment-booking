@@ -1,4 +1,4 @@
-package capitec.branch.appointment.user.app;
+package capitec.branch.appointment.user.app.event;
 
 import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.Validator;

@@ -1,10 +1,8 @@
-package capitec.branch.appointment.user.app;
+package capitec.branch.appointment.user.app.dto;
 
 import capitec.branch.appointment.utils.Password;
-import capitec.branch.appointment.utils.ValidRSAId;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import org.springframework.util.Assert;
 

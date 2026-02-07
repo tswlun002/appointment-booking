@@ -1,5 +1,7 @@
 package capitec.branch.appointment.user.app;
 
+import capitec.branch.appointment.user.app.dto.EmailCommand;
+import capitec.branch.appointment.user.app.dto.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
