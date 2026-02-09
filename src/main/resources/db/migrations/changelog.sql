@@ -354,11 +354,10 @@ CREATE TABLE user_dead_letter_event
     CONSTRAINT check_topic_not_empty CHECK (TRIM(topic) <> ''),
     CONSTRAINT check_trace_id_not_empty CHECK (TRIM(trace_id) <> '')
 );
-CREATE INDEX idx_user_dead_letter_event_trace_id ON user_dead_letter_event (trace_id);
-CREATE INDEX idx_user_dead_letter_event_topic ON user_dead_letter_event (topic);
-CREATE INDEX idx_user_dead_letter_event_is_retryable ON user_dead_letter_event (is_retryable);
-CREATE INDEX idx_user_dead_letter_event_status ON user_dead_letter_event (status);
+CREATE INDEX idx_user_dead_letter_event_topic_trace_id ON user_dead_letter_event (topic,trace_id);
 CREATE INDEX idx_user_dead_letter_event_time_stamp ON user_dead_letter_event (published_time);
+CREATE INDEX idx_dead_letter_recovery ON user_dead_letter_event (is_retryable, status, retry_count, next_retry_at);
+
 --rollback DROP TABLE user_dead_letter_event;
 
 -- changeset Lunga:22

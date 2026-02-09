@@ -8,7 +8,7 @@ public interface EventDeadLetterService {
     void saveDeadLetter( ErrorEvent errorEventValue);
     Set<ErrorEvent> findByStatus(RecordStatus recordStatus, int offset, int limit );
 
-    void updateStatus( ErrorEvent errorEventValue);
+    ErrorEvent updateStatus( ErrorEvent errorEventValue);
     List<ErrorEvent> recoverDeadLetter(boolean isRetryable, DEAD_LETTER_STATUS status, int offset, int limit, int maxRetry);
 
     Optional<ErrorEvent> findById(String eventId);

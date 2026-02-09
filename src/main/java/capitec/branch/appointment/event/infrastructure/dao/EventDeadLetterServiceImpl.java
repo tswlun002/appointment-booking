@@ -29,7 +29,7 @@ import static capitec.branch.appointment.event.infrastructure.config.DeadLetterC
 @Service
 @Validated
 @Primary
-public class EventDeadLetterServiceServiceImpl implements EventDeadLetterService {
+public class EventDeadLetterServiceImpl implements EventDeadLetterService {
 
     private final FailedRecordRepository repository;
 
@@ -67,7 +67,7 @@ public class EventDeadLetterServiceServiceImpl implements EventDeadLetterService
 
     @Override
     @CachePut(value = DEAD_LETTER_CACHE, key = "#errorEventValue.eventId", cacheManager = DEAD_LETTER_CACHE_MANAGER, unless = "#errorEventValue == null")
-    public void updateStatus(ErrorEvent errorEventValue) {
+    public ErrorEvent updateStatus(ErrorEvent errorEventValue) {
         if (errorEventValue == null) {
             log.error("Cannot update status: ErrorEvent is null");
             throw new InternalServerErrorException("Invalid FailedRecord can not be updated");
@@ -77,9 +77,10 @@ public class EventDeadLetterServiceServiceImpl implements EventDeadLetterService
                 errorEventValue.getEventId(), errorEventValue.getStatus(), errorEventValue.getRetryCount());
         try {
             var entity = errorEventMapper.toEntity(errorEventValue);
-            repository.save(entity);
-            log.info("Dead letter status updated. eventId: {}, status: {}, traceId: {}",
-                    errorEventValue.getEventId(), errorEventValue.getStatus(), errorEventValue.getTraceId());
+
+            UserErrorEventValueEntity save = repository.save(entity);
+            return errorEventMapper.toModel(save);
+
         } catch (Exception e) {
             log.error("Failed to update dead letter status. eventId: {}, traceId: {}",
                     errorEventValue.getEventId(), errorEventValue.getTraceId(), e);
@@ -103,7 +104,6 @@ public class EventDeadLetterServiceServiceImpl implements EventDeadLetterService
     @Override
     @Cacheable(value = DEAD_LETTER_CACHE, key = "#eventId", cacheManager = DEAD_LETTER_CACHE_MANAGER, unless = "#result == null || !#result.isPresent()")
     public Optional<ErrorEvent> findById(String eventId) {
-        log.debug("Finding dead letter by id. eventId: {}", eventId);
         var result = repository.findById(eventId).map(errorEventMapper::toModel);
         if (result.isPresent()) {
             log.debug("Dead letter found. eventId: {}", eventId);
