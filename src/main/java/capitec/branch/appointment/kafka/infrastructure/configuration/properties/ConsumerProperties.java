@@ -53,7 +53,7 @@ public class ConsumerProperties {
     private Integer retryMaxInterval=2000;
     private Integer retryMaxAttempts=1000;
     private Integer requestTimeoutSkip=5000;
-    private String allowedPackages="capitec.branch.appointment.kafka.domain,utils.sharekernel.event.metadata";
+    private String allowedPackages="capitec.branch.appointment.kafka.domain,capitec.branch.appointment.sharekernel.event.metadata";
     private Long initialRetryInterval = 1000L;
 
 

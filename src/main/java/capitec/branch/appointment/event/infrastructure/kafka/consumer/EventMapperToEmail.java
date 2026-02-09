@@ -68,7 +68,7 @@ public interface EventMapperToEmail {
     @Named("appointmentUpdateTriggeredBy")
     default String appointmentUpdateTriggeredBy(Map<String,Object> otherData) {
         if(otherData ==null || otherData.isEmpty()) return null;
-        return otherData.get("triggeredBy") != null ? otherData.get("day").toString() : null;
+        return otherData.get("triggeredBy") != null ? otherData.get("triggeredBy").toString() : null;
     }
     @Named("appointmentDay")
     default LocalDate appointmentDay(Map<String,Object> otherData) {
@@ -111,9 +111,9 @@ public interface EventMapperToEmail {
     @Named("appointmentToState")
     default String appointmentToState(Map<String,Object> otherData) {
         if(otherData ==null || otherData.isEmpty()) return null;
-        Object endTime = otherData.get("toDate");
-        if (endTime != null) {
-            return endTime.toString();
+        Object toState = otherData.get("toState");
+        if (toState != null) {
+            return toState.toString();
         } else {
             return null;
         }

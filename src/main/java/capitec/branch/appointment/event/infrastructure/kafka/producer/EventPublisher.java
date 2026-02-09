@@ -148,8 +148,9 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
                 "fromState", event.fromState(),
-                "toState", event.toState(), "triggerBy",
-                event.triggeredBy(), "occurredAt", event.occurredAt()
+                "toState", event.toState(),
+                "triggeredBy", event.triggeredBy(),
+                "occurredAt", event.occurredAt()
         );
         var appointmentMetadata = new AppointmentMetadata(
                 event.appointmentId(), event.appointmentReference(),
@@ -172,8 +173,8 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
                 "fromState", event.previousState(),
-                "toState",event.appointmentStatus(),
-                "triggerBy", event.triggeredBy()
+                "toState", event.appointmentStatus(),
+                "triggeredBy", event.triggeredBy()
         );
         var appointmentMetadata = new AppointmentMetadata(
                 event.appointmentId(), event.reference(), event.branchId(),
@@ -196,8 +197,8 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
                 "fromState", event.previousState(),
-                "toState",event.appointmentStatus(),
-                "triggerBy", event.triggeredBy()
+                "toState", event.appointmentStatus(),
+                "triggeredBy", event.triggeredBy()
         );
         var appointmentMetadata = new AppointmentMetadata(
                 event.appointmentId(), event.reference(), event.branchId(),
@@ -221,7 +222,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         Map<String, Object> map = Map.of(
                 "fromState", event.previousState(),
                 "toState", event.appointmentStatus(),
-                "triggerBy", event.triggeredBy()
+                "triggeredBy", event.triggeredBy()
         );
         var appointmentMetadata = new AppointmentMetadata(
                 event.appointmentId(), event.reference(), event.branchId(),
