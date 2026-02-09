@@ -6,6 +6,7 @@ import capitec.branch.appointment.role.domain.RoleService;
 import capitec.branch.appointment.role.domain.RoleType;
 import capitec.branch.appointment.utils.GroupName;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.UseCaseExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,22 +22,18 @@ public class CreateRoleTypeUseCase {
     private final RoleService roleService;
 
     public void execute(@GroupName String name, String traceId) {
-        try {
-            log.info("Creating role type. name: {}, traceId: {}", name, traceId);
+        log.info("Creating role type. name: {}, traceId: {}", name, traceId);
 
-            validateRoleTypeDoesNotExist(name, traceId);
-            createRoleType(name, traceId);
-
-            log.info("Role type created successfully. name: {}, traceId: {}", name, traceId);
-        } catch (EntityAlreadyExistException e) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, e.getMessage(), e);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Validation failed. name: {}, traceId: {}, error: {}", name, traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (RoleDomainException e) {
-            log.error("Role domain error. name: {}, traceId: {}, error: {}", name, traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
-        }
+        UseCaseExecutor.executeVoid(
+                () -> {
+                    validateRoleTypeDoesNotExist(name, traceId);
+                    createRoleType(name, traceId);
+                    log.info("Role type created successfully. name: {}, traceId: {}", name, traceId);
+                },
+                "Role type creation",
+                RoleDomainException.class,
+                String.format("name: %s, traceId: %s", name, traceId)
+        );
     }
 
     private void validateRoleTypeDoesNotExist(String name, String traceId) {

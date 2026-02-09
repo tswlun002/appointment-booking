@@ -3,6 +3,7 @@ package capitec.branch.appointment.role.app;
 import capitec.branch.appointment.role.domain.RoleDomainException;
 import capitec.branch.appointment.role.domain.RoleService;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.UseCaseExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,21 +19,19 @@ public class AssignRoleToGroupUseCase {
     private final RoleService roleService;
 
     public void execute(String groupId, String roleId, String traceId) {
-        try {
-            log.info("Assigning role to group. groupId: {}, roleId: {}, traceId: {}", groupId, roleId, traceId);
+        log.info("Assigning role to group. groupId: {}, roleId: {}, traceId: {}", groupId, roleId, traceId);
 
-            validateGroupExists(groupId, traceId);
-            validateRoleExists(roleId, traceId);
-            assignRole(groupId, roleId, traceId);
-
-            log.info("Role assigned to group successfully. groupId: {}, roleId: {}, traceId: {}", groupId, roleId, traceId);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Validation failed. groupId: {}, roleId: {}, traceId: {}, error: {}", groupId, roleId, traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (RoleDomainException e) {
-            log.error("Role domain error. groupId: {}, roleId: {}, traceId: {}, error: {}", groupId, roleId, traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
-        }
+        UseCaseExecutor.executeVoid(
+                () -> {
+                    validateGroupExists(groupId, traceId);
+                    validateRoleExists(roleId, traceId);
+                    assignRole(groupId, roleId, traceId);
+                    log.info("Role assigned to group successfully. groupId: {}, roleId: {}, traceId: {}", groupId, roleId, traceId);
+                },
+                "Role assignment",
+                RoleDomainException.class,
+                String.format("groupId: %s, roleId: %s, traceId: %s", groupId, roleId, traceId)
+        );
     }
 
     private void validateGroupExists(String groupId, String traceId) {
