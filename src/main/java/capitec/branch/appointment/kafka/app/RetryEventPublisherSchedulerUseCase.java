@@ -2,8 +2,8 @@ package capitec.branch.appointment.kafka.app;
 
 
 import capitec.branch.appointment.kafka.domain.EventValue;
-import capitec.branch.appointment.utils.sharekernel.metadata.MetaData;
-import capitec.branch.appointment.utils.sharekernel.retry.RetryConfiguration;
+import capitec.branch.appointment.sharekernel.event.metadata.MetaData;
+import capitec.branch.appointment.sharekernel.retry.RetryConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;

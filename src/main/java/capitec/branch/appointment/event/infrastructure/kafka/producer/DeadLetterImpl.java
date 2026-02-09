@@ -5,7 +5,7 @@ import capitec.branch.appointment.event.domain.ErrorEvent;
 import capitec.branch.appointment.event.domain.EventDeadLetterService;
 import capitec.branch.appointment.kafka.domain.DeadLetterService;
 import capitec.branch.appointment.kafka.domain.EventValue;
-import capitec.branch.appointment.utils.sharekernel.retry.RetryConfiguration;
+import capitec.branch.appointment.sharekernel.retry.RetryConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,7 @@
 package capitec.branch.appointment.appointment.app;
 
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
-import capitec.branch.appointment.utils.sharekernel.EventTrigger;
+import capitec.branch.appointment.sharekernel.EventTrigger;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

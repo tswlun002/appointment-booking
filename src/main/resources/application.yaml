@@ -93,8 +93,6 @@ kafka:
     event-publisher-default-impl:
       enabled: true
 
-    allowed-packages-subdirectories: ${TRUSTED_PACKAGES_SUBDIRECTORIES}
-
 # Email
 mail:
   host: ${MAIL_HOST}

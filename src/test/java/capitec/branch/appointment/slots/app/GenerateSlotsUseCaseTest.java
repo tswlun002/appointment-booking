@@ -1,7 +1,7 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.utils.sharekernel.day.app.CheckHolidayQuery;
-import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import capitec.branch.appointment.sharekernel.day.app.CheckHolidayQuery;
+import capitec.branch.appointment.sharekernel.day.domain.Day;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Set;
 
 
-import static capitec.branch.appointment.utils.sharekernel.day.domain.Day.isWeekend;
+import static capitec.branch.appointment.sharekernel.day.domain.Day.isWeekend;
 import static org.assertj.core.api.Assertions.assertThat;
 
 

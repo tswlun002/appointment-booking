@@ -3,7 +3,7 @@ package capitec.branch.appointment.appointment.infrastructure.adapter;
 import capitec.branch.appointment.appointment.app.AppointmentEventService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.event.app.port.appointment.*;
-import capitec.branch.appointment.utils.sharekernel.EventTrigger;
+import capitec.branch.appointment.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;

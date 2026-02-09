@@ -9,8 +9,8 @@ import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmen
 import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.utils.UseCase;
-import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
-import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import capitec.branch.appointment.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.sharekernel.day.domain.Day;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
 package capitec.branch.appointment.event.app.port.appointment;
 
-import capitec.branch.appointment.utils.sharekernel.EventTrigger;
+import capitec.branch.appointment.sharekernel.EventTrigger;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

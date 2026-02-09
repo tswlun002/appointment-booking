@@ -1,7 +1,7 @@
 package capitec.branch.appointment.location.app;
 
-import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
-import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import capitec.branch.appointment.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.sharekernel.day.domain.Day;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -2,7 +2,7 @@ package capitec.branch.appointment.event.infrastructure.dao;
 
 
 import capitec.branch.appointment.event.domain.ErrorEvent;
-import capitec.branch.appointment.utils.sharekernel.id.IdStore;
+import capitec.branch.appointment.sharekernel.id.IdStore;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

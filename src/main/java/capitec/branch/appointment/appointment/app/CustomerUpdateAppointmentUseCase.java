@@ -7,7 +7,7 @@ import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
 import capitec.branch.appointment.utils.UseCase;
-import capitec.branch.appointment.utils.sharekernel.EventTrigger;
+import capitec.branch.appointment.sharekernel.EventTrigger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

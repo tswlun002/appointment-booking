@@ -1,7 +1,7 @@
 package capitec.branch.appointment.location.infrastructure.api;
 
-import capitec.branch.appointment.utils.sharekernel.day.app.GetDateOfNextDaysQuery;
-import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import capitec.branch.appointment.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.sharekernel.day.domain.Day;
 import capitec.branch.appointment.exeption.BranchLocationServiceException;
 import capitec.branch.appointment.location.app.GetNearestCachedBranch;
 import capitec.branch.appointment.location.domain.BranchLocationFetcher;

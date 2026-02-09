@@ -1,7 +1,7 @@
 package capitec.branch.appointment.slots.infrastructure.dao;
 
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
-import capitec.branch.appointment.utils.sharekernel.id.IdStore;
+import capitec.branch.appointment.sharekernel.id.IdStore;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;

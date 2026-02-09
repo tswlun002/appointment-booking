@@ -10,7 +10,7 @@ import capitec.branch.appointment.notification.domain.AppointmentBookedEmail;
 import capitec.branch.appointment.notification.domain.AppointmentStatusUpdatesEmail;
 import capitec.branch.appointment.notification.domain.NotificationService;
 import capitec.branch.appointment.utils.UseCase;
-import capitec.branch.appointment.utils.sharekernel.EventTrigger;
+import capitec.branch.appointment.sharekernel.EventTrigger;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

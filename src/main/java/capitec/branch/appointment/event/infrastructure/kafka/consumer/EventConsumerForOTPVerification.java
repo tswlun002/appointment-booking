@@ -2,7 +2,7 @@ package capitec.branch.appointment.event.infrastructure.kafka.consumer;
 
 import capitec.branch.appointment.event.app.port.OTPPort;
 import capitec.branch.appointment.kafka.domain.EventValue;
-import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
+import capitec.branch.appointment.sharekernel.event.metadata.OTPMetadata;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

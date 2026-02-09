@@ -2,8 +2,8 @@ package capitec.branch.appointment.event.infrastructure.kafka.consumer;
 
 
 import capitec.branch.appointment.notification.domain.*;
-import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
-import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
+import capitec.branch.appointment.sharekernel.event.metadata.AppointmentMetadata;
+import capitec.branch.appointment.sharekernel.event.metadata.OTPMetadata;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

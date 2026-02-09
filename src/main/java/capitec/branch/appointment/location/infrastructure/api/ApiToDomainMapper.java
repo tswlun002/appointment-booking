@@ -1,6 +1,6 @@
 package capitec.branch.appointment.location.infrastructure.api;
 
-import capitec.branch.appointment.utils.sharekernel.day.domain.Day;
+import capitec.branch.appointment.sharekernel.day.domain.Day;
 import capitec.branch.appointment.location.domain.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

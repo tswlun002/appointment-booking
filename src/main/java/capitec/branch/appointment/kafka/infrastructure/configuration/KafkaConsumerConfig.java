@@ -63,7 +63,7 @@ public class KafkaConsumerConfig<K extends Serializable,V extends Serializable> 
         props.put(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG,consumerProperties.getRequestTimeoutSkip());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, consumerProperties.getAutoCommit());
         props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, EventValue.class.getName());
-        var allowedPackages =consumerProperties.getAllowedPackages()+"."+String.join(","+consumerProperties.getAllowedPackages()+".", consumerProperties.getAllowedPackagesSubdirectories());
+        var allowedPackages =consumerProperties.getAllowedPackages();
         props.put(SPRING_JSON_PACKAGE,allowedPackages);
         props.putAll(consumerProperties.getAdditionalProperties());
 
