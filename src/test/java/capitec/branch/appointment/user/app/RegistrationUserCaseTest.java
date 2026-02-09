@@ -2,7 +2,7 @@ package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.event.domain.RecordStatus;
-import capitec.branch.appointment.event.domain.UserDeadLetterService;
+import capitec.branch.appointment.event.domain.EventDeadLetterService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTP;
@@ -43,7 +43,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @Autowired
     OTPService otpService;
     @Autowired
-    private UserDeadLetterService userDeadLetterService;
+    private EventDeadLetterService eventDeadLetterService;
     @Autowired
     private KeycloakService keycloakService;
 
@@ -66,7 +66,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         var registeredUser = registerUserUseCase.execute(userRegister, traceId);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
+        var failedRecord = eventDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
 
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
@@ -87,7 +87,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         wireMockGetHolidayByYearAndCountryCode(user, idNumber);
         var registeredUser = registerUserUseCase.execute(userRegister, traceId);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
+        var failedRecord = eventDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
 
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
@@ -132,7 +132,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 .hasFieldOrPropertyWithValue("verified", true)
                 .hasFieldOrPropertyWithValue("enabled", true);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
+        var failedRecord = eventDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
             return r.getTraceId().equals(traceId) &&
@@ -167,7 +167,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 .hasFieldOrPropertyWithValue("verified", true)
                 .hasFieldOrPropertyWithValue("enabled", true);
 
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
+        var failedRecord = eventDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE);
         assertThat(failedRecord.stream().noneMatch(r -> {
             String value = r.getValue();
             return r.getTraceId().equals(traceId) &&
@@ -213,7 +213,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         otp = otpService.find(user.getUsername(), otp.getCode()).orElseThrow();
         assertThat(otp.getStatus()).isEqualTo(new OTPStatus(OTPSTATUSENUM.REVOKED.name()));
-        var failedRecord = userDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE).stream();
+        var failedRecord = eventDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE).stream();
         assertThat(failedRecord.noneMatch(r -> {
 
             try {

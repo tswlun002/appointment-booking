@@ -3,6 +3,7 @@ package capitec.branch.appointment.kafka.app;
 
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.utils.sharekernel.metadata.MetaData;
+import capitec.branch.appointment.utils.sharekernel.retry.RetryConfiguration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,7 +12,6 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
 import capitec.branch.appointment.kafka.domain.DeadLetterService;
 import capitec.branch.appointment.kafka.domain.RetryEventPublisher;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher {
 
     private static final int BATCH_SIZE = 50;
-    public static final int MAX_RETRY = 5;
     private static final int CIRCUIT_BREAKER_THRESHOLD = 3;
 
     private final EventPublishUseCase<String,MetaData> eventPublishUseCase;
@@ -73,7 +72,7 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
                     DEAD_LETTER_STATUS.DEAD,
                     offset,
                     BATCH_SIZE,
-                    MAX_RETRY
+                    RetryConfiguration.MAX_RETRY
             );
 
             if (batch.isEmpty()) {
@@ -127,7 +126,7 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
                 batchSuccessCount.incrementAndGet();
                 deadLetterService.markRecovered(event, event.partition(), event.offset());
             } else {
-                log.error("Failed to republish dead letter event:{}", event.eventId(), event.traceId());
+                log.error("Failed to republish dead letter event. eventId: {}, traceId: {}", event.eventId(), event.traceId());
                 batchFailureCount.incrementAndGet();
                 deadLetterService.handleRetryFailure(event);
             }
@@ -171,13 +170,5 @@ public class RetryEventPublisherSchedulerUseCase implements RetryEventPublisher 
         }
     }
 
-    public static LocalDateTime calculateNextRetry(int retryCount) {
-        long delaySeconds = switch (retryCount) {
-            case 1 -> 10;
-            case 2 -> 20;
-            case 3 -> 40;
-            default -> 60;
-        };
-        return LocalDateTime.now().plusSeconds(delaySeconds);
-    }
+
 }

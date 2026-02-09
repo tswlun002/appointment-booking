@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-public interface UserDeadLetterService   {
+public interface EventDeadLetterService {
     void saveDeadLetter( ErrorEvent errorEventValue);
     Set<ErrorEvent> findByStatus(RecordStatus recordStatus, int offset, int limit );
 
