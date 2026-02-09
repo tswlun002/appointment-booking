@@ -73,3 +73,12 @@ otp:
   expire:
     datetime: 5
 
+# RATE LIMITING
+rate-limit:
+  otp-resend:
+    max-attempts: 5
+    window-minutes: 60
+    cooldown-seconds: 60
+  login:
+    max-attempts: 5
+    window-minutes: 300

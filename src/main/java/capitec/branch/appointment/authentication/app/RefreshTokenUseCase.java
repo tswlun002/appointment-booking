@@ -12,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.text.ParseException;
 import java.util.Map;
 
 @Slf4j
@@ -43,6 +42,11 @@ public class RefreshTokenUseCase {
         } catch (AuthDomainException e) {
             log.error("Auth domain error. traceId: {}, error: {}", traceId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during token refresh. traceId: {}", traceId, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Token refresh failed. Please try again later.", e);
         }
     }
 
@@ -61,7 +65,7 @@ public class RefreshTokenUseCase {
         try {
             JWTClaimsSet jwtClaimsSet = SignedJWT.parse(token).getJWTClaimsSet();
             return jwtClaimsSet.getClaims();
-        } catch (ParseException e) {
+        } catch (Exception e) {
             log.error("Failed to parse JWT token. traceId: {}", traceId, e);
             throw new AuthDomainException("Failed to parse authentication token", e);
         }

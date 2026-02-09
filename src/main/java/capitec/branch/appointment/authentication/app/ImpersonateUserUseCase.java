@@ -41,6 +41,11 @@ public class ImpersonateUserUseCase {
         } catch (AuthDomainException e) {
             log.error("Auth domain error. username: {}, traceId: {}, error: {}", username, traceId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during impersonation. username: {}, traceId: {}", username, traceId, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User impersonation failed. Please try again later.", e);
         }
     }
 }

@@ -46,7 +46,8 @@ public class LoginUseCase {
                 handleFailedLogin(loginDTO.email(), traceId);
             }
 
-            TokenResponse token = tokenOpt.get();
+            TokenResponse token = tokenOpt.orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
             validateUserVerified(token.getToken(), traceId);
 
             // Reset rate limit on successful login
@@ -60,6 +61,11 @@ public class LoginUseCase {
         } catch (AuthDomainException e) {
             log.error("Auth domain error. email: {}, traceId: {}, error: {}", loginDTO.email(), traceId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error during login. email: {}, traceId: {}", loginDTO.email(), traceId, e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Login failed. Please try again later.", e);
         }
     }
 
