@@ -1,7 +1,6 @@
 package capitec.branch.appointment.event.infrastructure.kafka.consumer;
 
 
-import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.notification.domain.*;
 import capitec.branch.appointment.utils.sharekernel.metadata.AppointmentMetadata;
 import capitec.branch.appointment.utils.sharekernel.metadata.OTPMetadata;
