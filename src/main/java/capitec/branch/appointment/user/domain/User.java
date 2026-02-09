@@ -26,7 +26,7 @@ public class User {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(User.class);
     private static final NamesValidator NAME_VALIDATOR = new NamesValidator();
     private static final PasswordValidator PASSWORD_VALIDATOR = new PasswordValidator();
-
+    public static final int NAMES_FIELD_LENGTH = 2;
     @Username
     private final String username;
 

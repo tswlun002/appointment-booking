@@ -85,7 +85,6 @@ public class KeycloakUtils {
     enum   AppDomains {
 
         User("capitec.branch.appointment.user.domain.User"),
-        Account("capitec.branch.appointment.account.domain.Account"),
         Role("capitec.branch.appointment.roles.domain.Role");
 
         private  String domain;
