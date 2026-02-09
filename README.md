@@ -12,6 +12,7 @@ A comprehensive branch appointment scheduling system that enables Capitec Bank c
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Deployment](#deployment)
+  - [Future Enhancements](#future-enhancements)
 - [Testing](#testing)
 - [Contributing](#contributing)
 
@@ -353,6 +354,43 @@ slot:
 ```
 
 ## 🚢 Deployment
+
+### Future Enhancements
+
+The following enhancements are planned for future releases:
+
+#### Security & Rate Limiting
+
+| Enhancement | Description | Priority |
+|-------------|-------------|----------|
+| **IP-based Rate Limiting** | Add rate limiting per IP address for login endpoint to prevent distributed brute-force attacks with random credentials. Current per-email rate limiting doesn't protect against attacks using different random emails. | High |
+| **CAPTCHA Integration** | Add CAPTCHA challenge after N failed login attempts from same IP to distinguish humans from bots | Medium |
+| **Progressive Lockout** | Implement escalating lockout periods (5min → 15min → 30min → 1hr) instead of fixed duration | Medium |
+| **Login Anomaly Detection** | Flag suspicious login patterns (unusual location, device, time) for additional verification | Low |
+
+**Proposed IP Rate Limit Configuration:**
+```yaml
+rate-limit:
+  login:
+    max-attempts-per-email: 5      # Current: per email
+    window-minutes-per-email: 300  # 5 hours
+    max-attempts-per-ip: 20        # Future: per IP
+    window-minutes-per-ip: 1       # 1 minute
+```
+
+#### Performance & Scalability
+
+| Enhancement | Description | Priority |
+|-------------|-------------|----------|
+| **Redis Cache** | Replace Caffeine with Redis for distributed caching in multi-instance deployments | Medium |
+| **Database Read Replicas** | Add read replicas for query-heavy operations | Low |
+
+#### Monitoring & Observability
+
+| Enhancement | Description | Priority |
+|-------------|-------------|----------|
+| **Distributed Tracing** | Add OpenTelemetry for end-to-end request tracing | Medium |
+| **Security Audit Logging** | Enhanced audit trail for security-sensitive operations | High |
 
 ### CI/CD Pipeline
 
