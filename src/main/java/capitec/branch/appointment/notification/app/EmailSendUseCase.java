@@ -1,128 +1,94 @@
 package capitec.branch.appointment.notification.app;
 
 
-import jakarta.mail.MessagingException;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import capitec.branch.appointment.exeption.MailSenderException;
 import capitec.branch.appointment.notification.domain.ConfirmationEmail;
 import capitec.branch.appointment.notification.domain.Notification;
-import capitec.branch.appointment.notification.domain.OTPEmail;
 import capitec.branch.appointment.notification.domain.NotificationService;
+import capitec.branch.appointment.notification.domain.OTPEmail;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
-import org.springframework.util.FileCopyUtils;
 import org.springframework.validation.annotation.Validated;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.UncheckedIOException;
-import java.util.Set;
-import java.util.function.Function;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Set;
+
 @Slf4j
 @Validated
 @Service
 @RequiredArgsConstructor
-public class EmailSendUseCase   {
+public class EmailSendUseCase {
+
+    private static final String USER_NOTIFICATION_TEMPLATE = "email/user-notification";
+    private static final Map<Notification.UserEventType, String> EMAIL_SUBJECTS = new EnumMap<>(Notification.UserEventType.class);
+
+    static {
+        EMAIL_SUBJECTS.put(Notification.UserEventType.REGISTRATION_EVENT, "Verification email");
+        EMAIL_SUBJECTS.put(Notification.UserEventType.EMAIL_VERIFIED_EVENT, "Email verified");
+        EMAIL_SUBJECTS.put(Notification.UserEventType.COMPLETE_REGISTRATION_EVENT, "Welcome to Capitec Appointment Booking");
+        EMAIL_SUBJECTS.put(Notification.UserEventType.PASSWORD_RESET_REQUEST_EVENT, "Password Change Request");
+        EMAIL_SUBJECTS.put(Notification.UserEventType.PASSWORD_UPDATED_EVENT, "Important Security Notice – Password Successfully Updated");
+        EMAIL_SUBJECTS.put(Notification.UserEventType.DELETE_ACCOUNT_REQUEST_EVENT, "Important Security Notice – Account Deletion Request");
+        EMAIL_SUBJECTS.put(Notification.UserEventType.DELETE_ACCOUNT_EVENT, "Account Successfully Deleted");
+    }
 
     private final NotificationService notificationService;
+    private final TemplateEngine templateEngine;
+
     @Value("${mail.username}")
     private String hostEmail;
 
+    @Value("${mail.support:support@capitec.co.za}")
+    private String supportEmail;
+
     @EventListener(OTPEmail.class)
-    public void sendOTPEmail(OTPEmail event) throws MessagingException {
+    public void sendOTPEmail(@Valid OTPEmail event) throws MailSenderException {
+        log.info("Sending OTP email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
-        log.info("Sending otp email , traceId:{}", event.traceId());
-
-        var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(), event.OTPCode(), hostEmail);
         String subject = getSubject(event.eventType());
-        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
+        String body = buildEmailBody(event.eventType(), event.fullname(), event.OTPCode());
+        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject, body, event.traceId());
 
+        log.info("OTP email sent successfully. traceId: {}", event.traceId());
     }
-    private final Function<String,String> readFile =(path)->{
 
-        ResourceLoader resourceLoader = new DefaultResourceLoader();
-        Resource resource = resourceLoader.getResource(path);
-        return asString(resource);
-    };
     @EventListener(ConfirmationEmail.class)
-    public void sendOTPEmail(ConfirmationEmail event) throws MessagingException {
+    public void sendConfirmationEmail(@Valid ConfirmationEmail event) throws MailSenderException {
+        log.info("Sending confirmation email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
-        log.info("Sending confirmation email, traceId:{}", event.traceId());
-
-        var emailTemplateHTML = getEmailTemplate(event.eventType(), event.fullname(),null, hostEmail);
         String subject = getSubject(event.eventType());
-        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject,emailTemplateHTML, event.traceId());
+        String body = buildEmailBody(event.eventType(), event.fullname(), null);
+        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject, body, event.traceId());
 
-
+        log.info("Confirmation email sent successfully. traceId: {}", event.traceId());
     }
 
-    private  String getSubject(Notification.UserEventType userEventType) {
-
-        return   switch (userEventType){
-            case REGISTRATION_EVENT -> "Verification email";
-            case  EMAIL_VERIFIED_EVENT ->"Email verified";
-            case COMPLETE_REGISTRATION_EVENT -> "Welcome VarsityBlock";
-            case PASSWORD_RESET_REQUEST_EVENT -> "Password Change Request";
-            case PASSWORD_UPDATED_EVENT ->"Important Security Notice – Password Successfully Updated";
-            case DELETE_ACCOUNT_REQUEST_EVENT -> "Important Security Notice – Account Deletion Request";
-            case DELETE_ACCOUNT_EVENT -> "Delete User Account";
-        };
-
-    }
-
-    /**
-     *  Replace the placeholder string with value.
-     *  Use replacement on otp placeholder because it might have a regex pattern that causes error.
-     */
-    private  String getEmailTemplate(Notification.UserEventType userEventType, String fullname, String value, String hostEmail) throws MessagingException {
-
-      return   switch (userEventType){
-          case REGISTRATION_EVENT -> {
-                String emailTemplate = readFile.apply("/email/registration.html");
-                yield  emailTemplate.replaceAll("user_full_name",fullname).replace("block_otp_var",value).replaceAll("block_email_var", hostEmail) ;
-            }
-          case  EMAIL_VERIFIED_EVENT -> {
-                String emailTemplate = readFile.apply("/email/email_verified.html");
-              yield emailTemplate.replaceAll("user_full_name",fullname).replaceAll("block_email_var", hostEmail) ;
-
-          }
-          case COMPLETE_REGISTRATION_EVENT -> {
-                String emailTemplate = readFile.apply("/email/welcome.html");
-                yield emailTemplate.replaceAll("user_full_name",fullname).replaceAll("block_email_var", hostEmail) ;
-            }
-          case PASSWORD_RESET_REQUEST_EVENT -> {
-                String emailTemplate = readFile.apply("/email/password_reset_request.html");
-                yield    emailTemplate.replaceAll("user_full_name",fullname).replace("block_otp_var",value).replaceAll("block_email_var", hostEmail) ;
-          }
-          case PASSWORD_UPDATED_EVENT -> {
-                String emailTemplate = readFile.apply("/email/password_updated.html");
-                yield  emailTemplate.replaceAll("user_full_name",fullname).replaceAll("block_email_var", hostEmail) ;
-          }
-          case DELETE_ACCOUNT_REQUEST_EVENT -> {
-                String emailTemplate = readFile.apply("/email/delete_user_account_request.html");
-                yield emailTemplate.replaceAll("user_full_name",fullname).replace("block_otp_var",value).replaceAll("block_email_var", hostEmail) ;
-          }
-          case DELETE_ACCOUNT_EVENT -> {
-                String emailTemplate = readFile.apply("/email/user_account_deleted.html");
-                yield  emailTemplate.replaceAll("user_full_name",fullname).replaceAll("block_email_var", hostEmail) ;
-          }
-
-        };
-
-    }
-    private String asString(Resource resource){
-        try(Reader reader  = new InputStreamReader(resource.getInputStream(), UTF_8)){
-            return FileCopyUtils.copyToString(reader);
-        }catch (IOException e){
-            throw  new UncheckedIOException(e);
+    private String getSubject(Notification.UserEventType eventType) {
+        String subject = EMAIL_SUBJECTS.get(eventType);
+        if (subject == null) {
+            throw new IllegalArgumentException("No email subject found for event type: " + eventType);
         }
+        return subject;
     }
 
+    private String buildEmailBody(Notification.UserEventType eventType, String fullname, String otpCode) {
+        Context context = new Context();
+        context.setVariable("eventType", eventType.name());
+        context.setVariable("fullname", fullname);
+        context.setVariable("subject", getSubject(eventType));
+        context.setVariable("supportEmail", supportEmail);
 
+        if (otpCode != null) {
+            context.setVariable("otpCode", otpCode);
+        }
+
+        return templateEngine.process(USER_NOTIFICATION_TEMPLATE, context);
+    }
 }

@@ -79,6 +79,7 @@ dependencies {
     // Email
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("jakarta.mail:jakarta.mail-api")
+    implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
 
 
     // Env utilities

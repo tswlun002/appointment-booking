@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title th:text="${subject}">Appointment Email</title>
+    <!--[if mso]>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        .mobile-hide { display: block !important; }
+    </style>
+    <![endif]-->
+    <style>
+        /* ===========================================
+           CAPITEC BRAND DESIGN SYSTEM
+           MOBILE-FIRST RESPONSIVE EMAIL
+           =========================================== */
+
+        /* Reset & Base Styles - Mobile First */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #1e313e;
+            width: 100% !important;
+            min-width: 100%;
+            margin: 0;
+            padding: 8px;
+            background-color: #f9fafb;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        .email-container {
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 0 auto;
+            max-width: 600px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #2F70EF;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1.5;
+            color: #2F70EF;
+        }
+
+        /* Typography - Mobile First */
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            line-height: 1.4;
+            color: #1e313e;
+            margin-bottom: 16px;
+        }
+
+        .greeting {
+            font-size: 0.938rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #1e313e;
+            margin-bottom: 16px;
+        }
+
+        .message {
+            font-size: 0.875rem;
+            font-weight: 400;
+            line-height: 1.5;
+            color: #3a3a3a;
+            margin-bottom: 20px;
+        }
+
+        /* Appointment Details Table - Mobile Optimized */
+        .appointment-details {
+            background-color: #f9fafb;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            border: 1px solid #e5e7eb;
+        }
+
+        .appointment-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .appointment-details td {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 0.813rem;
+            line-height: 1.4;
+            display: block;
+            width: 100%;
+        }
+
+        .appointment-details tr {
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .appointment-details td:first-child {
+            font-weight: 600;
+            color: #1e313e;
+            padding-bottom: 2px;
+            border-bottom: none;
+        }
+
+        .appointment-details td:last-child {
+            color: #3a3a3a;
+            padding-top: 0;
+        }
+
+        .appointment-details tr:last-child {
+            margin-bottom: 0;
+        }
+
+        .appointment-details tr:last-child td:last-child {
+            border-bottom: none;
+        }
+
+        /* Reference Box - Primary Blue */
+        .reference-box {
+            background: linear-gradient(135deg, #2F70EF, #1e313e);
+            color: #FFFFFF;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 16px 0;
+        }
+
+        .reference-box > div:first-child {
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1.4;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .reference-code {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            margin-top: 6px;
+            word-break: break-all;
+        }
+
+        /* Status Boxes - Mobile Optimized */
+        .success-box,
+        .info-box,
+        .warning-box,
+        .cancel-box {
+            padding: 12px;
+            margin: 16px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.813rem;
+            line-height: 1.5;
+        }
+
+        .success-box {
+            background-color: #dcfce7;
+            border-left: 4px solid #16a34a;
+            color: #16a34a;
+        }
+
+        .info-box {
+            background-color: #e8f0fe;
+            border-left: 4px solid #2F70EF;
+            color: #1e313e;
+        }
+
+        .warning-box {
+            background-color: #fef3c7;
+            border-left: 4px solid #d97706;
+            color: #d97706;
+        }
+
+        .cancel-box {
+            background-color: #fee2e2;
+            border-left: 4px solid #C83C37;
+            color: #C83C37;
+        }
+
+        .success-box strong,
+        .info-box strong,
+        .warning-box strong,
+        .cancel-box strong {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Footer - Mobile Optimized */
+        .footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.688rem;
+            font-weight: 400;
+            line-height: 1.4;
+        }
+
+        .footer p {
+            margin: 6px 0;
+        }
+
+        .footer a {
+            color: #2F70EF;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* ===========================================
+           TABLET & DESKTOP STYLES (min-width: 480px)
+           =========================================== */
+        @media screen and (min-width: 480px) {
+            body {
+                font-size: 16px;
+                padding: 16px;
+            }
+
+            .email-container {
+                padding: 32px;
+            }
+
+            .header {
+                padding-bottom: 20px;
+                margin-bottom: 24px;
+            }
+
+            .logo {
+                font-size: 1.875rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 20px;
+            }
+
+            .greeting {
+                font-size: 1rem;
+                margin-bottom: 20px;
+            }
+
+            .message {
+                font-size: 0.875rem;
+                margin-bottom: 25px;
+            }
+
+            /* Table layout for larger screens */
+            .appointment-details {
+                padding: 20px;
+                margin: 20px 0;
+            }
+
+            .appointment-details tr {
+                display: table-row;
+                margin-bottom: 0;
+            }
+
+            .appointment-details td {
+                display: table-cell;
+                padding: 10px 0;
+                border-bottom: 1px solid #e5e7eb;
+            }
+
+            .appointment-details td:first-child {
+                width: 40%;
+                padding-bottom: 10px;
+                font-weight: 500;
+            }
+
+            .appointment-details td:last-child {
+                padding-top: 10px;
+            }
+
+            .reference-box {
+                padding: 20px;
+                margin: 20px 0;
+            }
+
+            .reference-box > div:first-child {
+                font-size: 0.875rem;
+            }
+
+            .reference-code {
+                font-size: 1.5rem;
+                letter-spacing: 3px;
+            }
+
+            .success-box,
+            .info-box,
+            .warning-box,
+            .cancel-box {
+                padding: 15px;
+                margin: 20px 0;
+                font-size: 0.875rem;
+            }
+
+            .success-box strong,
+            .info-box strong,
+            .warning-box strong,
+            .cancel-box strong {
+                display: inline;
+                margin-bottom: 0;
+            }
+
+            .footer {
+                margin-top: 40px;
+                padding-top: 20px;
+                font-size: 0.75rem;
+            }
+
+            .footer p {
+                margin: 8px 0;
+            }
+        }
+
+        /* ===========================================
+           LARGER DESKTOP STYLES (min-width: 600px)
+           =========================================== */
+        @media screen and (min-width: 600px) {
+            body {
+                padding: 20px;
+            }
+
+            .email-container {
+                padding: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">Capitec</div>
+        </div>
+
+        <!-- Greeting -->
+        <p class="greeting">Dear <span th:text="${customerName} ?: 'Customer'">Customer</span>,</p>
+
+        <!-- APPOINTMENT_BOOKED -->
+        <th:block th:if="${eventType == 'APPOINTMENT_BOOKED'}">
+            <h1>Appointment Confirmed!</h1>
+            <div class="success-box">
+                <strong>Great news!</strong> Your appointment has been successfully booked.
+            </div>
+            <p class="message">
+                Your appointment at <strong th:text="${branchName}">Branch</strong> has been confirmed.
+                Please arrive 5-10 minutes before your scheduled time.
+            </p>
+            <div class="reference-box">
+                <div>Reference Number</div>
+                <div class="reference-code" th:text="${reference}">REF123456</div>
+            </div>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                    <tr>
+                        <td>Address:</td>
+                        <td th:text="${branchAddress}">Branch Address</td>
+                    </tr>
+                    <tr>
+                        <td>Date:</td>
+                        <td th:text="${date}">2026-02-09</td>
+                    </tr>
+                    <tr>
+                        <td>Time:</td>
+                        <td><span th:text="${startTime}">09:00</span> - <span th:text="${endTime}">09:30</span></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="info-box">
+                <strong>What to bring:</strong> If you are a new customer, please bring a valid ID document. All customers should bring any relevant documentation for your appointment.
+            </div>
+            <div class="warning-box">
+                <strong>Please note:</strong> If you arrive late, your appointment won't get priority. You will be added to the queue along with other clients currently waiting at the branch.
+            </div>
+        </th:block>
+
+        <!-- APPOINTMENT_RESCHEDULED -->
+        <th:block th:if="${eventType == 'APPOINTMENT_RESCHEDULED'}">
+            <h1>Appointment Rescheduled</h1>
+            <div class="info-box">
+                Your appointment has been successfully rescheduled.
+            </div>
+            <p class="message">
+                Your appointment at <strong th:text="${branchName}">Branch</strong> has been moved to a new date and time.
+            </p>
+            <div class="reference-box">
+                <div>Reference Number</div>
+                <div class="reference-code" th:text="${reference}">REF123456</div>
+            </div>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                    <tr>
+                        <td>Address:</td>
+                        <td th:text="${branchAddress}">Branch Address</td>
+                    </tr>
+                    <tr>
+                        <td>New Date:</td>
+                        <td th:text="${date}">2026-02-09</td>
+                    </tr>
+                    <tr>
+                        <td>New Time:</td>
+                        <td><span th:text="${startTime}">09:00</span> - <span th:text="${endTime}">09:30</span></td>
+                    </tr>
+                </table>
+            </div>
+        </th:block>
+
+        <!-- CHECKED_IN -->
+        <th:block th:if="${eventType == 'CHECKED_IN'}">
+            <h1>Check-In Confirmed</h1>
+            <div class="success-box">
+                <strong>Welcome!</strong> You have successfully checked in for your appointment.
+            </div>
+            <p class="message">
+                You are now checked in at <strong th:text="${branchName}">Branch</strong>.
+                Please wait to be called for your appointment.
+            </p>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Reference:</td>
+                        <td th:text="${reference}">REF123456</td>
+                    </tr>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                    <tr>
+                        <td>Check-in Time:</td>
+                        <td th:text="${time}">09:00</td>
+                    </tr>
+                </table>
+            </div>
+        </th:block>
+
+        <!-- IN_PROGRESS -->
+        <th:block th:if="${eventType == 'IN_PROGRESS'}">
+            <h1>Appointment In Progress</h1>
+            <div class="info-box">
+                Your appointment is now in progress.
+            </div>
+            <p class="message">
+                A consultant at <strong th:text="${branchName}">Branch</strong> is now assisting you.
+            </p>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Reference:</td>
+                        <td th:text="${reference}">REF123456</td>
+                    </tr>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                </table>
+            </div>
+        </th:block>
+
+        <!-- COMPLETED -->
+        <th:block th:if="${eventType == 'COMPLETED'}">
+            <h1>Appointment Completed</h1>
+            <div class="success-box">
+                <strong>Thank you!</strong> Your appointment has been completed successfully.
+            </div>
+            <p class="message">
+                We hope we were able to assist you today at <strong th:text="${branchName}">Branch</strong>.
+            </p>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Reference:</td>
+                        <td th:text="${reference}">REF123456</td>
+                    </tr>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                    <tr>
+                        <td>Completed On:</td>
+                        <td th:text="${date}">2026-02-09</td>
+                    </tr>
+                </table>
+            </div>
+            <p class="message">
+                We value your feedback. If you have any comments about your experience, please don't hesitate to contact us.
+            </p>
+        </th:block>
+
+        <!-- CANCEL_BY_CUSTOMER -->
+        <th:block th:if="${eventType == 'CANCEL_BY_CUSTOMER'}">
+            <h1>Appointment Cancelled</h1>
+            <div class="warning-box">
+                Your appointment has been cancelled as per your request.
+            </div>
+            <p class="message">
+                Your appointment at <strong th:text="${branchName}">Branch</strong> has been successfully cancelled.
+            </p>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Reference:</td>
+                        <td th:text="${reference}">REF123456</td>
+                    </tr>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                    <tr>
+                        <td>Original Date:</td>
+                        <td th:text="${date}">2026-02-09</td>
+                    </tr>
+                </table>
+            </div>
+            <p class="message">
+                Need to book a new appointment? You can do so anytime through our booking system.
+            </p>
+        </th:block>
+
+        <!-- CANCEL_BY_STAFF -->
+        <th:block th:if="${eventType == 'CANCEL_BY_STAFF'}">
+            <h1>Appointment Cancelled</h1>
+            <div class="cancel-box">
+                <strong>We apologize.</strong> Your appointment has been cancelled by our staff.
+            </div>
+            <p class="message">
+                Unfortunately, your appointment at <strong th:text="${branchName}">Branch</strong>
+                has been cancelled. We sincerely apologize for any inconvenience this may cause.
+            </p>
+            <div class="appointment-details">
+                <table>
+                    <tr>
+                        <td>Reference:</td>
+                        <td th:text="${reference}">REF123456</td>
+                    </tr>
+                    <tr>
+                        <td>Branch:</td>
+                        <td th:text="${branchName}">Branch Name</td>
+                    </tr>
+                    <tr>
+                        <td>Original Date:</td>
+                        <td th:text="${date}">2026-02-09</td>
+                    </tr>
+                </table>
+            </div>
+            <p class="message">
+                Please book a new appointment at your earliest convenience. We apologize for any inconvenience caused.
+            </p>
+        </th:block>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This is an automated message from Capitec Appointment Booking.</p>
+            <p>Please do not reply to this email.</p>
+            <p>Contact us: <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}">support@capitec.co.za</a></p>
+            <p>&copy; 2026 Capitec Bank. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

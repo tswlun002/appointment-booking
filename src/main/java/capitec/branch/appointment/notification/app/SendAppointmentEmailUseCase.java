@@ -8,6 +8,7 @@ import capitec.branch.appointment.notification.app.port.CustomerDetails;
 import capitec.branch.appointment.notification.app.port.CustomerLookup;
 import capitec.branch.appointment.notification.domain.AppointmentBookedEmail;
 import capitec.branch.appointment.notification.domain.AppointmentStatusUpdatesEmail;
+import capitec.branch.appointment.notification.domain.Notification;
 import capitec.branch.appointment.notification.domain.NotificationService;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.sharekernel.EventTrigger;
@@ -19,8 +20,10 @@ import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
 
 @Slf4j
@@ -29,138 +32,113 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SendAppointmentEmailUseCase {
 
+    private static final String APPOINTMENT_TEMPLATE = "email/appointment-notification";
+
+    private static final Map<String, String> EMAIL_SUBJECTS = Map.of(
+            "APPOINTMENT_BOOKED", "Appointment Confirmation",
+            "APPOINTMENT_RESCHEDULED", "Appointment Rescheduled",
+            "CHECKED_IN", "Check-In Confirmation",
+            "IN_PROGRESS", "Appointment In Progress",
+            "COMPLETED", "Appointment Completed",
+            "CANCEL_BY_CUSTOMER", "Appointment Cancelled",
+            "CANCEL_BY_STAFF", "Appointment Cancelled by Branch"
+    );
+
     private final BranchLookup branchLookup;
     private final CustomerLookup customerLookup;
     private final NotificationService notificationService;
+    private final TemplateEngine templateEngine;
 
     @Value("${mail.username}")
     private String hostEmail;
 
+    @Value("${mail.support:support@capitec.co.za}")
+    private String supportEmail;
+
     @EventListener(AppointmentBookedEmail.class)
     public void onAppointmentBooked(@Valid AppointmentBookedEmail event) throws MailSenderException {
-
-        log.info("Sending appointment email, traceId:{}", event.traceId());
+        log.info("Sending appointment booked email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
         CustomerDetails user = customerLookup.findByUsername(event.customerUsername());
+        BranchDetails branch = getBranchDetails(event.branchId());
 
-        BranchDetails branchDetails = branchLookup.findById(event.branchId())
-                                                    .orElseThrow(()->{
-                                                        log.warn("No branch found with id:{}", event.branchId());
-                                                        return new ResponseStatusException(HttpStatus.NOT_FOUND, "No branch found.");
-                                                    });
+        String eventType = event.eventType().name();
+        validateEventType(eventType, event.traceId());
 
-        String subject;
-        String body;
+        Context context = new Context();
+        context.setVariable("eventType", eventType);
+        context.setVariable("customerName", user.fullname());
+        context.setVariable("branchName", branch.branchName());
+        context.setVariable("branchAddress", branch.address());
+        context.setVariable("reference", event.reference());
+        context.setVariable("date", event.day().toString());
+        context.setVariable("startTime", event.startTime().toString());
+        context.setVariable("endTime", event.endTime().toString());
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("subject", EMAIL_SUBJECTS.get(eventType));
 
-        switch (event.eventType()) {
-            case APPOINTMENT_BOOKED -> {
-                subject = EmailTemplates.BOOKING_CONFIRMATION_SUBJECT;
-                body = EmailTemplates.BOOKING_CONFIRMATION_BODY
-                        .replaceAll("\\{customerName}", user.fullname())
-                        .replaceAll("\\{branchName}", branchDetails.branchName())
-                        .replaceAll("\\{branchAddress}", branchDetails.address())
-                        .replaceAll("\\{appointmentReference}", event.reference())
-                        .replaceAll("\\{date}", event.day().toString())
-                        .replaceAll("\\{startTime}", event.startTime().toString())
-                        .replaceAll("\\{endTime}", event.endTime().toString())
-                        .replaceAll("\\{branch}", branchDetails.branchName());
-            }
-            case APPOINTMENT_RESCHEDULED -> {
-                subject = EmailTemplates.RESCHEDULE_CONFIRMATION_SUBJECT;
-                body = EmailTemplates.RESCHEDULE_CONFIRMATION_BODY
-                        .replaceAll("\\{customerName}", user.fullname())
-                        .replaceAll("\\{branchName}", branchDetails.branchName())
-                        .replaceAll("\\{address}", branchDetails.address())
-                        .replaceAll("\\{referenceNumber}", event.reference())
-                        .replaceAll("\\{date}", event.day().toString())
-                        .replaceAll("\\{startTime}", event.startTime().toString())
-                        .replaceAll("\\{endTime}", event.endTime().toString());
-            }
-            default -> {
-                log.error("Unsupported event type: {} - this is a code defect. Event: {}, traceId: {}", event.eventType(), event, event.traceId());
-                throw new NonRetryableException("Unsupported event type:"+event.eventType());
-            }
-        }
+        String body = templateEngine.process(APPOINTMENT_TEMPLATE, context);
+        notificationService.sendEmail(hostEmail, Set.of(user.email()), EMAIL_SUBJECTS.get(eventType), body, event.traceId());
 
-        notificationService.sendEmail(hostEmail, Set.of(user.email()), subject, body, event.traceId());
+        log.info("Appointment booked email sent successfully. traceId: {}", event.traceId());
     }
 
     @EventListener(AppointmentStatusUpdatesEmail.class)
     public void onAppointmentStatusUpdates(@Valid AppointmentStatusUpdatesEmail event) throws MailSenderException {
+        log.info("Sending appointment status update email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
-        log.info("Sending appointment status updates email, traceId:{}", event.traceId());
         CustomerDetails user = customerLookup.findByUsername(event.customerUsername());
-        BranchDetails branchDetails = branchLookup.findById(event.branchId())
-                                                    .orElseThrow(()->{
-                                                        log.warn("No branch found with id:{}", event.branchId());
-                                                        return new ResponseStatusException(HttpStatus.NOT_FOUND, "No branch found.");
-                                                    });
+        BranchDetails branch = getBranchDetails(event.branchId());
+
+        String eventType = resolveStatusEventType(event);
+        validateEventType(eventType, event.traceId());
+
         String date = event.createdAt().toLocalDate().toString();
         String time = event.createdAt().toLocalTime().toString();
 
-        String subject =null;
-        String body = null;
+        Context context = new Context();
+        context.setVariable("eventType", eventType);
+        context.setVariable("customerName", user.fullname());
+        context.setVariable("branchName", branch.branchName());
+        context.setVariable("branchAddress", branch.address());
+        context.setVariable("reference", event.reference());
+        context.setVariable("date", date);
+        context.setVariable("time", time);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("subject", EMAIL_SUBJECTS.get(eventType));
 
-        switch (event.eventType()) {
-            case ATTENDED_APPOINTMENT -> {
-                switch (event.toState().toUpperCase()) {
-                    case "CHECKED_IN" -> {
-                        subject = EmailTemplates.STATUS_CHECKIN_SUBJECT;
-                        body = EmailTemplates.STATUS_CHECKIN_BODY
-                                .replaceAll("\\{customerName}", user.fullname())
-                                .replaceAll("\\{startTime}", time)
-                                .replaceAll("\\{referenceNumber}", event.reference())
-                                .replaceAll("\\{branchName}", branchDetails.branchName());
-                    }
-                    case "IN_PROGRESS" -> {
-                        subject = EmailTemplates.STATUS_INPROGRESS_SUBJECT;
-                        body = EmailTemplates.STATUS_INPROGRESS_BODY
-                                .replaceAll("\\{customerName}", user.fullname())
-                                .replaceAll("\\{referenceNumber}", event.reference())
-                                .replaceAll("\\{branchName}", branchDetails.branchName());
-                    }
-                    case "COMPLETED" -> {
-                        subject = EmailTemplates.STATUS_COMPLETED_SUBJECT;
-                        body = EmailTemplates.STATUS_COMPLETED_BODY
-                                .replaceAll("\\{customerName}", user.fullname())
-                                .replaceAll("\\{date}", date)
-                                .replaceAll("\\{referenceNumber}", event.reference())
-                                .replaceAll("\\{branchName}", branchDetails.branchName());
-                    }
-                    default -> {
-                        log.error("Unsupported toState: {} for ATTENDED_APPOINTMENT. Event: {}", event.toState(), event);
-                         throw new NonRetryableException("Unsupported toState:"+event.toState());
-                    }
-                }
-            }
-            case APPOINTMENT_CANCELED -> {
+        String body = templateEngine.process(APPOINTMENT_TEMPLATE, context);
+        notificationService.sendEmail(hostEmail, Set.of(user.email()), EMAIL_SUBJECTS.get(eventType), body, event.traceId());
 
-                var trigger = EventTrigger.valueOf(event.triggeredBy().toUpperCase());
+        log.info("Appointment status update email sent successfully. traceId: {}", event.traceId());
+    }
 
-                switch (trigger) {
-                    case EventTrigger.STAFF->{
-                        subject = EmailTemplates.CANCEL_BY_STAFF_SUBJECT;
-                        body = EmailTemplates.CANCEL_BY_STAFF_BODY;
-                    }
-                    case EventTrigger.CUSTOMER -> {
-                        subject = EmailTemplates.CANCEL_BY_CUSTOMER_SUBJECT;
-                        body = EmailTemplates.CANCEL_BY_CUSTOMER_BODY;
-                    }
-                    default -> {
-                        log.error("Unsupported fromState: {} for APPOINTMENT_CANCELED. Event: {}", event.fromState(), event);
-                        throw new NonRetryableException("Unsupported fromState:"+event.fromState());
-                    }
-                }
-
-                body = body.replaceAll("\\{customerName}", user.fullname())
-                        .replaceAll("\\{date}", date)
-                        .replaceAll("\\{startTime}", time)
-                        .replaceAll("\\{referenceNumber}", event.reference())
-                        .replaceAll("\\{branchName}", branchDetails.branchName());
-            }
-
+    private String resolveStatusEventType(AppointmentStatusUpdatesEmail event) {
+        if (event.eventType() == Notification.AppointmentEventType.ATTENDED_APPOINTMENT) {
+            return event.toState().toUpperCase();
+        } else if (event.eventType() == Notification.AppointmentEventType.APPOINTMENT_CANCELED) {
+            EventTrigger trigger = EventTrigger.valueOf(event.triggeredBy().toUpperCase());
+            return switch (trigger) {
+                case STAFF -> "CANCEL_BY_STAFF";
+                case CUSTOMER -> "CANCEL_BY_CUSTOMER";
+                default -> throw new NonRetryableException("Unsupported trigger: " + event.triggeredBy());
+            };
         }
+        throw new NonRetryableException("Unsupported event type: " + event.eventType());
+    }
 
-        notificationService.sendEmail(hostEmail, Set.of(user.email()), Objects.requireNonNull(subject), Objects.requireNonNull(body), event.traceId());
+    private BranchDetails getBranchDetails(String branchId) {
+        return branchLookup.findById(branchId)
+                .orElseThrow(() -> {
+                    log.warn("No branch found with id: {}", branchId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "No branch found.");
+                });
+    }
+
+    private void validateEventType(String eventType, String traceId) {
+        if (!EMAIL_SUBJECTS.containsKey(eventType)) {
+            log.error("Unsupported event type: {}. traceId: {}", eventType, traceId);
+            throw new NonRetryableException("Unsupported event type: " + eventType);
+        }
     }
 }

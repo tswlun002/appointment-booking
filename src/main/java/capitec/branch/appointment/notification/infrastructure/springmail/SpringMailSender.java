@@ -1,56 +1,89 @@
 package capitec.branch.appointment.notification.infrastructure.springmail;
 
-import jakarta.mail.Message;
-import jakarta.mail.internet.InternetAddress;
+import capitec.branch.appointment.exeption.MailSenderException;
+import capitec.branch.appointment.exeption.NonRetryableException;
+import capitec.branch.appointment.notification.domain.NotificationService;
+import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import capitec.branch.appointment.exeption.MailSenderException;
-import capitec.branch.appointment.notification.domain.NotificationService;
 import org.eclipse.angus.mail.util.MailConnectException;
+import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-
+import org.springframework.validation.annotation.Validated;
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
+@Validated
 @Slf4j
-public class SpringMailSender  implements NotificationService {
+public class SpringMailSender implements NotificationService {
 
     private final JavaMailSender mailSender;
 
     @Override
-    public void sendEmail(String hostEmail, Set<String> recipients, String subject, String emailTemplate, String traceId) throws MailSenderException{
+    public void sendEmail(
+            @NotBlank @Email String hostEmail,
+            @NotEmpty Set<@Email String> recipients,
+            @NotBlank String subject,
+            @NotBlank String emailTemplate,
+            @NotBlank String traceId) throws MailSenderException {
 
-         try {
+        log.debug("Sending email. subject: {}, recipients: {}, traceId: {}", subject, recipients.size(), traceId);
 
-            MimeMessage message = mailSender.createMimeMessage();
-            message.setFrom(new InternetAddress(hostEmail));
-            String emailRecipients = String.join(",", recipients);
-            InternetAddress address = new InternetAddress(emailRecipients);
-            message.addRecipient(Message.RecipientType.TO, address);
-            message.setSubject(subject);
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, String.valueOf(Charset.defaultCharset()));
-            helper.setText(emailTemplate, true);
+        try {
+            MimeMessage message = createMimeMessage(hostEmail, recipients, subject, emailTemplate);
             mailSender.send(message);
+            log.info("Email sent successfully. subject: {}, traceId: {}", subject, traceId);
+
+        } catch (MailConnectException | MailSendException e) {
+            log.error("Failed to send email - connection/send error. subject: {}, traceId: {}", subject, traceId, e);
+            throw new MailSenderException("Failed to connect to mail server", e);
+
+        } catch (MailException e) {
+            if (isRetryableException(e)) {
+                log.error("Failed to send email - retryable error. subject: {}, traceId: {}", subject, traceId, e);
+                throw new MailSenderException("Failed to send email", e);
+            }
+            log.error("Failed to send email - non-retryable error. subject: {}, traceId: {}", subject, traceId, e);
+            throw new NonRetryableException("Failed to send email - non-retryable", e);
+
+        } catch (MessagingException e) {
+            log.error("Failed to create email message. subject: {}, traceId: {}", subject, traceId, e);
+            throw new NonRetryableException("Failed to create email message", e);
 
         } catch (Exception e) {
-
-            if (e instanceof MailConnectException || e instanceof MailSendException
-                    || e.getCause() instanceof MailSendException || e.getCause() instanceof IOException) {
-
-                log.info("Failed to send email from event:{},traceId:{}.\nMailSenderException is thrown : {}", subject, traceId, e.getMessage(), e);
-
-                throw new MailSenderException(e.getCause().getMessage(), e);
-            }
-            log.info("Failed to send email from event:{}, traceId:{}. /nDeadException is thrown : {}", subject, traceId, e.getMessage(), e);
-
-            throw new RuntimeException("Dead letter for mail sender exception", e);
+            log.error("Unexpected error sending email. subject: {}, traceId: {}", subject, traceId, e);
+            throw new NonRetryableException("Unexpected error sending email", e);
         }
+    }
+
+    private MimeMessage createMimeMessage(String hostEmail, Set<String> recipients, String subject, String emailTemplate)
+            throws MessagingException {
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+
+        helper.setFrom(hostEmail);
+        helper.setTo(recipients.toArray(String[]::new));
+        helper.setSubject(subject);
+        helper.setText(emailTemplate, true);
+
+        return message;
+    }
+
+    private boolean isRetryableException(Exception e) {
+        Throwable cause = e.getCause();
+        return cause instanceof IOException
+                || cause instanceof MailConnectException
+                || cause instanceof MailSendException;
     }
 }
