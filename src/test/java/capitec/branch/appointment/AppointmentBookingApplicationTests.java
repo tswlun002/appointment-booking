@@ -249,11 +249,10 @@ public class AppointmentBookingApplicationTests {
                           "firstname": "%s",
                           "lastname": "%s",
                           "email": "%s",
-                          "verified": "%s",
                           "enabled": "%s"
                         }
                         """, user.getUsername(), user.getFirstname()
-                , user.getLastname(), user.getEmail(), true, true);
+                , user.getLastname(), user.getEmail(), true);
 
         wireMock.register(WireMock.get(WireMock.urlPathEqualTo("/v1/clients"))
                 .withQueryParam("IDNumber",WireMock.equalTo(idNumber))
