@@ -1,5 +1,5 @@
 {
-  "realm": "AppointmentSystemTest",
+  "realm": "appointment-booking-DEV",
   "enabled": true,
   "rememberMe": true,
   "verifyEmail": true,
@@ -65,10 +65,10 @@
   ],
   "clients": [
     {
-      "clientId": "users-service-test",
+      "clientId": "appointment-booking",
       "enabled": true,
       "protocol": "openid-connect",
-      "secret": "1F6395C9-A0FC-4E70-B8C3-9408E835DF20",
+      "secret": "37B9EoUIVcDGxJexxDBuVismiDy53uMd",
       "directAccessGrantsEnabled": true,
       "standardFlowEnabled": true,
       "serviceAccountsEnabled": true,
@@ -113,7 +113,7 @@
       }
     ],
     "client":{
-      "users-service-test": [
+      "appointment-booking": [
         {
           "name": "app_user",
           "description": "Allow user to create appointment"
@@ -172,7 +172,7 @@
           "token-exchange", "exchange",
           "impersonation"
         ],
-        "users-service-test": [
+        "appointment-booking": [
           "app_user",
           "app_client",
           "app_guest",
@@ -183,9 +183,9 @@
       }
     },
     {
-      "username": "service-account-users-service-test",
+      "username": "service-account-appointment-booking",
       "enabled": true,
-      "serviceAccountClientId": "users-service-test",
+      "serviceAccountClientId": "appointment-booking",
       "clientRoles": {
         "realm-management": [
           "manage-clients",
@@ -213,7 +213,7 @@
     {
       "name": "USER_CLIENT",
       "clientRoles": {
-        "users-service-test": [
+        "appointment-booking": [
           "app_user",
           "app_client"
         ]
@@ -222,7 +222,7 @@
     {
       "name": "USER_GUEST",
       "clientRoles": {
-        "users-service-test": [
+        "appointment-booking": [
           "app_user",
           "app_guest"
         ]
@@ -231,7 +231,7 @@
     {
       "name": "ADMIN",
       "clientRoles": {
-        "users-service-test": [
+        "appointment-booking": [
           "app_admin"
         ]
       }
