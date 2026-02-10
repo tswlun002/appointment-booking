@@ -147,7 +147,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             AssertionsForClassTypes.assertThat(metadata.customerUsername()).isEqualTo(bookedAppointment.getCustomerUsername());
             assertThat(metadata.createdAt().toLocalDate()).isEqualTo(LocalDate.now());
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.CUSTOMER.name());
             var fromState =  mapper.convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(BOOKED.name());
@@ -227,7 +227,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.STAFF.name());
             var fromState =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(CHECKED_IN.name());
@@ -316,7 +316,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.STAFF.name());
             var fromState =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(IN_PROGRESS.name());
@@ -356,7 +356,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.STAFF.name());
             var fromState =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(BOOKED.name());
@@ -404,7 +404,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             AppointmentMetadata metadata = eventValue.value();
             AssertionsForClassTypes.assertThat(metadata).isNotNull();
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.STAFF.name());
             var fromState =  EventToJSONMapper.getMapper().convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(CHECKED_IN.name());

@@ -168,7 +168,7 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             AssertionsForClassTypes.assertThat(metadata.customerUsername()).isEqualTo(bookedAppointment.getCustomerUsername());
             assertThat(metadata.createdAt().toLocalDate()).isEqualTo(LocalDate.now());
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.CUSTOMER.name());
             var fromState =  mapper.convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(BOOKED.name());
@@ -319,7 +319,7 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             AssertionsForClassTypes.assertThat(metadata.customerUsername()).isEqualTo(bookedAppointment.getCustomerUsername());
             assertThat(metadata.createdAt().toLocalDate()).isEqualTo(LocalDate.now());
             Map<String, Object> stringObjectMap = metadata.otherData();
-            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggerBy"), String.class);
+            var triggeredBy =  mapper.convertValue(stringObjectMap.get("triggeredBy"), String.class);
             assertThat(triggeredBy).isNotNull().isEqualTo(EventTrigger.CUSTOMER.name());
             var fromState =  mapper.convertValue(stringObjectMap.get("fromState"), String.class);
             assertThat(fromState).isNotNull().isEqualTo(BOOKED.name());

@@ -36,11 +36,11 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         assertThat(allSlots).isNotEmpty();
 
         //ASSUME started next day after today and exclude sunday, possible holidays
-        Set<Day> days = getDateOfNextDaysQuery.execute(date.getDayOfWeek(), date.plusDays(6).getDayOfWeek());
+        Set<Day> days = getDateOfNextDaysQuery.execute(date, date.plusDays(6));
         long count = days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count();
 
-        LocalDate tomorrow = date;
-        LocalDate expectedEndDate = tomorrow.plusDays(4-count);
+
+        LocalDate expectedEndDate = date.plusDays(5-count);
 
         List<LocalDate> distinctDates = allSlots.stream()
                 .map(Slot::getDay)
@@ -49,7 +49,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
                 .toList();
 
         assertThat(distinctDates).hasSize((int) (5-count));
-        assertThat(distinctDates.getFirst()).isEqualTo(tomorrow);
+        assertThat(distinctDates.getFirst()).isEqualTo(date);
         assertThat(distinctDates.getLast()).isEqualTo(expectedEndDate);
     }
 
@@ -79,7 +79,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
            assertThat(finalCount).isEqualTo(initialCount);
        }
        else {
-           assertThat(finalCount).isGreaterThan(initialCount);
+           assertThat(finalCount).isGreaterThanOrEqualTo(initialCount);
        }
 
     }

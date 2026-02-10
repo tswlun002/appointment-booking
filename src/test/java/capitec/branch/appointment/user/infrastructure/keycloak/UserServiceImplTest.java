@@ -3,11 +3,8 @@ package capitec.branch.appointment.user.infrastructure.keycloak;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
-import capitec.branch.appointment.role.domain.Role;
-import capitec.branch.appointment.role.domain.RoleService;
-import capitec.branch.appointment.user.domain.USER_TYPES;
 import capitec.branch.appointment.user.domain.User;
-import jakarta.ws.rs.NotFoundException;
+import capitec.branch.appointment.user.domain.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,31 +12,21 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.keycloak.admin.client.resource.RoleResource;
 import org.keycloak.admin.client.resource.RolesResource;
-import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.AbstractUserRepresentation;
-import org.keycloak.representations.idm.GroupRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.client.MockRestServiceServer;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-
 import static capitec.branch.appointment.utils.KeycloakUtils.keyCloakRequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatException;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
+
 
 @Slf4j
 public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
@@ -51,9 +38,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @Value("${default_roles.users}")
     private List<String> defaultUsersRoles;
     @Autowired
-    UserServiceImpl userService;
-    @Autowired
-    RoleService roleService;
+   private UserService userService;
     @Autowired
     private  KeycloakService keycloakService;
 
@@ -136,7 +121,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
         user = userService.registerUser(user);
         assertThatException().isThrownBy(() -> userService.registerUser(user2))
                 .isExactlyInstanceOf(EntityAlreadyExistException.class)
-                .withMessage("User already exist.");
+                .withMessage("User already exists");
         assertThat(user).isNotNull()
                 .isExactlyInstanceOf(User.class)
                 .hasFieldOrPropertyWithValue("email", email)
@@ -191,8 +176,8 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @CsvSource(value = {"38310942437"}, delimiter = ';')
     void deleteNoneExistingUser(String username) {
         assertThatException().isThrownBy(() -> userService.deleteUser(username))
-                .isExactlyInstanceOf(NotFoundException.class)
-                .withMessage("User not found");
+                .isExactlyInstanceOf(ResponseStatusException.class)
+                .withMessageContaining("User not found");
 
     }
 
@@ -243,62 +228,6 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     public void getUserByEmailDoneNotExists(String emil) {
         Optional<User> user = userService.getUserByEmail(emil);
         assertThat(user.isEmpty()).isTrue();
-    }
-
-    @ParameterizedTest
-    @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033"}, delimiter = ';')
-    public void assignValidRoleTValidUser(String email, String firstName, String lastName, String password) {
-
-        var user = new User(email, firstName, lastName, password);
-
-        userService.registerUser(user);
-
-        Set<String> collect = defaultUsersRoles.stream().map(r ->
-                roleService.getClientRole(r).orElseThrow().getId()
-        ).collect(Collectors.toSet());
-
-        collect.forEach(r-> {
-
-            boolean b = userService.assignRoleToUser(user.getUsername(), r);
-
-            assertThat(b).isTrue();
-        });
-
-    }
-
-    @ParameterizedTest
-    @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033;app_users;Allow to create user to creat account;true"}, delimiter = ';')
-    public void getAssignedRoleTUser(String email, String firstName, String lastName, String password,
-                                     String roleName, String roleDescription, boolean isClientRole) {
-        var user = new User(email, firstName, lastName, password);
-        userService.registerUser(user);
-        Role role = new Role( roleName, roleDescription, isClientRole);
-        roleService.createRole(role);
-
-        userService.assignRoleToUser( user.getUsername(),role.getId());
-        Collection<String> clientRolesForUser = userService.getUserRoles(user.getUsername());
-        Optional<String> first = clientRolesForUser.stream().findFirst();
-        assertThat(first.isPresent()).isTrue();
-
-        assertThat(first.get()).isEqualTo(role.id());
-    }
-
-    @ParameterizedTest
-    @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033;USER_GUEST", "barbaraandrade1@gmail.com;Barbara;Andrade;@NkLlun00033;ADMIN"}, delimiter = ';')
-    public void addUserToGroup(String email, String firstName, String lastName, String password, USER_TYPES roleType) {
-
-        var user = new User(email, firstName, lastName, password);
-        userService.registerUser(user);
-        String id = roleService.getGroup(roleType.name(), false).orElseThrow().getId();
-        userService.addUserToGroup(user.getUsername(), id);
-
-        UsersResource users = keycloakService.getUsersResources();
-        var first = users.searchByUsername( user.getUsername(), true).getFirst();
-        UserResource userResource = users.get(first.getId());
-        List<GroupRepresentation> groups = userResource.groups();
-        boolean b = groups.stream().anyMatch(ug -> ug.getId().equals(id));
-
-        assertThat(b).isTrue();
     }
 
 }

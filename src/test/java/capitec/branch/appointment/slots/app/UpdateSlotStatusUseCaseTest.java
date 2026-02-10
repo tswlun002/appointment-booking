@@ -258,7 +258,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         // Act & Assert (Domain logic prevents save)
         Slot beforeSlot = slotService.getSlot(existingSlotId).orElseThrow();
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(ResponseStatusException.class,
                 () -> useCase.execute(new SlotStatusTransitionAction.Release(existingSlotId, LocalDateTime.now())));
 
         // Assert Persistence: Check the database state to ensure it was NOT saved

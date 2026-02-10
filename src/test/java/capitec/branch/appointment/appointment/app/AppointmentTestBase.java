@@ -21,7 +21,7 @@ import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.staff.domain.Staff;
 import capitec.branch.appointment.staff.domain.StaffService;
 import capitec.branch.appointment.staff.domain.StaffStatus;
-import capitec.branch.appointment.user.domain.UserRoleService;
+import capitec.branch.appointment.user.app.port.UserRoleService;
 import capitec.branch.appointment.user.domain.UsernameGenerator;
 import capitec.branch.appointment.sharekernel.EventToJSONMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;

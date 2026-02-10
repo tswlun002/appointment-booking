@@ -14,6 +14,7 @@ import capitec.branch.appointment.user.app.dto.UsernameCommand;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.sharekernel.EventToJSONMapper;
 import capitec.branch.appointment.sharekernel.event.metadata.OTPMetadata;
+import capitec.branch.appointment.user.infrastructure.keycloak.KeycloakUserCacheConfig;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,6 +22,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -47,9 +53,20 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @Autowired
     private KeycloakService keycloakService;
 
-
+    @Autowired
+    @Qualifier(KeycloakUserCacheConfig.KEYCLOAK_USER_CACHE_MANAGER)
+    private CacheManager cacheManager;
     @AfterEach
     void tearUp() {
+        var cache = new Cache[]{
+                cacheManager.getCache(KeycloakUserCacheConfig.KEYCLOAK_USER_CACHE),
+                cacheManager.getCache(KeycloakUserCacheConfig.KEYCLOAK_USER_CACHE_MANAGER)
+        };
+        for (Cache cache1 : cache) {
+            if(cache1!=null) {
+                cache1.clear();
+            }
+        }
         otpService.deleteAllOTP("f9ad5e5b-f4f8-42e0-bb93-26b283e6f55d");
         UsersResource usersResource = keycloakService.getUsersResources();
         List<UserRepresentation> list = usersResource.list().stream().filter(u -> !u.getUsername().equals(username)).toList();
@@ -181,7 +198,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
     @CsvSource(delimiter = ';', value = {"dorismia@myuct.ac.za;Doris;Mia;@KrVgfjl65;2b1d5b0d-59e2-47ec-94f1-24505ef2abbd",
             "davidchong@cput.ac.za;David;Chong;1wcB2OsQFV6_;03289819-bcf4-4fef-8747-cfaf4d1e808a"})
     void testVerifyRegisteredUserUntilOTPRevoked(String email, String firstname, String lastname,
-                                                 String password, String traceId) throws JsonProcessingException {
+                                                 String password, String traceId)  {
 
         var registerDTO = new NewUserDtO(email, firstname, lastname, password, password);
         User user = registerUserUseCase.execute(registerDTO, traceId);
