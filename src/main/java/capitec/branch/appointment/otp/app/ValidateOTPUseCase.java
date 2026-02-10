@@ -1,6 +1,6 @@
 package capitec.branch.appointment.otp.app;
 
-import capitec.branch.appointment.exeption.TokenExpiredException;
+import capitec.branch.appointment.exeption.OTPExpiredException;
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
 import capitec.branch.appointment.otp.domain.OTPService;
@@ -60,7 +60,7 @@ public class ValidateOTPUseCase implements ValidateOTPService {
 
                 otpService.renewOTP(otpEntity.get());
 
-                throw new TokenExpiredException("OTP is expired");
+                throw new OTPExpiredException("OTP is expired");
             }
             case OTPSTATUSENUM.VERIFIED -> {
 
