@@ -1,7 +1,7 @@
 package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.authentication.domain.TokenResponse;
-import capitec.branch.appointment.exeption.TokenExpiredException;
+import capitec.branch.appointment.exeption.OTPExpiredException;
 import capitec.branch.appointment.user.app.event.UserCreatedEvent;
 import capitec.branch.appointment.user.app.event.UserVerifiedEvent;
 import capitec.branch.appointment.user.app.port.AuthenticationPort;
@@ -9,8 +9,7 @@ import capitec.branch.appointment.user.app.port.OtpValidationPort;
 import capitec.branch.appointment.user.app.port.RoleAssignmentPort;
 import capitec.branch.appointment.user.domain.USER_TYPES;
 import capitec.branch.appointment.user.domain.User;
-import capitec.branch.appointment.user.domain.UserDomainException;
-import capitec.branch.appointment.user.domain.UserRoleService;
+import capitec.branch.appointment.user.app.port.UserRoleService;
 import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitPurpose;
@@ -23,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
-
 import java.util.Optional;
 
 @Slf4j
@@ -51,24 +49,33 @@ public class VerifyUserUseCase {
     private int cooldownSeconds;
 
     public Optional<TokenResponse> execute(String username, String otp, boolean isCapitecClient, String traceId) {
+
+        User user = findUserOrThrow(username, traceId);
+        validateOtp(user, otp, traceId);
         try {
             log.info("Verifying user registration. username: {}, traceId: {}", username, traceId);
 
-            // Transactional verification steps
             transactionTemplate.executeWithoutResult(status -> {
-                User user = findUserOrThrow(username, traceId);
-                validateOtp(user, otp, traceId);
+
                 verifyUserStatus(username, traceId);
-                assignDefaultRoles(username, isCapitecClient, traceId);
-                publishUserVerifiedEvent(user, otp, traceId);
+
             });
-            return attemptAutoLogin(username, traceId);
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Validation failed. username: {}, traceId: {}, error: {}", username, traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
-        } catch (UserDomainException e) {
+
+        } catch (Exception e) {
             log.error("User domain error. username: {}, traceId: {}, error: {}", username, traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+            publishUserCreatedEvent(user, traceId);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "System error during verification. A new code has been sent to your email.");
+        }
+        try {
+
+            assignDefaultRoles(username, isCapitecClient, traceId);
+            publishUserVerifiedEvent(user, otp, traceId);
+            return attemptAutoLogin(username, traceId);
+        }
+        catch (Exception e) {
+            log.debug("Unexpected error. username: {}, traceId: {}, error: \n", username, traceId, e);
+            return Optional.empty();
         }
     }
 
@@ -89,14 +96,14 @@ public class VerifyUserUseCase {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP code");
             }
 
-        } catch (TokenExpiredException e) {
+        } catch (OTPExpiredException e) {
             handleExpiredOtp(user, traceId, e);
         } catch (ResponseStatusException e) {
             handleOtpValidationError(user.getUsername(), traceId, e);
         }
     }
 
-    private void handleExpiredOtp(User user, String traceId, TokenExpiredException e) {
+    private void handleExpiredOtp(User user, String traceId, OTPExpiredException e) {
         log.warn("OTP expired. username: {}, traceId: {}", user.getUsername(), traceId);
 
         checkRateLimitOrThrow(user.getUsername(), traceId);
@@ -174,6 +181,16 @@ public class VerifyUserUseCase {
         ));
 
         log.debug("UserVerifiedEvent published. username: {}, traceId: {}", user.getUsername(), traceId);
+    }
+    private void publishUserCreatedEvent(User user, String traceId) {
+        String fullName = user.getFirstname() + " " + user.getLastname();
+        applicationEventPublisher.publishEvent(new UserCreatedEvent(
+                user.getUsername(),
+                user.getEmail(),
+                fullName,
+                traceId
+        ));
+        log.debug("UserCreatedEvent published for username: {}, traceId: {}", user.getUsername(), traceId);
     }
 
     private Optional<TokenResponse> attemptAutoLogin(String username, String traceId) {

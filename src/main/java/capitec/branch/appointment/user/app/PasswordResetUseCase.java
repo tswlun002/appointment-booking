@@ -1,6 +1,6 @@
 package capitec.branch.appointment.user.app;
 
-import capitec.branch.appointment.exeption.TokenExpiredException;
+import capitec.branch.appointment.exeption.OTPExpiredException;
 import capitec.branch.appointment.user.app.dto.ChangePasswordDTO;
 import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
 import capitec.branch.appointment.user.app.event.PasswordResetRequestEvent;
@@ -136,14 +136,14 @@ public class PasswordResetUseCase {
                 throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP code");
             }
 
-        } catch (TokenExpiredException e) {
+        } catch (OTPExpiredException e) {
             handleExpiredOtp(user, traceId, e);
         } catch (ResponseStatusException e) {
             handleOtpValidationError(user.getUsername(), traceId, e);
         }
     }
 
-    private void handleExpiredOtp(User user, String traceId, TokenExpiredException e) {
+    private void handleExpiredOtp(User user, String traceId, OTPExpiredException e) {
         log.warn("OTP expired. username: {}, traceId: {}", user.getUsername(), traceId);
 
         checkRateLimitOrThrow(user.getUsername(), traceId);

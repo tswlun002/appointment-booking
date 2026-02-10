@@ -1,7 +1,7 @@
 package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.user.domain.UserDomainException;
-import capitec.branch.appointment.user.domain.UserRoleService;
+import capitec.branch.appointment.user.app.port.UserRoleService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;

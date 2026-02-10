@@ -1,4 +1,4 @@
-package capitec.branch.appointment.user.domain;
+package capitec.branch.appointment.user.app.port;
 
 import java.util.Collection;
 

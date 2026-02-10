@@ -65,9 +65,9 @@ public class RegisterUserUseCase {
 
     private User createCapitecClientUser(NewUserDtO registerDTO, String traceId) {
         var factory = new CreateUserExistingClientFactory(
+                registerDTO.email(),
                 registerDTO.firstname(),
                 registerDTO.lastname(),
-                registerDTO.email(),
                 registerDTO.password()
         );
 

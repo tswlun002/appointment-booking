@@ -12,7 +12,7 @@ public record CreateUserExistingClientFactory( String email, String firstname, S
         if(userClientDetails ==null) {
             throw new IllegalStateException("User client is not found");
         }
-        if( !userClientDetails.isEnabled()){
+        if( !userClientDetails.enabled()){
             logger.warn("User client {} is disabled", userClientDetails);
             throw new IllegalStateException("User client is blocked");
         }
@@ -24,6 +24,7 @@ public record CreateUserExistingClientFactory( String email, String firstname, S
 
             throw new IllegalStateException("User information is don't match with existing user");
         }
-        return new User(userClientDetails.username(), userClientDetails.username(), userClientDetails.firstname(), userClientDetails.lastname(), password);
+        return new User(userClientDetails.username(), userClientDetails.email(),userClientDetails.firstname(), userClientDetails.lastname()
+        , password,false,userClientDetails.enabled());
     }
 }

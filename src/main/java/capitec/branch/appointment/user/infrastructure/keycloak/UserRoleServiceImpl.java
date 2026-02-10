@@ -2,7 +2,7 @@ package capitec.branch.appointment.user.infrastructure.keycloak;
 
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.RolesAndGroupsService;
-import capitec.branch.appointment.user.domain.UserRoleService;
+import capitec.branch.appointment.user.app.port.UserRoleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.resource.RoleScopeResource;
