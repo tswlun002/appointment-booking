@@ -2,13 +2,11 @@ package capitec.branch.appointment.otp.infrastructure;
 
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPService;
-import capitec.branch.appointment.otp.domain.*;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
@@ -33,7 +31,7 @@ public class OTServiceImpl implements OTPService {
             OTPEntity newValue = otpMapper.OTPToOTPEntity(OTP);
 
             int affectedRows = otpRepository.revokeAndInsertNewOtp(newValue.code(), newValue.creationDate(), newValue.expiresDate(),
-                    newValue.purpose().name(), newValue.status().status(), newValue.attempts().attempts(), newValue.username());
+                    newValue.purpose(), newValue.status(), newValue.verificationAttempts(), newValue.username());
             if(affectedRows>0) return otpMapper.OTPEntityToOTPModel(newValue);
             else return null;
 
@@ -91,7 +89,7 @@ public class OTServiceImpl implements OTPService {
         }
         catch (Exception e) {
 
-            log.error("Failed to update OTP verification attempts", e);
+            log.error("Failed to update OTP verification verificationAttempts", e);
             throw new InternalServerErrorException("Internal error,failed OTP verification");
         }
     }

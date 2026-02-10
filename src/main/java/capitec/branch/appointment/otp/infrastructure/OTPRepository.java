@@ -24,12 +24,12 @@ interface OTPRepository extends CrudRepository<OTPEntity, Long> {
                     RETURNING  username 
                 )
                 INSERT INTO otp (code, created_date, expire_date, purpose, status, verification_attempts, username) 
-                VALUES( :code, :creationDate, :expiresDate, :purpose, :status, :attempts, :username )
+                VALUES( :code, :creationDate, :expiresDate, :purpose, :status, :verificationAttempts, :username )
             """
            )
     int  revokeAndInsertNewOtp(@Param("code") String code, @Param("creationDate") LocalDateTime creationDate,
                                @Param("expiresDate") LocalDateTime expiresDate,
-                                @Param("purpose") String purpose,@Param("status") String status,@Param("attempts") int attempts,
+                                @Param("purpose") String purpose,@Param("status") String status,@Param("verificationAttempts") int verificationAttempts,
                                @Param("username") String username);
     @Query("""
                SELECT otp.id, otp.code,otp.purpose, otp.status ,otp.created_date,otp.expire_date , otp. username, otp.verification_attempts    FROM  otp as otp
@@ -49,7 +49,6 @@ interface OTPRepository extends CrudRepository<OTPEntity, Long> {
             """)
     boolean deleteByUserId(@NotBlank @Param("username") String username);
 
-   // @Modifying
    @Query("""
     UPDATE otp SET
         verification_attempts = CASE
@@ -59,11 +58,11 @@ interface OTPRepository extends CrudRepository<OTPEntity, Long> {
         status = CASE
             WHEN otp.status IN  ('VERIFIED','REVOKED','VALIDATED')  THEN otp.status
             WHEN otp.expire_date <= LOCALTIMESTAMP THEN 'EXPIRED'                    -- Check expiry FIRST
-            WHEN otp.verification_attempts+1>=:maxAttempts AND otp.code!=:code AND otp. username=:username THEN 'REVOKED'
-            WHEN otp.code=:code AND otp. username=:username THEN 'VALIDATED'                    -- Check code match AFTER expiry
+            WHEN otp.verification_attempts+1>=:maxAttempts AND otp.code!=:code AND otp.username=:username THEN 'REVOKED'
+            WHEN otp.code=:code AND otp.username=:username THEN 'VALIDATED'                    -- Check code match AFTER expiry
             ELSE otp.status
         END 
-    WHERE otp. username=:username AND otp.status in ('CREATED','RENEWED')
+    WHERE otp.username=:username AND otp.status in ('CREATED','RENEWED')
     RETURNING otp.id, otp.code,otp.purpose, otp.status ,otp.created_date,otp.expire_date , otp. username ,otp.verification_attempts
     """)
     Optional<OTPEntity> validateOTP( @Param("username") String username,@Param("code") String code, @Param("maxAttempts") int maxAttempts);
