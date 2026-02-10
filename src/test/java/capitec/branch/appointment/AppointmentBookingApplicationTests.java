@@ -205,6 +205,14 @@ public class AppointmentBookingApplicationTests {
             registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> issuer);
             registry.add("allowed_origins.urls",()->"*");
             registry.add("allowed_origins.cache_period",()->"30");
+            // Short OTP expiration for faster tests
+            registry.add("otp.expire.datetime", () -> 1);
+            // Short cooldown for faster rate limit testing (1 second)
+            registry.add("rate-limit.otp-resend.cooldown-seconds", () -> 1);
+            // Keep max attempts at 5 for realistic testing
+            registry.add("rate-limit.otp-resend.max-attempts", () -> 5);
+            // Short window for faster cleanup
+            registry.add("rate-limit.otp-resend.window-minutes", () -> 5);
 
             //Client domain
             wiremockContainer.start();
