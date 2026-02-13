@@ -18,7 +18,7 @@ spring:
       dialect: postgresql
   liquibase:
     enabled: true
-    change-log: classpath:db/migrations/changelog.sql
+    change-log: classpath:db/migrations/changelog-master.xml
   jackson:
     parser:
       allow-unquoted-field-names: true
@@ -53,6 +53,7 @@ keycloak:
 otp:
   expire:
     datetime: ${OTP_EXPIRE_DATETIME_IN_MINUTES:5}
+    chron-units: ${OTP_EXPIRE_CHRON_UNITS:MINUTES}
   number:
     verification:
       attempts: ${OTP_NUMBER_VERIFICATION_ATTEMPTS:3}

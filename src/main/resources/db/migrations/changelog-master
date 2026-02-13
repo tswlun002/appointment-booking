@@ -1,0 +1,477 @@
+-- liquibase formatted sql
+
+-- changeset Lunga:1
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.routines WHERE routine_name='update_last_modified_date' AND routine_schema=current_schema();
+CREATE OR REPLACE FUNCTION update_last_modified_date()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.last_modified_date = CURRENT_TIMESTAMP;
+RETURN NEW;
+END
+$$
+LANGUAGE plpgsql;
+
+-- changeset Lunga:2
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='branch' AND table_schema=current_schema();
+-- comment: /* Create table BRANCH only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE branch
+(
+    id                 SERIAL PRIMARY KEY,
+    created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    branch_id          VARCHAR(36) NOT NULL,
+    branch_name        VARCHAR(72) NOT NULL,
+    CONSTRAINT unique_branch_id UNIQUE (branch_id),
+    CONSTRAINT branch_id_is_not_blank CHECK (TRIM(branch_id) <> ''),
+    CONSTRAINT branch_name_is_not_blank CHECK (TRIM(branch_name) <> '')
+);
+--ROLLBACK DROP TABLE branch
+
+-- changeset Lunga:3
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='branch' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_branch' AND event_object_table='branch' AND trigger_schema=current_schema();
+CREATE TRIGGER set_last_modified_date_branch
+    BEFORE UPDATE
+    ON branch
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified_date();
+
+-- changeset Lunga:4
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='branch_appointment_info' AND table_schema=current_schema();
+-- comment: /* Create table branchAppointmentInfo only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE branch_appointment_info
+(
+    id                 SERIAL PRIMARY KEY,
+    created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    branch_id          SERIAL           NOT NULL REFERENCES branch (id) ON DELETE CASCADE,
+    branch_business_id VARCHAR(36)      NOT NULL,
+    branch_key         VARCHAR(16)      NOT NULL,
+    slot_duration      INTEGER          NOT NULL,
+    utilization_factor DOUBLE PRECISION NOT NULL,
+    staff_count        INTEGER          NOT NULL,
+    day                VARCHAR(16)      NOT NULL,
+    max_booking_capacity INTEGER        NOT NULL,
+    CONSTRAINT unique_branch_day UNIQUE (branch_id, day),
+    CONSTRAINT check_slot_duration_positive CHECK (slot_duration > 0),
+    CONSTRAINT check_utilization_factor_range CHECK (utilization_factor > 0 AND utilization_factor <= 1),
+    CONSTRAINT check_staff_count_positive CHECK (staff_count > 0),
+    CONSTRAINT check_day_branch_key_equal CHECK (day = branch_key),
+    CONSTRAINT check_max_booking_capacity_positive CHECK (max_booking_capacity>0)
+);
+--ROLLBACK DROP TABLE branch_appointment_info
+
+-- changeset Lunga:5
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='branch_appointment_info' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_branch_appointment_info' AND event_object_table='branch_appointment_info' AND trigger_schema=current_schema();
+CREATE TRIGGER set_last_modified_date_branch_appointment_info
+    BEFORE UPDATE
+    ON branch_appointment_info
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified_date();
+
+-- changeset Lunga:6
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='staff' AND table_schema=current_schema();
+-- comment: /* Create table staff only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE staff
+(
+    id                 SERIAL PRIMARY KEY,
+    created_at         TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    username           VARCHAR(32) NOT NULL,
+    branch_id          VARCHAR(36) NOT NULL,
+    status             VARCHAR(16),
+    CONSTRAINT unique_username UNIQUE (username)
+);
+-- ROLLBACK DROP TABLE staff
+
+-- changeset Lunga:6a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='staff' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='staff' AND indexname='idx_branch_id_username_status' AND schemaname=current_schema();
+CREATE INDEX idx_branch_id_username_status ON staff (branch_id, username, status);
+-- ROLLBACK DROP INDEX idx_branch_id_username_status;
+
+-- changeset Lunga:7
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='staff' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_entity' AND column_name = 'username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_username' AND table_name = 'staff' AND table_schema=current_schema();
+---ALTER TABLE staff ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES user_entity (username) ON DELETE RESTRICT;
+-- ROLLBACK ALTER TABLE staff DROP CONSTRAINT fk_username;
+
+-- changeset Lunga:8
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='staff' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'branch_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'branch' AND column_name = 'branch_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_branch_id' AND table_name = 'staff' AND table_schema=current_schema();
+ALTER TABLE staff ADD CONSTRAINT fk_branch_id FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE RESTRICT;
+-- ROLLBACK ALTER TABLE staff DROP CONSTRAINT fk_branch_id;
+
+-- changeset Lunga:9
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='staff' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_staff' AND event_object_table='staff' AND trigger_schema=current_schema();
+CREATE TRIGGER set_last_modified_date_staff
+    BEFORE UPDATE
+    ON staff
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified_date();
+
+-- changeset Lunga:10
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='branch_staff_assignment' AND table_schema=current_schema();
+-- comment: /* Create table branch_staff_assignment only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE branch_staff_assignment
+(
+    id         SERIAL PRIMARY KEY,
+    branch_id  VARCHAR(36) NOT NULL,
+    username   VARCHAR(32) NOT NULL,
+    day        DATE        NOT NULL,
+    created_at TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    CONSTRAINT unique_branch_id_username_day UNIQUE (branch_id, username, day),
+    CONSTRAINT check_day_not_future CHECK (day <= CURRENT_DATE + INTERVAL '365 days')
+    );
+-- ROLLBACK DROP TABLE branch_staff_assignment
+
+-- changeset Lunga:10a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='branch_staff_assignment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='branch_staff_assignment' AND indexname='idx_branch_date_status' AND schemaname=current_schema();
+-- Index for querying "who was working on day X?"
+CREATE INDEX idx_branch_date_status ON branch_staff_assignment (branch_id, day, username);
+-- ROLLBACK DROP INDEX idx_branch_date_status;
+
+-- changeset Lunga:11
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='operation_hours_override' AND table_schema=current_schema();
+-- comment: /* Create table OPERATION_HOURS_OVERRIDE only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE operation_hours_override
+(
+    id                 SERIAL PRIMARY KEY,
+    branch_id          SERIAL       NOT NULL REFERENCES branch (id) ON DELETE CASCADE,
+    branch_key         DATE         NOT NULL,
+    branch_business_id VARCHAR(36)  NOT NULL,
+    effective_date     DATE         NOT NULL,
+    open_at            TIME         NOT NULL,
+    close_at           TIME         NOT NULL,
+    closed             BOOLEAN      NOT NULL,
+    reason             VARCHAR(255) NOT NULL,
+    created_date       TIMESTAMP DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP,
+    CONSTRAINT check_effective_day_future CHECK (effective_date >= CURRENT_DATE),
+    CONSTRAINT check_open_at_close_at_valid CHECK (open_at < close_at),
+    CONSTRAINT check_reason_not_blank CHECK (TRIM(reason) <> ''),
+    CONSTRAINT check_effective_date_day_equal CHECK (effective_date = branch_key),
+    CONSTRAINT unique_branch_id_effective_date UNIQUE (branch_id, effective_date)
+);
+--ROLLBACK DROP TABLE operation_hours_override
+
+-- changeset Lunga:12
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='slot' AND table_schema=current_schema();
+-- comment: /* Create table SLOT only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE slot
+(
+    id                   UUID PRIMARY KEY NOT NULL,
+    day                  DATE        NOT NULL,
+    start_time           TIME        NOT NULL,
+    end_time             TIME        NOT NULL,
+    booking_count        INTEGER     NOT NULL,
+    max_booking_capacity INTEGER     NOT NULL,
+    branch_id            VARCHAR(36) NOT NULL,
+    status               VARCHAR(16) NOT NULL DEFAULT 'AVAILABLE',
+    created_at           TIMESTAMP   DEFAULT LOCALTIMESTAMP,
+    last_modified_date   TIMESTAMP   DEFAULT LOCALTIMESTAMP,
+    version              INTEGER     DEFAULT 1,
+    CONSTRAINT positive_booking_count CHECK (booking_count >= 0),
+    CONSTRAINT positive_max_booking_capacity CHECK (max_booking_capacity >= 0),
+    CONSTRAINT positive_version CHECK (version >= 1),
+    CONSTRAINT booking_capacity_check CHECK (booking_count <= max_booking_capacity),
+    CONSTRAINT start_before_end CHECK (start_time < end_time),
+    CONSTRAINT unique_slot_per_branch_day UNIQUE (branch_id, day, start_time, end_time),
+    CONSTRAINT check_day_within_year CHECK (day <= CURRENT_DATE + INTERVAL '365 days')
+    );
+-- ROLLBACK DROP TABLE slot
+
+-- changeset Lunga:12a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='slot' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='slot' AND indexname='idx_branch_day_status' AND schemaname=current_schema();
+CREATE INDEX idx_branch_day_status ON slot (branch_id, day, status);
+-- ROLLBACK DROP INDEX idx_branch_day_status;
+
+-- changeset Lunga:13
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='slot' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'slot' AND column_name = 'branch_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'branch' AND column_name = 'branch_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_branch_id' AND table_name = 'slot' AND table_schema=current_schema();
+ALTER TABLE slot ADD CONSTRAINT fk_branch_id FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE RESTRICT;
+-- ROLLBACK ALTER TABLE slot DROP CONSTRAINT fk_branch_id;
+
+-- changeset Lunga:14
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='slot' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_slot' AND event_object_table='slot' AND trigger_schema=current_schema();
+CREATE TRIGGER set_last_modified_date_slot
+    BEFORE UPDATE
+    ON slot
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified_date();
+
+-- changeset Lunga:15
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- comment: /* Create table APPOINTMENT only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE appointment
+(
+    id                     UUID PRIMARY KEY         NOT NULL,
+    slot_id                UUID                     NOT NULL REFERENCES slot (id) ON DELETE RESTRICT,
+    branch_id              VARCHAR(50)              NOT NULL,
+    customer_username      VARCHAR(10)              NOT NULL,
+    service_type           VARCHAR(100)             NOT NULL,
+    status                 VARCHAR(50)              NOT NULL,
+    reference              VARCHAR(20)              NOT NULL,
+    date_time              TIMESTAMP WITH TIME ZONE NOT NULL,
+    version                INT                      NOT NULL DEFAULT 0,
+    created_at             TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at             TIMESTAMP WITH TIME ZONE NOT NULL,
+    checked_in_at          TIMESTAMP WITH TIME ZONE,
+    in_progress_at         TIMESTAMP WITH TIME ZONE,
+    completed_at           TIMESTAMP WITH TIME ZONE,
+    terminated_at          TIMESTAMP WITH TIME ZONE,
+    terminated_by          VARCHAR(50),
+    termination_reason     VARCHAR(50),
+    termination_notes      VARCHAR(500),
+    assigned_consultant_id VARCHAR(10),
+    service_notes          VARCHAR(1000),
+    previous_slot_id       UUID REFERENCES slot (id) ON DELETE SET NULL,
+    reschedule_count       INT                      NOT NULL DEFAULT 0,
+    day                    DATE GENERATED ALWAYS AS ((date_time AT TIME ZONE 'UTC')::date) STORED,
+    CONSTRAINT check_reschedule_count_non_negative CHECK (reschedule_count >= 0),
+    CONSTRAINT check_version_non_negative CHECK (version >= 1),
+    CONSTRAINT check_updated_after_created CHECK (updated_at >= created_at),
+    CONSTRAINT check_checked_in_after_created CHECK (checked_in_at IS NULL OR checked_in_at >= created_at),
+    CONSTRAINT check_in_progress_after_checked_in CHECK (in_progress_at IS NULL OR checked_in_at IS NULL OR in_progress_at >= checked_in_at),
+    CONSTRAINT check_completed_after_in_progress CHECK (completed_at IS NULL OR in_progress_at IS NULL OR completed_at >= in_progress_at),
+    CONSTRAINT check_terminated_after_created CHECK (terminated_at IS NULL OR terminated_at >= created_at),
+    CONSTRAINT check_termination_reason_when_terminated CHECK ((terminated_at IS NULL AND termination_reason IS NULL) OR (terminated_at IS NOT NULL AND termination_reason IS NOT NULL)),
+    CONSTRAINT check_terminated_by_when_terminated CHECK ((terminated_at IS NULL AND terminated_by IS NULL) OR (terminated_at IS NOT NULL AND terminated_by IS NOT NULL)),
+    CONSTRAINT check_only_one_completion_type CHECK ((completed_at IS NULL AND terminated_at IS NULL) OR (completed_at IS NOT NULL AND terminated_at IS NULL) OR (completed_at IS NULL AND terminated_at IS NOT NULL))
+);
+-- ROLLBACK DROP TABLE appointment
+
+-- changeset Lunga:15a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='appointment' AND indexname='idx_unique_booking_action_day_status' AND schemaname=current_schema();
+--// Ensure user has one booked appointment per day
+CREATE UNIQUE INDEX idx_unique_booking_action_day_status
+    ON appointment (customer_username, day) WHERE status IN ('BOOKED', 'CHECKED_IN', 'IN_PROGRESS');
+-- ROLLBACK DROP INDEX idx_unique_booking_action_day_status;
+
+-- changeset Lunga:15b
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='appointment' AND indexname='idx_appointment_branch_day' AND schemaname=current_schema();
+CREATE INDEX idx_appointment_branch_day ON appointment (branch_id, day, status);
+-- ROLLBACK DROP INDEX idx_appointment_branch_day;
+
+-- changeset Lunga:15c
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='appointment' AND indexname='idx_appointment_branch_reference' AND schemaname=current_schema();
+CREATE INDEX idx_appointment_branch_reference ON appointment (branch_id, reference);
+-- ROLLBACK DROP INDEX idx_appointment_branch_reference;
+
+-- changeset Lunga:16
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'appointment' AND column_name = 'branch_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'branch' AND column_name = 'branch_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_branch_id' AND table_name = 'appointment' AND table_schema=current_schema();
+ALTER TABLE appointment ADD CONSTRAINT fk_branch_id FOREIGN KEY (branch_id) REFERENCES branch (branch_id) ON DELETE RESTRICT;
+-- ROLLBACK ALTER TABLE appointment DROP CONSTRAINT fk_branch_id;
+
+-- changeset Lunga:17
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'appointment' AND column_name = 'assigned_consultant_id' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'staff' AND column_name = 'username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_assigned_consultant_id' AND table_name = 'appointment' AND table_schema=current_schema();
+ALTER TABLE appointment ADD CONSTRAINT fk_assigned_consultant_id FOREIGN KEY (assigned_consultant_id) REFERENCES staff (username) ON DELETE RESTRICT;
+-- ROLLBACK ALTER TABLE appointment DROP CONSTRAINT fk_assigned_consultant_id;
+
+-- changeset Lunga:18
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='appointment' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'appointment' AND column_name = 'customer_username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_entity' AND column_name = 'username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_customer_username' AND table_name = 'appointment' AND table_schema=current_schema();
+--ALTER TABLE appointment ADD CONSTRAINT fk_customer_username FOREIGN KEY (customer_username) REFERENCES user_entity (username) ON DELETE RESTRICT;
+-- ROLLBACK ALTER TABLE appointment DROP CONSTRAINT fk_customer_username;
+
+-- changeset Lunga:19
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='otp' AND table_schema=current_schema();
+-- comment: /* Create table OTP only if it does not exist. ZERO means the schema does not exist*/
+CREATE TABLE otp
+(
+    id                    SERIAL      NOT NULL,
+    code                  VARCHAR(32) NOT NULL,
+    created_date          TIMESTAMP   NOT NULL DEFAULT LOCALTIMESTAMP,
+    expire_date           TIMESTAMP,
+    updated_at            TIMESTAMP,
+    purpose               VARCHAR(32) NOT NULL,
+    status                VARCHAR(32) NOT NULL,
+    username              VARCHAR(10) NOT NULL,
+    verification_attempts INT                  DEFAULT 0 NULL,
+    version               INT,
+    CONSTRAINT pk_otp PRIMARY KEY (id),
+    CONSTRAINT unique_username_code_status UNIQUE (username, code, status),
+    CONSTRAINT check_verification_attempts_non_negative CHECK (verification_attempts >= 0),
+    CONSTRAINT check_expire_after_created CHECK (expire_date IS NULL OR expire_date > created_date)
+);
+-- ROLLBACK DROP TABLE otp
+
+-- changeset Lunga:19a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='otp' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='otp' AND indexname='idx_username_code_status' AND schemaname=current_schema();
+CREATE INDEX idx_username_code_status ON otp (username, code, status);
+-- ROLLBACK DROP INDEX idx_username_code_status;
+
+-- changeset Lunga:19b
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='otp' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='otp' AND indexname='idx_username_status' AND schemaname=current_schema();
+CREATE INDEX idx_username_status ON otp (username, status);
+-- ROLLBACK DROP INDEX idx_username_status;
+
+-- changeset Lunga:19c
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='otp' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='otp' AND indexname='idx_username_creation_date' AND schemaname=current_schema();
+CREATE INDEX idx_username_creation_date ON otp (username, created_date);
+-- ROLLBACK DROP INDEX idx_username_creation_date;
+
+-- changeset Lunga:20
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='otp' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'otp' AND column_name = 'username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'user_entity' AND column_name = 'username' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_name = 'fk_username' AND table_name = 'otp' AND table_schema=current_schema();
+--ALTER TABLE otp ADD CONSTRAINT fk_username FOREIGN KEY (username) REFERENCES user_entity (value) ON DELETE CASCADE;
+-- Foreign key reference
+-- ROLLBACK ALTER TABLE otp DROP CONSTRAINT fk_username;
+
+-- changeset Lunga:21
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='user_dead_letter_event' AND table_schema=current_schema();
+CREATE TABLE user_dead_letter_event
+(
+    event_id           VARCHAR(255) PRIMARY KEY,
+    key                TEXT NOT NULL,
+    value              TEXT         NOT NULL,
+    topic              VARCHAR(255) NOT NULL,
+    partition          INTEGER,
+    event_offset       INTEGER,
+    headers            TEXT,
+    is_retryable       BOOLEAN      NOT NULL DEFAULT FALSE,
+    retry_count        INTEGER      NOT NULL DEFAULT 0,
+    exception          TEXT         NOT NULL,
+    exception_class    VARCHAR(255),
+    exception_cause    VARCHAR(255),
+    stack_trace        TEXT         NOT NULL,
+    trace_id           VARCHAR(255) NOT NULL,
+    status             VARCHAR(50)  NOT NULL,
+    published_time     TIMESTAMP    NOT NULL,
+    next_retry_at      TIMESTAMP,
+    created_date       TIMESTAMP    NOT NULL DEFAULT LOCALTIMESTAMP,
+    last_modified_date TIMESTAMP    NOT NULL DEFAULT LOCALTIMESTAMP,
+    CONSTRAINT unique_key_trace_id UNIQUE (key, trace_id),
+    CONSTRAINT check_retry_count_non_negative CHECK (retry_count >= 0),
+    CONSTRAINT check_partition_non_negative CHECK (partition IS NULL OR partition >= 0),
+    CONSTRAINT check_event_offset_non_negative CHECK (event_offset IS NULL OR event_offset >= 0),
+    CONSTRAINT check_published_before_created CHECK (published_time <= created_date),
+    CONSTRAINT check_created_before_modified CHECK (created_date <= last_modified_date),
+    CONSTRAINT check_event_id_not_empty CHECK (TRIM(event_id) <> ''),
+    CONSTRAINT check_topic_not_empty CHECK (TRIM(topic) <> ''),
+    CONSTRAINT check_trace_id_not_empty CHECK (TRIM(trace_id) <> '')
+);
+--rollback DROP TABLE user_dead_letter_event;
+
+-- changeset Lunga:21a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='user_dead_letter_event' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='user_dead_letter_event' AND indexname='idx_user_dead_letter_event_topic_trace_id' AND schemaname=current_schema();
+CREATE INDEX idx_user_dead_letter_event_topic_trace_id ON user_dead_letter_event (topic, trace_id);
+--rollback DROP INDEX idx_user_dead_letter_event_topic_trace_id;
+
+-- changeset Lunga:21b
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='user_dead_letter_event' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='user_dead_letter_event' AND indexname='idx_user_dead_letter_event_time_stamp' AND schemaname=current_schema();
+CREATE INDEX idx_user_dead_letter_event_time_stamp ON user_dead_letter_event (published_time);
+--rollback DROP INDEX idx_user_dead_letter_event_time_stamp;
+
+-- changeset Lunga:21c
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='user_dead_letter_event' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='user_dead_letter_event' AND indexname='idx_dead_letter_recovery' AND schemaname=current_schema();
+CREATE INDEX idx_dead_letter_recovery ON user_dead_letter_event (is_retryable, status, retry_count, next_retry_at);
+--rollback DROP INDEX idx_dead_letter_recovery;
+
+-- changeset Lunga:22
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='user_dead_letter_event' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_name='set_last_modified_date_event' AND event_object_table='user_dead_letter_event' AND trigger_schema=current_schema();
+CREATE TRIGGER set_last_modified_date_event
+    BEFORE UPDATE
+    ON user_dead_letter_event
+    FOR EACH ROW
+    EXECUTE FUNCTION update_last_modified_date();
+
+-- changeset Lunga:23
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='rate_limit' AND table_schema=current_schema();
+-- comment: Rate limit table for tracking request limits across different purposes (OTP resend, password reset, etc.)
+CREATE TABLE rate_limit
+(
+    id              BIGSERIAL PRIMARY KEY,
+    identifier      VARCHAR(255) NOT NULL,
+    purpose         VARCHAR(50)  NOT NULL,
+    attempt_count   INT          NOT NULL DEFAULT 0,
+    window_start_at TIMESTAMP    NOT NULL,
+    last_attempt_at TIMESTAMP,
+    CONSTRAINT uk_rate_limit_identifier_purpose UNIQUE (identifier, purpose)
+);
+--rollback DROP TABLE rate_limit;
+
+-- changeset Lunga:23a
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='rate_limit' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='rate_limit' AND indexname='idx_rate_limit_identifier' AND schemaname=current_schema();
+CREATE INDEX idx_rate_limit_identifier ON rate_limit (identifier);
+--rollback DROP INDEX idx_rate_limit_identifier;
+
+-- changeset Lunga:23b
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='rate_limit' AND table_schema=current_schema();
+-- precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM pg_indexes WHERE tablename='rate_limit' AND indexname='idx_rate_limit_purpose' AND schemaname=current_schema();
+CREATE INDEX idx_rate_limit_purpose ON rate_limit (purpose);
+--rollback DROP INDEX idx_rate_limit_purpose;
+
+-- changeset Lunga:23c
+-- preconditions onFail:MARK_RAN onError:HALT
+-- precondition-sql-check expectedResult:1 SELECT COUNT(*) FROM information_schema.tables WHERE table_name='rate_limit' AND table_schema=current_schema();
+-- preconditi
