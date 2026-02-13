@@ -40,7 +40,7 @@ public class NoShowBatchUseCase {
      * ON DISTRIBUTED SYSTEMS, ENSURE ONLY ONE INSTANCE RUNS THIS SCHEDULED TASK AT A TIME
      * source <a href='https://www.baeldung.com/shedlock-spring'/>
      */
-    @Scheduled(cron = "0 0 1 * * *") // Every day at 1am
+    @Scheduled(cron = "0 5 6-18 * * *") // Every 1hour 5minutes
     public void processNoShowsForPreviousDay() {
         log.info("Starting no-show batch processing for previous day");
 
