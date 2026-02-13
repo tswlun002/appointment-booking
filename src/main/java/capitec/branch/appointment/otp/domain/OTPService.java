@@ -1,18 +1,19 @@
 package capitec.branch.appointment.otp.domain;
 
+import jakarta.validation.Valid;
+
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 
 public interface OTPService {
-    OTP saveOTP(OTP otp);
-    void verify(String otp, String username);
+    OTP saveOTP(@Valid OTP otp);
     Set<OTP> find(String username);
-    Optional<OTP> find(String username, String otp);
-
-    void renewOTP(OTP opt);
-    Optional<OTP> validateOTP(String username, String otpCode, int maxAttempts);
-
-    boolean deleteAllOTP(String traceId);
+    Optional<OTP> find(String username, String otp,OTPStatus status);
 
     boolean deleteUserOTP( String username);
+
+    Optional<OTP> findLatestOTP(String username,LocalDateTime fromDate);
+
+    boolean update(@Valid OTP otp2, OTPStatus oldStatus);
 }

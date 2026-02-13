@@ -1,7 +1,7 @@
 package capitec.branch.appointment.otp.infrastructure;
 
 import capitec.branch.appointment.otp.domain.OTP;
-import capitec.branch.appointment.otp.domain.OTP_PURPOSE_ENUM;
+import capitec.branch.appointment.otp.domain.OTPPurpose;
 import capitec.branch.appointment.otp.domain.OTPStatus;
 import capitec.branch.appointment.otp.domain.VerificationAttempts;
 import org.mapstruct.Mapper;
@@ -9,19 +9,30 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.time.temporal.ChronoUnit;
+
 @Mapper(componentModel = "spring")
-public abstract class OTPMapper {
+abstract class OTPMapper {
 
     @Value("${otp.number.verification.attempts}")
     private int MAX_NUMBER_OF_VERIFICATION_ATTEMPTS;
+    @Value("${otp.expire.chron-units}")
+    private ChronoUnit CHRON_UNITS;
 
-    // Entity to Domain mapping
-    @Mapping(source = "verificationAttempts", target = "verificationAttempts", qualifiedByName = "mapToDomainAttempts")
-    @Mapping(source = "purpose", target = "purpose", qualifiedByName = "mapToDomainPurpose")
-    @Mapping(source = "status", target = "status", qualifiedByName = "mapToDomainStatus")
-    @Mapping(expression = "java(calculateExpiryMinutes())", target = "expireDatetime")
-    //@Mapping(target = "isExpired", expression = "java(isOtpExpired(otpEntity))")
-    public abstract OTP OTPEntityToOTPModel(OTPEntity otpEntity);
+    OTP OTPEntityToOTPModel(OTPEntity otpEntity){
+        return  OTP.creatFromExisting(
+                otpEntity.username(),
+                otpEntity.code(),
+                otpEntity.creationDate(),
+                otpEntity.expiresDate(),
+                mapToDomainPurpose(otpEntity.purpose()),
+                mapToDomainAttempts(otpEntity.verificationAttempts()),
+                mapToDomainStatus(otpEntity),
+                otpEntity.version(),
+                CHRON_UNITS
+        );
+    }
+
 
     long calculateExpiryMinutes() {
         return MAX_NUMBER_OF_VERIFICATION_ATTEMPTS;
@@ -35,7 +46,8 @@ public abstract class OTPMapper {
     @Mapping(source = "creationDate", target = "creationDate")
     @Mapping(source = "expiresDate", target = "expiresDate")
     @Mapping(source = "username", target = "username")
-    @Mapping(target = "id", ignore = true) // ID is auto-generated
+    @Mapping(source = "version", target = "version")
+    @Mapping(target = "id", ignore = true)
     public abstract OTPEntity OTPToOTPEntity(OTP otp);
 
     // Convert Integer (from entity) to VerificationAttempts (domain)
@@ -47,6 +59,7 @@ public abstract class OTPMapper {
         );
     }
 
+
     // Convert VerificationAttempts (domain) to Integer (for entity)
     @Named("mapToEntityAttempts")
     static Integer mapToEntityAttempts(VerificationAttempts verificationAttempts) {
@@ -55,25 +68,25 @@ public abstract class OTPMapper {
 
     // Convert String (from entity) to OTP_PURPOSE_ENUM (domain)
     @Named("mapToDomainPurpose")
-    static OTP_PURPOSE_ENUM mapToDomainPurpose(String purpose) {
-        return purpose != null ? OTP_PURPOSE_ENUM.valueOf(purpose) : null;
+    static OTPPurpose mapToDomainPurpose(String purpose) {
+        return purpose != null ? OTPPurpose.valueOf(purpose) : null;
     }
 
     // Convert OTP_PURPOSE_ENUM (domain) to String (for entity)
     @Named("mapToEntityPurpose")
-    static String mapToEntityPurpose(OTP_PURPOSE_ENUM purpose) {
-        return purpose != null ? purpose.name() : null;
+     String mapToEntityPurpose(OTPPurpose otpPurpose) {
+        return otpPurpose != null ? otpPurpose.name() : null;
     }
 
     // Convert String (from entity) to OTPStatus (domain)
     @Named("mapToDomainStatus")
-    static OTPStatus mapToDomainStatus(String status) {
-        return status != null ? new OTPStatus(status) : null;
+     OTPStatus mapToDomainStatus(OTPEntity otpEntity) {
+        return otpEntity.status() != null ? OTPStatus.valueOf(otpEntity.status()) : null;
     }
 
     // Convert OTPStatus (domain) to String (for entity)
     @Named("mapToEntityStatus")
-    static String mapToEntityStatus(OTPStatus status) {
-        return status != null ? status.status() : null;
+     String mapToEntityStatus(OTPStatus status) {
+        return status != null ? status.getValue() : null;
     }
 }

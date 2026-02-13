@@ -1,99 +1,199 @@
 package capitec.branch.appointment.otp.domain;
 
+import capitec.branch.appointment.user.domain.UsernameGenerator;
 import capitec.branch.appointment.utils.OTPCode;
 import capitec.branch.appointment.utils.Username;
-import capitec.branch.appointment.utils.Validator;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
-import jakarta.ws.rs.InternalServerErrorException;
-import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
-import org.hibernate.validator.constraints.Range;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.util.Assert;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
-@Slf4j
 public class OTP {
 
-    public static final int CODE_FIELD_LENGTH = 6;
-    public  static  final int EXPIRE_TIME_MIN=3;
+    private static final Logger log = LoggerFactory.getLogger(OTP.class);
 
-    @Range(min = EXPIRE_TIME_MIN, message = Validator.OTP_EXPIRE_TIME_MESS)
-    private  final long expireDatetime;
+    public static final int CODE_FIELD_LENGTH = 6;
+
+    private static   ChronoUnit expireTimeUnits = ChronoUnit.MINUTES;
+
+    private  long duration;
 
     @OTPCode
-    private String code ;
+    private String code;
 
-    private  LocalDateTime creationDate ;
+    @NotNull
+    private LocalDateTime creationDate;
 
-    private LocalDateTime expiresDate ;
+    @NotNull
+    private LocalDateTime expiresDate;
 
-    @NonNull
-    private OTP_PURPOSE_ENUM purpose;
+    @NotNull
+    private final OTPPurpose purpose;
+    @NotNull
+    private VerificationAttempts verificationAttempts;
 
-    @NonNull
-    private  VerificationAttempts verificationAttempts;
-
-     @Username
+    @Username
     private final String username;
 
     private OTPStatus status;
 
-    public OTP(String username, long expireDatetime, @NotNull OTP_PURPOSE_ENUM purpose, @NonNull VerificationAttempts verificationAttempts) {
-        this. username =  username;
-        this.expireDatetime = expireDatetime;
-        this.creationDate = LocalDateTime.now();
-        this.expiresDate = creationDate.plusMinutes(expireDatetime);
+    @Min(0)
+    private int version;
+    public OTP(String username, LocalDateTime expireDatetime, @NotNull OTPPurpose purpose, @NotNull VerificationAttempts verificationAttempts) {
+
+        this(username, expireDatetime, purpose, verificationAttempts, null);
+    }
+    public OTP(String username, LocalDateTime expireDatetime, @NotNull OTPPurpose purpose, @NotNull VerificationAttempts verificationAttempts,ChronoUnit TimeUnits) {
+
+        expireTimeUnits = TimeUnits==null?expireTimeUnits: TimeUnits;
+
+
+        Assert.isTrue(UsernameGenerator.isValid(username), "Username is invalid");
+        Assert.notNull(expireDatetime, "Expire date cannot be null");
+        LocalDateTime now = LocalDateTime.now();
+        duration = calculate(now,expireDatetime,expireTimeUnits);
+        Assert.isTrue(duration > 0, "Expire date must be after creation date.");
+        Assert.notNull(purpose, "Purpose cannot be null");
+        Assert.notNull(verificationAttempts, "Verification attempts cannot be null");
+        Assert.notNull(purpose, "Purpose cannot be null");
+        Assert.isTrue(version >= 0, "Existing OTP version must be greater than 0");
+
+        this.username = username;
+        this.creationDate = now;
+        this.expiresDate = expireDatetime;
         this.verificationAttempts = verificationAttempts;
         this.purpose = purpose;
-        this.status=new OTPStatus(OTPSTATUSENUM.CREATED.name());
-        this.code= SecurePassword.generatePassword(CODE_FIELD_LENGTH);
-        validate();
-    }
-
-    public final OTP getNewOtp(){
-        this.expiresDate = LocalDateTime.now().plusMinutes(expireDatetime);
+        this.status = OTPStatus.CREATED;
         this.code = SecurePassword.generatePassword(CODE_FIELD_LENGTH);
-        this.status =  new OTPStatus(OTPSTATUSENUM.CREATED.name());
-        this.creationDate= LocalDateTime.now();
-        validate();
-        return this;
+        this.version = 0;
+
     }
 
-    public void setPurpose(@NonNull OTP_PURPOSE_ENUM purpose) {
-        this.purpose = purpose;
-    }
+    private OTP(String username, String code, LocalDateTime creationDate, LocalDateTime expiresDate,
+                OTPPurpose purpose, VerificationAttempts verificationAttempts, OTPStatus status, long duration, int version) {
 
-    public  final  OTP  validate(){
-        if(creationDate.equals(expiresDate)||creationDate.isAfter(expiresDate)) {
-            log.error("Invalid creation dateOfSlots, it cannot be same or after expire datetime, creation dateOfSlots: {}, expiresDate: {}", creationDate, expiresDate);
-            throw  new InternalServerErrorException("Internal Server Error");
-        }
-        Validator.validate(this);
-        return this;
-    }
-    public   void  setVerificationAttempts(@NonNull VerificationAttempts attempts) {
-        this.verificationAttempts = attempts;
-        validate();
-    }
-
-    public void  setStatus(OTPStatus status){
-        this.status = status;
-    }
-
-
-    public void setCode( @OTPCode String code) {
+        this.username = username;
+        this.duration = duration;
         this.code = code;
-        validate();
-    }
-
-    public  void setCreationDate(LocalDateTime creationDate) {
         this.creationDate = creationDate;
-        this.expiresDate = creationDate.plusMinutes(expireDatetime);
-        validate();
+        this.expiresDate = expiresDate;
+        this.purpose = purpose;
+        this.verificationAttempts = verificationAttempts;
+        this.status = status;
+        this.version = version;
     }
 
-    public long getExpireDatetime() {
-        return expireDatetime;
+    public static OTP creatFromExisting(String username, String code, LocalDateTime creationDate, LocalDateTime expiresDate,
+                                        OTPPurpose purpose, VerificationAttempts verificationAttempts, OTPStatus status,
+                                        int version, ChronoUnit units) {
+
+
+        expireTimeUnits = units ==null? expireTimeUnits : units;
+        Assert.isTrue(UsernameGenerator.isValid(username), "Username is invalid");
+        Assert.notNull(creationDate, "Creation Date cannot be null");
+        Assert.notNull(expiresDate, "Expires Date cannot be null");
+        long periodMinutes = calculate(creationDate, expiresDate, expireTimeUnits);
+        Assert.isTrue(periodMinutes > 0, "Expire date must be after creation date.");
+        Assert.notNull(purpose, "Purpose cannot be null");
+        Assert.notNull(verificationAttempts, "Verification attempts cannot be null");
+        Assert.notNull(purpose, "Purpose cannot be null");
+        Assert.isTrue(version >= 0, "Existing OTP version must be greater or equal 0");
+
+        return new OTP(username, code, creationDate, expiresDate, purpose, verificationAttempts, status, periodMinutes, version);
+    }
+
+
+    private static long calculate(LocalDateTime creationDate, LocalDateTime expiresDate, ChronoUnit units) {
+       return Duration.between(creationDate, expiresDate).get(units);
+    }
+    public void renewOTP() {
+
+        if (this.status != OTPStatus.EXPIRED) {
+            log.debug("Cannot renew an OTP that is not at expired state, OTP: {}", this);
+            throw new IllegalStateException("Only expired OTPs can be renewed");
+        }
+
+        log.debug("Renewing an OTP that is at expired state, previous state OTP: {}", this);
+        this.expiresDate = LocalDateTime.now().plus(duration, this.getExpireTimeUnits());
+        this.code = SecurePassword.generatePassword(CODE_FIELD_LENGTH);
+        this.status = OTPStatus.RENEWED;
+        this.creationDate = LocalDateTime.now();
+        this.version = 0;
+    }
+
+    public void revoke() {
+
+        if (this.status == OTPStatus.VALIDATED || this.status == OTPStatus.VERIFIED) {
+            log.debug("Cannot revoke an  verified/validated OTP, OTP: {}", this);
+            throw new IllegalStateException("Cannot revoke an verified OTP");
+        }
+
+        if (this.status == OTPStatus.REVOKED) {
+            log.debug("Cannot revoke an OTP that is already revoked, OTP: {}", this);
+            throw new IllegalStateException("Cannot revoke an revoked OTP");
+        }
+        log.debug("Revoking an OTP. Previous state OTP: {}", this);
+        this.status = OTPStatus.REVOKED;
+        //  this.version +=1;  infrastructure will take care, uncomment is user db does not manage optimistic lock
+
+    }
+
+    public void validate(String code) {
+
+        if (this.status == OTPStatus.VERIFIED) {
+            throw new IllegalStateException("OTP is already verified");
+        }
+        if (this.status == OTPStatus.VALIDATED) {
+            throw new IllegalStateException("OTP is already validated");
+        }
+        if (this.status == OTPStatus.REVOKED) {
+            throw new IllegalStateException("OTP is revoked");
+        }
+
+        if (this.status == OTPStatus.CREATED || this.status == OTPStatus.RENEWED) {
+
+            int attempts = this.verificationAttempts.attempts();
+            int maxNumberVerificationAttempts = this.verificationAttempts.maxNumberVerificationAttempts();
+            this.verificationAttempts = new VerificationAttempts(attempts + 1, maxNumberVerificationAttempts);
+            //  2this.version +=1;  infrastructure will take care, uncomment is user db does not manage optimistic lock
+            if (this.expiresDate.isBefore(LocalDateTime.now())) {
+                this.status = OTPStatus.EXPIRED;
+                return;
+            } else if (this.verificationAttempts.usedAllAttempts() && !Objects.equals(code, this.code)) {
+                this.status = OTPStatus.REVOKED;
+                return;
+            }
+            if (Objects.equals(code, this.code)) {
+                this.status = OTPStatus.VALIDATED;
+                return;
+            }
+        }
+    }
+
+    public ChronoUnit getExpireTimeUnits() {
+        return expireTimeUnits;
+    }
+
+    public void setExpireTimeUnits(ChronoUnit units) {
+        if (units == null) {
+           log.info("expireTimeUnits set to default units because expireTimeUnits is null");
+           expireTimeUnits = ChronoUnit.MINUTES;
+           return;
+        }
+        expireTimeUnits = units;
+        this.duration = calculate(this.creationDate, this.expiresDate, expireTimeUnits);
+
+    }
+
+
+    public long getDuration() {
+        return duration;
     }
 
     public String getCode() {
@@ -108,20 +208,49 @@ public class OTP {
         return expiresDate;
     }
 
-
-    public @NonNull OTP_PURPOSE_ENUM getPurpose() {
+    public OTPPurpose getPurpose() {
         return purpose;
     }
 
-    public @NonNull VerificationAttempts getVerificationAttempts() {
+    public VerificationAttempts getVerificationAttempts() {
         return verificationAttempts;
     }
 
     public String getUsername() {
-        return  username;
+        return username;
     }
 
     public OTPStatus getStatus() {
         return status;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof OTP otp)) return false;
+        return Objects.equals(code, otp.code) && Objects.equals(username, otp.username) && status == otp.status;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(code, username, status);
+    }
+
+    @Override
+    public String toString() {
+        return "OTP{" +
+                "periodMinutes=" + duration +
+                ", code='" + code + '\'' +
+                ", creationDate=" + creationDate +
+                ", expiresDate=" + expiresDate +
+                ", purpose=" + purpose +
+                ", verificationAttempts=" + verificationAttempts +
+                ", username='" + username + '\'' +
+                ", status=" + status +
+                ", version=" + version +
+                '}';
     }
 }

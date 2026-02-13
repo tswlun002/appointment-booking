@@ -1,6 +1,5 @@
 package capitec.branch.appointment.otp.domain;
 
-import jakarta.ws.rs.InternalServerErrorException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -13,7 +12,10 @@ public record VerificationAttempts(
     public  VerificationAttempts {
         if (!(0<=attempts && attempts<=maxNumberVerificationAttempts) ) {
             log.error("Verification attempts:{} exceeded maximum attempts:{} of OTP verification attempts", attempts,maxNumberVerificationAttempts);
-            throw new InternalServerErrorException("Verification attempts exceeded maximum attempts of verification attempts");
+            throw new IllegalStateException("Exceeded maximum verification attempts");
         }
+    }
+    boolean usedAllAttempts(){
+        return attempts >= maxNumberVerificationAttempts;
     }
 }

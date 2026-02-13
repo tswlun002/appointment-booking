@@ -1,12 +1,17 @@
 package capitec.branch.appointment.otp.infrastructure;
 
+import capitec.branch.appointment.exeption.OptimisticLockConflictException;
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPService;
+import capitec.branch.appointment.otp.domain.OTPStatus;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
+
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
@@ -15,14 +20,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Validated
 public class OTServiceImpl implements OTPService {
     private final OTPRepository otpRepository;
     private final OTPMapper otpMapper;
 
 
-    @Transactional
     @Override
-    public OTP saveOTP(OTP OTP) {
+    @Transactional
+    public OTP saveOTP( @Valid OTP OTP) {
 
         if(OTP==null)throw new IllegalArgumentException("OTP cannot be null");
 
@@ -31,13 +37,21 @@ public class OTServiceImpl implements OTPService {
             OTPEntity newValue = otpMapper.OTPToOTPEntity(OTP);
 
             int affectedRows = otpRepository.revokeAndInsertNewOtp(newValue.code(), newValue.creationDate(), newValue.expiresDate(),
-                    newValue.purpose(), newValue.status(), newValue.verificationAttempts(), newValue.username());
-            if(affectedRows>0) return otpMapper.OTPEntityToOTPModel(newValue);
-            else return null;
+                    newValue.purpose(), newValue.status(), newValue.verificationAttempts(), newValue.username(),
+                    LocalDateTime.now(), newValue.version());
+            if(affectedRows==1) {
+                log.debug("User had active otp and is revoked for this otp, otp{}, username:{}",newValue.code(),newValue.username());
+            }
+            return otpMapper.OTPEntityToOTPModel(newValue);
+
 
         } catch (Exception e) {
+            if(e instanceof OptimisticLockConflictException || (e.getCause() != null && e.getCause() instanceof  OptimisticLockConflictException)){
+                log.error("Optimistic lock conflict", e);
+                throw new OptimisticLockConflictException(e.getMessage(),e);
+            }
             log.error("Failed to save OTP", e);
-            throw new InternalServerErrorException("Internal Server Error");
+            throw e;
         }
 
     }
@@ -45,29 +59,10 @@ public class OTServiceImpl implements OTPService {
     private Set<OTPEntity> findOTPEntity(String username) {
         return otpRepository.findOtpByUserId( username);
     }
-    private Optional<OTPEntity> findOTPEntity(String username, String otp) {
-        return otpRepository.findOtpByCodeAndUserId(otp, username);
+    private Optional<OTPEntity> findOTPEntity(String username, String otp,OTPStatus status) {
+        return otpRepository.findOtpByCodeAndUserId(otp, username, status.getValue());
     }
 
-    @Transactional
-    @Override
-    public void verify(String otp, String username) {
-
-        try {
-
-            var affectedRows = otpRepository.verifyOTP(otp,  username)>0;
-
-            if(!affectedRows){
-
-                log.warn("Failed to change OTP  status to VERIFIED");
-            }
-
-        }catch (Exception e) {
-
-            log.error("Failed to verify email because failed to save OTP", e);
-            throw new InternalServerErrorException("Internal Server Error");
-        }
-    }
 
     @Override
     public Set<OTP> find(String username) {
@@ -75,43 +70,8 @@ public class OTServiceImpl implements OTPService {
     }
 
     @Override
-    public Optional<OTP> find(String username, String otp) {
-        return findOTPEntity( username,otp).map(otpMapper::OTPEntityToOTPModel);
-    }
-
-    @Transactional
-    @Override
-    public void renewOTP(OTP otpModel) {
-        try{
-
-            String code = otpModel.getNewOtp().getCode();
-            otpRepository.renewOTP(otpModel.getUsername(), code, LocalDateTime.now().plusMinutes(OTP.EXPIRE_TIME_MIN));
-        }
-        catch (Exception e) {
-
-            log.error("Failed to update OTP verification verificationAttempts", e);
-            throw new InternalServerErrorException("Internal error,failed OTP verification");
-        }
-    }
-
-    @Transactional
-    @Override
-    public Optional<OTP> validateOTP(String username, String otpCode, int maxAttempts) {
-        Optional<OTPEntity> otpEntity = otpRepository.validateOTP( username, otpCode, maxAttempts);
-        return otpEntity.map(otpMapper::OTPEntityToOTPModel);
-    }
-
-    @Override
-    public boolean deleteAllOTP(String traceId) {
-        log.warn("You are about to delete all OTPs, traceId:{}", traceId);
-        for (var otp:otpRepository.findAll()) {
-            var deleted= deleteUserOTP(otp. username());
-            if(!deleted){
-                return false;
-            }
-        }
-        log.warn("All OTPs are deleted, traceId:{}", traceId);
-        return true;
+    public Optional<OTP> find(String username, String otp, OTPStatus status) {
+        return findOTPEntity( username,otp,status).map(otpMapper::OTPEntityToOTPModel);
     }
 
     @Override
@@ -124,5 +84,44 @@ public class OTServiceImpl implements OTPService {
             throw new InternalServerErrorException("Internal server error");
         }
         return isOTPDeleted;
+    }
+
+    @Override
+    public Optional<OTP> findLatestOTP(String username,LocalDateTime fromDate) {
+        try{
+           return  otpRepository.findLatestOTP(username,fromDate).map(otpMapper::OTPEntityToOTPModel);
+
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public boolean update(@Valid OTP otp,OTPStatus oldStatus) {
+
+        try {
+
+            var newValue = otpMapper.OTPToOTPEntity(otp);
+            var affectedRows = otpRepository.updateOTP(
+                    newValue.username(),
+                    newValue.code(),
+                    oldStatus.getValue(),
+                    newValue.status(),
+                    newValue.verificationAttempts()
+
+            );
+            return affectedRows==1;
+
+
+        } catch (Exception e) {
+            if (e instanceof OptimisticLockConflictException || (e.getCause() != null && e.getCause() instanceof OptimisticLockConflictException)) {
+                log.error("Optimistic lock conflict", e);
+                throw new OptimisticLockConflictException(e.getMessage(), e);
+            }
+            log.error("Failed to update OTP", e);
+            throw e;
+
+        }
     }
 }

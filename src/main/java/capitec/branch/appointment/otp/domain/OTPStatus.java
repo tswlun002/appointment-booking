@@ -1,10 +1,24 @@
 package capitec.branch.appointment.otp.domain;
 
+import java.util.Arrays;
 
-import capitec.branch.appointment.utils.MemberOTPEnum;
+public enum OTPStatus {
+    CREATED("CREATED"),
+    EXPIRED("EXPIRED"),
+    RENEWED("RENEWED"),
+    VALIDATED("VALIDATED"),
+    VERIFIED("VERIFIED"),
+    REVOKED("REVOKED");
+    private final String value;
+    OTPStatus(String status) {
+        this.value = status;
+    }
+    public String getValue() {
+        return value;
+    }
 
-public record OTPStatus(
-        @MemberOTPEnum
-        String status
-) {
+    public static boolean isMember(String status) {
+        String finalStatus = status.toUpperCase();
+        return  Arrays.stream(OTPStatus.values()).anyMatch(v->v.name().equals(finalStatus));
+    }
 }
