@@ -2,7 +2,7 @@ package capitec.branch.appointment.appointment.domain;
 
 import capitec.branch.appointment.user.domain.UsernameGenerator;
 import capitec.branch.appointment.utils.Username;
-import capitec.branch.appointment.utils.Validator;
+import capitec.branch.appointment.utils.ValidatorMessages;
 import jakarta.validation.constraints.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -159,7 +159,7 @@ public class Appointment {
                 "Branch ID must be between 2 and 50 characters");
 
         // Customer ID checks
-        Assert.isTrue(UsernameGenerator.isValid(customerUsername), Validator.USERNAME_MESSAGE);
+        Assert.isTrue(UsernameGenerator.isValid(customerUsername), ValidatorMessages.USERNAME_MESSAGE);
 
         // Service Type checks
         Assert.hasText(serviceType, "Service type cannot be null or blank");
@@ -198,7 +198,7 @@ public class Appointment {
 
         if (!UsernameGenerator.isValid(consultantId)) {
 
-            LOGGER.error("Consultant ID is not valid. {}",Validator.USERNAME_MESSAGE);
+            LOGGER.error("Consultant ID is not valid. {}", ValidatorMessages.USERNAME_MESSAGE);
             throw new IllegalArgumentException("Consultant ID is not valid");
         }
         validateTimeInput(currentTime, "Current time");

@@ -10,7 +10,7 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Constraint(validatedBy = RoleNameValidator.class)
 public @interface RoleName {
-    String message() default Validator.ROLE_NAME_MESSAGE;
+    String message() default ValidatorMessages.ROLE_NAME_MESSAGE;
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }

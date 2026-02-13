@@ -12,7 +12,7 @@ import capitec.branch.appointment.sharekernel.event.metadata.MetaData;
 import capitec.branch.appointment.sharekernel.event.metadata.OTPMetadata;
 import capitec.branch.appointment.utils.OTPCode;
 import capitec.branch.appointment.utils.Username;
-import capitec.branch.appointment.utils.Validator;
+import capitec.branch.appointment.utils.ValidatorMessages;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.InternalServerErrorException;
@@ -41,10 +41,10 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
     @Override
     public CompletableFuture<Boolean> sendRegistrationEvent(@Username String username,
-                                                            @NotBlank(message = Validator.EMAIL_MESS) @Email(message = Validator.EMAIL_MESS) String email,
-                                                            @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME) String fullname,
+                                                            @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS) String email,
+                                                            @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME) String fullname,
                                                             @OTPCode String otpCode,
-                                                            @NotBlank(message = Validator.EVENT_TRACE_ID_MESS) String traceId) {
+                                                            @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS) String traceId) {
         String topic = Topics.REGISTRATION_EVENT;
         validateTopic(topic, traceId);
         var metadata = new OTPMetadata(fullname, username, email, otpCode);
@@ -91,10 +91,10 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
     @Override
     public CompletableFuture<Boolean> sendPasswordResetRequestEvent(@Username String username,
-                                                                    @NotBlank(message = Validator.EMAIL_MESS) @Email(message = Validator.EMAIL_MESS) String email,
-                                                                    @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME) String fullname,
+                                                                    @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS) String email,
+                                                                    @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME) String fullname,
                                                                     @OTPCode String OTP,
-                                                                    @NotBlank(message = Validator.EVENT_TRACE_ID_MESS) String traceId) {
+                                                                    @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS) String traceId) {
         String topic = Topics.PASSWORD_RESET_REQUEST_EVENT;
         validateTopic(topic, traceId);
         var metadata = new OTPMetadata(fullname, username, email, OTP);
@@ -106,10 +106,10 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
     @Override
     public CompletableFuture<Boolean> deleteUserRequestEvent(@Username String username,
-                                                             @NotBlank(message = Validator.EMAIL_MESS) @Email(message = Validator.EMAIL_MESS) String email,
-                                                             @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME) String fullname,
+                                                             @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS) String email,
+                                                             @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME) String fullname,
                                                              @OTPCode String OTP,
-                                                             @NotBlank(message = Validator.EVENT_TRACE_ID_MESS) String traceId) {
+                                                             @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS) String traceId) {
         String topic = Topics.DELETE_USER_ACCOUNT_REQUEST_EVENT;
         validateTopic(topic, traceId);
         var metadata = new OTPMetadata(fullname, username, email, OTP);

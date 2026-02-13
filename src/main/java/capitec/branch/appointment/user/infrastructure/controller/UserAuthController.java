@@ -6,7 +6,7 @@ import capitec.branch.appointment.user.app.dto.EmailCommand;
 import capitec.branch.appointment.user.app.dto.NewUserDtO;
 import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
 
-import capitec.branch.appointment.utils.Validator;
+import capitec.branch.appointment.utils.ValidatorMessages;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -104,7 +104,7 @@ public class UserAuthController {
 
 
     @GetMapping("/credentials/password/request-reset")
-    public ResponseEntity<?> requestToResetPassword(@RequestParam("email") @Email(message = Validator.EMAIL_MESS) @NotBlank(message = Validator.EMAIL_MESS) String email,
+    public ResponseEntity<?> requestToResetPassword(@RequestParam("email") @Email(message = ValidatorMessages.EMAIL_MESS) @NotBlank(message = ValidatorMessages.EMAIL_MESS) String email,
                                                     @RequestHeader("Trace-Id") String traceId) {
         log.info("Reseting password for user: {} traceId:{}", email, traceId);
         passwordResetUseCase.passwordResetRequest(email, traceId);

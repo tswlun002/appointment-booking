@@ -1,16 +1,16 @@
 package capitec.branch.appointment.user.app.event;
 
 import capitec.branch.appointment.utils.Username;
-import capitec.branch.appointment.utils.Validator;
+import capitec.branch.appointment.utils.ValidatorMessages;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record PasswordResetRequestEvent(
         @Username String username,
-        @NotBlank(message = Validator.EMAIL_MESS) @Email(message = Validator.EMAIL_MESS)
+        @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS)
         String email,
-        @NotBlank(message = Validator.FIRSTNAME + " " + Validator.LASTNAME)
+        @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME)
         String fullname,
-        @NotBlank(message = Validator.EVENT_TRACE_ID_MESS)
+        @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS)
         String traceId)  {
 }

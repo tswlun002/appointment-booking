@@ -1,5 +1,6 @@
 package capitec.branch.appointment.user.domain;
 
+import capitec.branch.appointment.utils.ValidatorMessages;
 import jakarta.validation.Validator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +17,7 @@ public class DomainConfig {
         return new LocalValidatorFactoryBean();
     }
     @Bean
-    public capitec.branch.appointment.utils.Validator validator(){
-        return new capitec.branch.appointment.utils.Validator();
+    public ValidatorMessages validator(){
+        return new ValidatorMessages();
     }
 }

@@ -8,6 +8,6 @@ public record RoleTypeValidator() implements ConstraintValidator<GroupName,Strin
     @Override
     public boolean isValid(String o, ConstraintValidatorContext constraintValidatorContext) {
         return StringUtils.isNotBlank(o)&&
-                o.matches(Validator.ROLE_TYPE_NAME_REGEX);
+                o.matches(ValidatorMessages.ROLE_TYPE_NAME_REGEX);
     }
 }

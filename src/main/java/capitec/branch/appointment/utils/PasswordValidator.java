@@ -10,6 +10,6 @@ public record PasswordValidator() implements ConstraintValidator<Password, Strin
     @Override
     public boolean isValid(String password, ConstraintValidatorContext constraintValidatorContext) {
         return StringUtils.isNotBlank(password) &&
-                Pattern.matches(Validator.PASSWORD_REGEX,password);
+                Pattern.matches(ValidatorMessages.PASSWORD_REGEX,password);
     }
 }

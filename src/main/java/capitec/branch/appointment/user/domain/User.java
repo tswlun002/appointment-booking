@@ -7,7 +7,7 @@ import capitec.branch.appointment.utils.NamesValidator;
 import capitec.branch.appointment.utils.Password;
 import capitec.branch.appointment.utils.PasswordValidator;
 import capitec.branch.appointment.utils.Username;
-import capitec.branch.appointment.utils.Validator;
+import capitec.branch.appointment.utils.ValidatorMessages;
 import org.springframework.util.Assert;
 
 import java.util.Objects;
@@ -30,8 +30,8 @@ public class User {
     @Username
     private final String username;
 
-    @Email(message = Validator.EMAIL_MESS)
-    @NotBlank(message = Validator.EMAIL_MESS)
+    @Email(message = ValidatorMessages.EMAIL_MESS)
+    @NotBlank(message = ValidatorMessages.EMAIL_MESS)
     private final String email;
 
     @Name
@@ -52,10 +52,10 @@ public class User {
      * Used for new user registration.
      */
     public User(String email, String firstname, String lastname, String password) {
-        Assert.hasText(email, Validator.EMAIL_MESS);
-        Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), Validator.FIRSTNAME);
-        Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), Validator.LASTNAME);
-        Assert.isTrue(PASSWORD_VALIDATOR.isValid(password, null), Validator.PASSWORD_MESS);
+        Assert.hasText(email, ValidatorMessages.EMAIL_MESS);
+        Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), ValidatorMessages.FIRSTNAME);
+        Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), ValidatorMessages.LASTNAME);
+        Assert.isTrue(PASSWORD_VALIDATOR.isValid(password, null), ValidatorMessages.PASSWORD_MESS);
 
         this.email = email;
         this.firstname = firstname;
@@ -74,9 +74,9 @@ public class User {
      */
     protected User(String username, String email, String firstname, String lastname,
                    String password, boolean verified, boolean enabled) {
-        Assert.hasText(username, Validator.USERNAME_MESSAGE);
-        Assert.isTrue(UsernameGenerator.isValid(username), Validator.USERNAME_MESSAGE);
-        Assert.hasText(email, Validator.EMAIL_MESS);
+        Assert.hasText(username, ValidatorMessages.USERNAME_MESSAGE);
+        Assert.isTrue(UsernameGenerator.isValid(username), ValidatorMessages.USERNAME_MESSAGE);
+        Assert.hasText(email, ValidatorMessages.EMAIL_MESS);
 
         this.username = username;
         this.email = email;
@@ -131,7 +131,7 @@ public class User {
      * Protected - only domain services can change password.
      */
     protected User setPassword(@Password String password) {
-        Assert.isTrue(PASSWORD_VALIDATOR.isValid(password, null), Validator.PASSWORD_MESS);
+        Assert.isTrue(PASSWORD_VALIDATOR.isValid(password, null), ValidatorMessages.PASSWORD_MESS);
         this.password = password;
         return this;
     }
@@ -156,7 +156,7 @@ public class User {
      * Updates user's first name.
      */
     protected User setFirstname(@Name String firstname) {
-        Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), Validator.FIRSTNAME);
+        Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), ValidatorMessages.FIRSTNAME);
         this.firstname = firstname;
         return this;
     }
@@ -165,7 +165,7 @@ public class User {
      * Updates user's last name.
      */
     protected User setLastname(@Name String lastname) {
-        Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), Validator.LASTNAME);
+        Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), ValidatorMessages.LASTNAME);
         this.lastname = lastname;
         return this;
     }
