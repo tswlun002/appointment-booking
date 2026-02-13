@@ -6,7 +6,6 @@ import capitec.branch.appointment.event.domain.EventDeadLetterService;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTP;
-import capitec.branch.appointment.otp.domain.OTPSTATUSENUM;
 import capitec.branch.appointment.otp.domain.OTPService;
 import capitec.branch.appointment.otp.domain.OTPStatus;
 import capitec.branch.appointment.user.app.dto.NewUserDtO;
@@ -25,10 +24,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -67,9 +65,14 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 cache1.clear();
             }
         }
-        otpService.deleteAllOTP("f9ad5e5b-f4f8-42e0-bb93-26b283e6f55d");
+
         UsersResource usersResource = keycloakService.getUsersResources();
         List<UserRepresentation> list = usersResource.list().stream().filter(u -> !u.getUsername().equals(username)).toList();
+        list.forEach(u -> {
+            otpService.find(u.getUsername())
+                    .stream().map(OTP::getUsername)
+                    .forEach(otpService::deleteUserOTP);
+        });
         list.stream().map(UserRepresentation::getId).forEach(usersResource::delete);
     }
 
@@ -206,7 +209,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
         OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
 
-        var otp = otpService.find(user.getUsername(), otp1.getCode()).orElseThrow();
+        var otp = otpService.find(user.getUsername(), otp1.getCode(), OTPStatus.CREATED).orElseThrow();
 
         OTP finalOtp1 = otp;
         assertThatThrownBy(() -> verifyUserUseCase.execute(user.getUsername(), finalOtp1.getCode() + "+", false, "fef516c1-bd53-4ae1-b2bf-f18cfc0071c9"))
@@ -228,8 +231,8 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 .hasFieldOrPropertyWithValue("verified", false)
                 .hasFieldOrPropertyWithValue("enabled", false);
 
-        otp = otpService.find(user.getUsername(), otp.getCode()).orElseThrow();
-        assertThat(otp.getStatus()).isEqualTo(new OTPStatus(OTPSTATUSENUM.REVOKED.name()));
+        otp = otpService.findLatestOTP(user.getUsername(), LocalDateTime.now().minusDays(1)).orElseThrow();
+        assertThat(otp.getStatus()).isEqualTo(OTPStatus.REVOKED);
         var failedRecord = eventDeadLetterService.findByStatus(RecordStatus.DEAD, 0, Integer.MAX_VALUE).stream();
         assertThat(failedRecord.noneMatch(r -> {
 

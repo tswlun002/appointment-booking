@@ -1,6 +1,7 @@
 package capitec.branch.appointment.user.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.exeption.OTPExpiredException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPService;
@@ -23,7 +24,9 @@ import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -64,8 +67,6 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
 
     private User registeredUser;
 
-
-
     @BeforeEach
     void setUp() {
         String traceId = UUID.randomUUID().toString();
@@ -94,10 +95,8 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
             rateLimitService.reset(registeredUser.getUsername(), RateLimitPurpose.OTP_RESEND);
         }
 
-        // Clean up OTPs
-        otpService.deleteAllOTP("f9ad5e5b-f4f8-42e0-bb93-26b283e6f55d");
 
-        // Clean up test users from Keycloak
+        // Clean up OTPs && Clean up test users from Keycloak
         cleanupKeycloakUsers();
     }
 
@@ -106,19 +105,19 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
     void shouldThrowTooManyRequestsWhenRateLimitExceeded() throws InterruptedException {
         // Given: A registered user with an expired OTP
         OTP otp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(otp);
 
         // When: User tries to verify with expired OTP multiple times exceeding max attempts
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             String attemptTraceId = UUID.randomUUID().toString();
 
-            // Wait for cooldown to pass (1 second + buffer)
-            Thread.sleep(1100);
+            // Wait for cooldown to pass (6 second + buffer)
+            Thread.sleep(Duration.of(6, ChronoUnit.SECONDS));
 
             // Each attempt should throw GONE (410) as OTP is expired and new one is sent
+            OTP finalOtp = otp;
             assertThatThrownBy(() -> verifyUserUseCase.execute(
                     registeredUser.getUsername(),
-                    otp.getCode(),
+                    finalOtp.getCode(),
                     false,
                     attemptTraceId
             ))
@@ -126,19 +125,18 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
                     .satisfies(ex -> {
                         ResponseStatusException rse = (ResponseStatusException) ex;
                         assertThat(rse.getStatusCode()).isEqualTo(HttpStatus.GONE);
-                        assertThat(rse.getReason()).contains("OTP has expired");
+                        assertThat(rse.getCause()).isInstanceOf(OTPExpiredException.class);
+                        assertThat(rse.getReason()).contains("OTP has expired. A new OTP has been sent to your email");
                     });
 
             // Re-expire the newly generated OTP for the next attempt
-            OTP newOtp = getLatestOtp(registeredUser.getUsername());
-            expireOtp(newOtp);
+            otp = getLatestOtp(registeredUser.getUsername());
         }
 
         // Then: The next attempt should throw TOO_MANY_REQUESTS (429)
-        Thread.sleep(1100); // Wait for cooldown
+        Thread.sleep(Duration.of(6, ChronoUnit.SECONDS));
         String finalTraceId = UUID.randomUUID().toString();
         OTP expiredOtp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(expiredOtp);
 
         assertThatThrownBy(() -> verifyUserUseCase.execute(
                 registeredUser.getUsername(),
@@ -159,11 +157,10 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
     void shouldReturnCorrectErrorMessageWhenRateLimited() throws InterruptedException {
         // Given: A user who has exceeded rate limit
         OTP otp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(otp);
 
         // Exceed rate limit
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            Thread.sleep(1100); // Wait for cooldown
+            Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
             try {
                 verifyUserUseCase.execute(
                         registeredUser.getUsername(),
@@ -177,13 +174,11 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
 
             // Re-expire the newly generated OTP
             otp = getLatestOtp(registeredUser.getUsername());
-            expireOtp(otp);
         }
 
         // When: User tries again after rate limit exceeded
-        Thread.sleep(1100); // Wait for cooldown
+        Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
         OTP finalOtp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(finalOtp);
 
         // Then: Should get TOO_MANY_REQUESTS with retry time in message
         assertThatThrownBy(() -> verifyUserUseCase.execute(
@@ -207,11 +202,11 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
     void shouldAllowVerificationAfterRateLimitReset() throws InterruptedException {
         // Given: A user who has exceeded rate limit
         OTP otp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(otp);
 
         // Exceed rate limit
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
-            Thread.sleep(1100); // Wait for cooldown
+
+            Thread.sleep(Duration.of(6, ChronoUnit.SECONDS));// Wait for cooldown
             try {
                 verifyUserUseCase.execute(
                         registeredUser.getUsername(),
@@ -223,13 +218,12 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
                 // Expected
             }
             otp = getLatestOtp(registeredUser.getUsername());
-            expireOtp(otp);
+
         }
 
         // Verify rate limit is in effect
-        Thread.sleep(1100); // Wait for cooldown
+        Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
         OTP rateLimitedOtp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(rateLimitedOtp);
 
         assertThatThrownBy(() -> verifyUserUseCase.execute(
                 registeredUser.getUsername(),
@@ -247,9 +241,9 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
         rateLimitService.reset(registeredUser.getUsername(), RateLimitPurpose.OTP_RESEND);
 
         // Then: User can try verification again (will get GONE for expired, not TOO_MANY_REQUESTS)
-        Thread.sleep(1100); // Wait for cooldown
+        Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
+
         OTP newOtp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(newOtp);
 
         assertThatThrownBy(() -> verifyUserUseCase.execute(
                 registeredUser.getUsername(),
@@ -270,12 +264,11 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
     void shouldTrackRateLimitAttemptsCorrectly() throws InterruptedException {
         // Given: A registered user
         OTP otp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(otp);
 
         // When: User makes attempts less than max
         int attemptsToMake = maxAttempts - 1;
         for (int attempt = 1; attempt <= attemptsToMake; attempt++) {
-            Thread.sleep(1100); // Wait for cooldown
+            Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
             try {
                 verifyUserUseCase.execute(
                         registeredUser.getUsername(),
@@ -287,13 +280,11 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
                 // Expected - OTP expired
             }
             otp = getLatestOtp(registeredUser.getUsername());
-            expireOtp(otp);
         }
 
         // Then: User should still be able to make one more attempt (GONE, not TOO_MANY_REQUESTS)
-        Thread.sleep(1100); // Wait for cooldown
+        Thread.sleep(Duration.of(6, ChronoUnit.SECONDS));// Wait for cooldown
         OTP nextOtp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(nextOtp);
 
         assertThatThrownBy(() -> verifyUserUseCase.execute(
                 registeredUser.getUsername(),
@@ -309,9 +300,8 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
                 });
 
         // Now the next attempt should be rate limited
-        Thread.sleep(1100); // Wait for cooldown
+        Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
         OTP rateLimitOtp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(rateLimitOtp);
 
         assertThatThrownBy(() -> verifyUserUseCase.execute(
                 registeredUser.getUsername(),
@@ -331,11 +321,10 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
     void successfulVerificationShouldResetRateLimit() throws InterruptedException {
         // Given: A user who has made some rate limited attempts
         OTP otp = getLatestOtp(registeredUser.getUsername());
-        expireOtp(otp);
 
         // Make some attempts (but not exceeding limit)
         for (int attempt = 1; attempt <= 2; attempt++) {
-            Thread.sleep(1100); // Wait for cooldown
+            Thread.sleep(Duration.of(6, ChronoUnit.SECONDS)); // Wait for cooldown
             try {
                 verifyUserUseCase.execute(
                         registeredUser.getUsername(),
@@ -347,7 +336,6 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
                 // Expected
             }
             otp = getLatestOtp(registeredUser.getUsername());
-            expireOtp(otp);
         }
 
         // When: User successfully verifies with valid (non-expired) OTP
@@ -372,16 +360,10 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
     // ==================== Helper Methods ====================
 
     private OTP getLatestOtp(String username) {
-        return otpService.find(username).stream()
-                .max(Comparator.comparing(OTP::getCreationDate))
-                .orElseThrow(() -> new IllegalStateException("No OTP found for user: " + username));
+        return otpService.findLatestOTP(username,LocalDateTime.now().minusDays(1))
+                .orElseThrow(RuntimeException::new);
     }
 
-    private void expireOtp(OTP otp) {
-        // Set creation date to past to make OTP expired (2 minutes ago, OTP expires in 1 minute)
-        otp.setCreationDate(LocalDateTime.now().minusMinutes(2));
-        otpService.saveOTP(otp);
-    }
 
     private void clearCaches() {
         Cache[] caches = {
@@ -400,6 +382,10 @@ class VerifyUserRateLimitTest extends AppointmentBookingApplicationTests {
         List<UserRepresentation> users = usersResource.list().stream()
                 .filter(u -> !u.getUsername().equals(ADMIN_USERNAME))
                 .toList();
+
+        users.forEach(user -> {
+            otpService.find(user.getUsername()).stream().map(OTP::getUsername).forEach(otpService::deleteUserOTP);
+        });
         users.stream()
                 .map(UserRepresentation::getId)
                 .forEach(usersResource::delete);

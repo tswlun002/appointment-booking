@@ -6,7 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
-import capitec.branch.appointment.utils.Validator;
+import capitec.branch.appointment.utils.ValidatorMessages;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -63,7 +63,7 @@ class UserTest {
     void setInvalidUserPassword(String password) {
         assertThatException().isThrownBy(()-> new User("2004lu@yahoo.com", "MaksimBala", "KunRocha", password))
                 .isInstanceOf(IllegalArgumentException.class)
-                .withMessage(Validator.PASSWORD_MESS);
+                .withMessage(ValidatorMessages.PASSWORD_MESS);
     }
 
     @ParameterizedTest

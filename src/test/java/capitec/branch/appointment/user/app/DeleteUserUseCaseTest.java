@@ -28,11 +28,6 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
     @Autowired
     DeleteUserUseCase deleteUserUseCase;
 
-    @AfterEach
-    void tearUp() {
-        otpService.deleteAllOTP("f9ad5e5b-f4f8-42e0-bb93-26b283e6f55d");
-
-    }
 
     @ParameterizedTest
     @CsvSource(delimiter = ';',
@@ -58,7 +53,7 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
         var user = registerUserUseCase.execute(userRegister, traceId);
         OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();
-        otpService.validateOTP(user.getUsername(), otp1.getCode(), 3);
+        otp1.validate(otp1.getCode());
         deleteUserUseCase.deleteUserRequest(user.getUsername(), password, traceId);
         OTP otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
                 .findFirst().orElseThrow();

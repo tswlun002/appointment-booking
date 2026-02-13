@@ -168,7 +168,7 @@ public class AppointmentBookingApplicationTests {
             registry.add("spring.datasource.username", SQLContainer::getUsername);
             registry.add("spring.datasource.password", SQLContainer::getPassword);
             registry.add("DATABASE_CATALOG", SQLContainer::getDatabaseName);
-            registry.add("spring.sql.init.schema-location", () -> "classpath:db/migrations/changelog.sql");
+            registry.add("spring.sql.init.schema-location", () -> "classpath:db/migrations/changelog-master.xml");
             registry.add("spring.sql.init.mode", () -> "always");
 
             //KEYCLOAK
@@ -206,13 +206,14 @@ public class AppointmentBookingApplicationTests {
             registry.add("allowed_origins.urls",()->"*");
             registry.add("allowed_origins.cache_period",()->"30");
             // Short OTP expiration for faster tests
-            registry.add("otp.expire.datetime", () -> 1);
+            registry.add("otp.expire.datetime", () -> 5);
+            registry.add("otp.expire.chron-units", () -> "SECONDS");
             // Short cooldown for faster rate limit testing (1 second)
             registry.add("rate-limit.otp-resend.cooldown-seconds", () -> 1);
             // Keep max attempts at 5 for realistic testing
-            registry.add("rate-limit.otp-resend.max-attempts", () -> 5);
+            registry.add("rate-limit.otp-resend.max-attempts", () -> 3);
             // Short window for faster cleanup
-            registry.add("rate-limit.otp-resend.window-minutes", () -> 5);
+            registry.add("rate-limit.otp-resend.window-minutes", () -> 3);
 
             //Client domain
             wiremockContainer.start();
