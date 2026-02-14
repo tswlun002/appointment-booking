@@ -352,7 +352,12 @@ public class Appointment {
     }
 
     public void markAsNoShow(LocalDateTime currentTime) {
-        validateTimeInput(currentTime, "Current time");
+        if (currentTime == null) {
+            throw new IllegalArgumentException("Current time cannot be null");
+        }
+        if (currentTime.isBefore(dateTime.plusMinutes(GRACE_WINDOW_MINUTES))) {
+            throw new IllegalArgumentException("Cannot mark appointment as no show before start time plus grace window.");
+        }
 
         if (this.status != AppointmentStatus.BOOKED && this.status != AppointmentStatus.CHECKED_IN) {
             LOGGER.error("Can only mark BOOKED or CHECKED_IN appointment as no-show. Current status: {}" , this.status);
@@ -363,6 +368,7 @@ public class Appointment {
         this.terminationReason = AppointmentTerminationReason.CUSTOMER_NO_SHOW;
         this.terminatedAt = currentTime;
         this.updatedAt = currentTime;
+        this.terminatedBy= "SYSTEM_SCHEDULER";
         //increaseVersion();  this managed by infrastructure, consider uncommenting if infrastructure does manage optimistic locking
     }
 

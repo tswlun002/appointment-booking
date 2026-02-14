@@ -2,10 +2,11 @@ package capitec.branch.appointment.appointment.app;
 
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
-import capitec.branch.appointment.utils.UseCase;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.validation.annotation.Validated;
 
@@ -16,7 +17,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-@UseCase
+@Component
 @Slf4j
 @Validated
 public class NoShowBatchUseCase {
@@ -26,25 +27,29 @@ public class NoShowBatchUseCase {
     private final AppointmentService appointmentService;
     private final TransactionTemplate transactionTemplate;
     private final RetryTemplate retryTemplate;
+    private final int markNoSinceInDays;
 
     public NoShowBatchUseCase(
             AppointmentService appointmentService,
             TransactionTemplate transactionTemplate,
-            RetryTemplate retryTemplate) {
+            RetryTemplate retryTemplate,
+            @Value("${appointment.unattended.since.in.days:3}")
+            int markNoSinceInDays) {
         this.appointmentService = appointmentService;
         this.transactionTemplate = transactionTemplate;
         this.retryTemplate = retryTemplate;
+        this.markNoSinceInDays = markNoSinceInDays;
     }
 
     /**
      * ON DISTRIBUTED SYSTEMS, ENSURE ONLY ONE INSTANCE RUNS THIS SCHEDULED TASK AT A TIME
      * source <a href='https://www.baeldung.com/shedlock-spring'/>
      */
-    @Scheduled(cron = "0 5 6-18 * * *") // Every 1hour 5minutes
+    @Scheduled(cron = "${appointment.unattended.cron:0 5 6-18 * * *}", zone = "Africa/Johannesburg") // Every 1hour 5minutes
     public void processNoShowsForPreviousDay() {
         log.info("Starting no-show batch processing for previous day");
 
-        LocalDate previousDay = LocalDate.now().minusDays(1);
+        LocalDate previousDay = LocalDate.now().minusDays(markNoSinceInDays);
         LocalDateTime processingTime = LocalDateTime.now();
 
         UUID lastProcessedId = null;

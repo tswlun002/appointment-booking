@@ -59,4 +59,14 @@ public class GetCustomerAppointmentsUseCase {
                 branchInfo != null ? branchInfo.address() : null
         );
     }
+
+    public Collection<Appointment> branchAppointments(String branchId, int offset, int limit) {
+        try {
+            return appointmentService.branchAppointments(branchId, offset, limit);
+        }catch (Exception e) {
+
+            log.error("Failed to fetch appointments for branch: {}", branchId, e);
+            throw  new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch branch appointments", e);
+        }
+    }
 }

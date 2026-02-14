@@ -104,7 +104,7 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
             FROM appointment
             WHERE DATE(date_time) = :appointmentDate
               AND status IN ('BOOKED', 'CHECKED_IN')
-              AND (:lastProcessedId IS NULL OR id > :lastProcessedId)
+              AND (CAST(:lastProcessedId AS UUID) IS NULL OR id > :lastProcessedId)
             ORDER BY id ASC
             LIMIT :limit
         
@@ -137,7 +137,7 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
             reschedule_count
             FROM appointment
             WHERE customer_username = :customerUsername
-            AND (:status IS NULL OR status = :status)
+            AND (CAST(:status AS VARCHAR) IS NULL OR status = :status)
             ORDER BY date_time DESC
             OFFSET :offset LIMIT :limit
         """)
