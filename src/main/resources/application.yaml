@@ -134,6 +134,12 @@ slot:
   cron: ${SLOT_SCHEDULAR_CRON:0 30 0 * * *}
   generation-errors:
     retryables: []
+appointment:
+  unattended:
+    cron: ${APPOINTMENT_NO_SHOW_CRON:0 5 6-19 * * *}
+    since:
+      in:
+        days: ${APPOINTMENT_TO_MARK_NO_SHOW_SINCE:3}
 
 capitec:
   branch-locator-api:
