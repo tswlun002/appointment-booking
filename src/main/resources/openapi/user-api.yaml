@@ -284,8 +284,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/credentials/password/request-reset:
-    get:
+  /auth/password/request-reset:
+    post:
       tags:
         - Password Reset
       summary: Request password reset
@@ -294,15 +294,13 @@ paths:
         Sends OTP code to the user's email.
       operationId: requestPasswordReset
       parameters:
-        - name: email
-          in: query
-          required: true
-          description: User's email address
-          schema:
-            type: string
-            format: email
-            example: "john.doe@example.com"
         - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
       responses:
         '200':
           description: Password reset email sent
@@ -330,7 +328,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /auth/credentials/password/reset:
+  /auth/password/reset:
     put:
       tags:
         - Password Reset
@@ -589,7 +587,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /credentials/password/update-request:
+  /password/update-request:
     put:
       tags:
         - Password Management
@@ -636,7 +634,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /credentials/password/update:
+  /password/update:
     put:
       tags:
         - Password Management
@@ -971,6 +969,17 @@ components:
         isCapitecClient:
           type: boolean
           description: Whether user is an existing Capitec client
+    ForgotPasswordRequest:
+      type: object
+      description: Request body for forgot password request
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
 
     PasswordResetRequest:
       type: object
@@ -979,6 +988,7 @@ components:
         - email
         - OTP
         - newPassword
+        - confirmPassword
       properties:
         email:
           type: string
@@ -993,6 +1003,11 @@ components:
           type: string
           pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
           description: New password
+          example: "NewSecurePass123!"
+        confirmPassword:
+          type: string
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
+          description: Confirm password
           example: "NewSecurePass123!"
 
     TokenResponse:

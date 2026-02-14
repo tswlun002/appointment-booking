@@ -9,6 +9,7 @@ public record PasswordResetDTO(
         @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS)
         String email,
         String OTP,
-        @Password String newPassword
+        @Password String newPassword,
+        @Password String confirmPassword
 ) {
 }

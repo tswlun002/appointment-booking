@@ -27,7 +27,8 @@ public class UserController {
     private final DeleteUserUseCase deleteUserUseCase;
 
     @GetMapping("/{username}")
-    @PreAuthorize("@securityUtils.isUsernameMatching(authentication, #username)") // ✅ Check Username from header vs path
+    @PreAuthorize("(@securityUtils.isUsernameMatching(authentication, #username) AND hasAnyRole('app_user'))" +
+            " OR hasAnyRole('admin')") // ✅ Check Username from header vs path
     public ResponseEntity<?> getUser(@PathVariable("username") String username, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Getting user traceId:{}", traceId);
@@ -37,7 +38,7 @@ public class UserController {
     }
 
     @GetMapping("/")
-    @PreAuthorize("@securityUtils.isEmailMatching(authentication, #email)")
+    @PreAuthorize("@securityUtils.isEmailMatching(authentication, #email) AND hasAnyRole('app_staff')")
     public ResponseEntity<?> getUserEmail(@RequestParam("email") String email, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Getting user, traceId:{}", traceId);
@@ -46,8 +47,9 @@ public class UserController {
     }
 
 
-    @PutMapping("/credentials/password/update-request")
-    @PreAuthorize("@securityUtils.isUsernameMatching(authentication, #changePasswordRequestDTO.username())") // ✅ Check Username from header vs path
+    @PutMapping("/password/update-request")
+    @PreAuthorize("@securityUtils.isUsernameMatching(authentication, #changePasswordRequestDTO.username())" +
+            " AND hasAnyRole('app_user')") // ✅ Check Username from header vs path
     public ResponseEntity<?> RequestToUpdateUserPassword(@RequestBody ChangePasswordRequestDTO changePasswordRequestDTO, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Changing password for traceId:{}", traceId);
@@ -55,8 +57,9 @@ public class UserController {
 
        return new ResponseEntity<>(isVerified ? "Confirm OTP code sent to your email" : "Password is invalid", isVerified ? HttpStatus.OK : HttpStatus.UNAUTHORIZED);
     }
-    @PutMapping("/credentials/password/update")
-    @PreAuthorize("@securityUtils.isUsernameMatching(authentication, #changePasswordDTO.username())") // ✅ Check Username from header vs path
+    @PutMapping("/password/update")
+    @PreAuthorize("@securityUtils.isUsernameMatching(authentication, #changePasswordDTO.username())" +
+            " AND hasAnyRole('app_user')") // ✅ Check Username from header vs path
     public ResponseEntity<?> updateUserPassword(@RequestBody @Valid ChangePasswordDTO changePasswordDTO, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Updating password for user traceId:{}", traceId);

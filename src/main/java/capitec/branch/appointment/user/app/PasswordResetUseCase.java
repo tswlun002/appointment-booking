@@ -24,6 +24,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Objects;
+
 @Slf4j
 @UseCase
 @RequiredArgsConstructor
@@ -71,30 +73,56 @@ public class PasswordResetUseCase {
     }
 
     public void passwordReset(@Valid PasswordResetDTO passwordResetDTO, String traceId) {
+
+        if(Objects.equals(passwordResetDTO.confirmPassword(),passwordResetDTO.newPassword())){
+            log.info("New password does not match with confirm password, traceId: {}", traceId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Password do not match");
+        }
+
+        User user = findUserByEmailOrThrow(passwordResetDTO.email(), traceId);
+
         try {
             log.info("Password reset initiated. email: {}, traceId: {}", passwordResetDTO.email(), traceId);
 
-            User user = findUserByEmailOrThrow(passwordResetDTO.email(), traceId);
+
             validateOtpOrThrow(user, passwordResetDTO.OTP(), traceId);
             resetRateLimit(user.getUsername());
             updatePasswordOrThrow(user, passwordResetDTO.newPassword(), traceId);
             publishPasswordUpdatedEvent(user, passwordResetDTO.OTP(), traceId);
 
             log.info("Password reset completed. username: {}, traceId: {}", user.getUsername(), traceId);
+
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.warn("Validation failed. email: {}, traceId: {}, error: {}", passwordResetDTO.email(), traceId, e.getMessage());
+
+            log.warn("Validation failed. email: {}, traceId: {}, error: {}", user.getUsername(), traceId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (UserDomainException e) {
-            log.error("User domain error. email: {}, traceId: {}, error: {}", passwordResetDTO.email(), traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+
+            publishPasswordResetRequestEvent(user, traceId);
+            log.error("User domain error. username: {}, traceId: {}, error: {}", user.getUsername(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to updated password , new otp sent to email. Please try again", e);
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        }
+        catch (Exception e) {
+
+            log.error("Failed to reset user password. username: {}, traceId: {}, error: {}",  traceId, e.getMessage());
+
+            log.info("Issue new otp for user for a failed to change password");
+            publishPasswordResetRequestEvent(user, traceId);
+
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Failed to updated password , new otp sent to email. Please try again", e);
         }
     }
 
     public void passwordChange(@Valid ChangePasswordDTO changePasswordDTO, String traceId) {
+
+        User user = findUserByUsernameOrThrow(changePasswordDTO.username(), traceId);
+
         try {
             log.info("Password change initiated. username: {}, traceId: {}", changePasswordDTO.username(), traceId);
 
-            User user = findUserByUsernameOrThrow(changePasswordDTO.username(), traceId);
             validateOtpOrThrow(user, changePasswordDTO.OTP(), traceId);
             resetRateLimit(user.getUsername());
             updatePasswordOrThrow(user, changePasswordDTO.newPassword(), traceId);
@@ -105,8 +133,20 @@ public class PasswordResetUseCase {
             log.warn("Validation failed. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (UserDomainException e) {
+            publishPasswordResetRequestEvent(user, traceId);
             log.error("User domain error. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to updated password , new otp sent to email. Please try again", e);
+        } catch (ResponseStatusException e) {
+            throw e;
+        }
+        catch (Exception e) {
+
+            log.error("Failed to reset user password. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
+
+            log.info("Issue new otp for user for a failed password reset");
+            publishPasswordResetRequestEvent(user, traceId);
+
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Failed to updated password , new otp sent to email. Please try again", e);
         }
     }
 

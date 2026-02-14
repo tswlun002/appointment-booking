@@ -64,7 +64,7 @@ public class AuthController {
     /**
      * Verify user's current password.
      */
-    @PostMapping("/credentials/password/verify")
+    @PostMapping("/password/verify")
     public ResponseEntity<String> verifyUserCurrentPassword(
             @RequestBody UserCredentialDTO userCredentialDTO,
             @RequestHeader("Trace-Id") String traceId) {

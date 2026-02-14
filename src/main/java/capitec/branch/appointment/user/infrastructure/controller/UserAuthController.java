@@ -3,16 +3,13 @@ package capitec.branch.appointment.user.infrastructure.controller;
 import capitec.branch.appointment.authentication.domain.TokenResponse;
 import capitec.branch.appointment.user.app.*;
 import capitec.branch.appointment.user.app.dto.EmailCommand;
+import capitec.branch.appointment.user.app.dto.ForgotPasswordRequestDTO;
 import capitec.branch.appointment.user.app.dto.NewUserDtO;
 import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
-
-import capitec.branch.appointment.utils.ValidatorMessages;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.core.NewCookie;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -103,17 +100,17 @@ public class UserAuthController {
     }
 
 
-    @GetMapping("/credentials/password/request-reset")
-    public ResponseEntity<?> requestToResetPassword(@RequestParam("email") @Email(message = ValidatorMessages.EMAIL_MESS) @NotBlank(message = ValidatorMessages.EMAIL_MESS) String email,
+    @PostMapping("/password/request-reset")
+    public ResponseEntity<?> requestToResetPassword(@RequestBody ForgotPasswordRequestDTO email,
                                                     @RequestHeader("Trace-Id") String traceId) {
-        log.info("Reseting password for user: {} traceId:{}", email, traceId);
-        passwordResetUseCase.passwordResetRequest(email, traceId);
+        log.info("Resetting password for user traceId:{}", traceId);
+        passwordResetUseCase.passwordResetRequest(email.email(), traceId);
         return new ResponseEntity<>("Email verification sent to your email", HttpStatus.OK);
     }
 
-    @PutMapping("/credentials/password/reset")
-    public ResponseEntity<?> resetPassword(@RequestBody @Valid PasswordResetDTO passwordResetDTO, @RequestHeader("Trace-Id") String traceId) {
-        log.info("Updating password for user: {} traceId:{}", passwordResetDTO.email(), traceId);
+    @PutMapping("/password/reset")
+    public ResponseEntity<String> resetPassword(@RequestBody @Valid PasswordResetDTO passwordResetDTO, @RequestHeader("Trace-Id") String traceId) {
+        log.info("Updating password for user traceId:{}", traceId);
         passwordResetUseCase.passwordReset(passwordResetDTO, traceId);
         return new ResponseEntity<>("Password updated successfully", HttpStatus.OK);
     }
