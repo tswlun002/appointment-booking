@@ -163,23 +163,17 @@ capitec:
 # LOGGING
 logging:
   level:
-    capitec:
-      branch:
-        appointment:
-          platform:
-            application: ${APPLICATION_LOGGING_LEVEL:INFO}
-    org:
-      apache:
-        kafka:  ${ KAFKA_LOGGING_LEVEL:INFO}
-      keycloak: ${KEYCLOAK_LOGGING_LEVEL:INFO}
-      org:
-        springframework:
-          kafka: ${ KAFKA_LOGGING_LEVEL:INFO}
-    #    metrics-log: DEBUG
-    #    platform-log: DEBUG
-    #    general-log: DEBUG
-    root: ${ROOT_LOGGING_LEVEL:INFO}
-
+    root: ${ROOT_LOG_LEVEL:WARN}
+    capitec.branch.appointment: ${APP_LOG_LEVEL:INFO}
+    org.springframework.security: ${KEYCLOAK_LOGGING_LEVEL:INFO}
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${SQL_LOG_LEVEL:WARN}
+    org.keycloak: ${KEYCLOAK_LOGGING_LEVEL:INFO}
+    org.springframework.kafka: ${KAFKA_LOGGING_LEVEL:INFO}
+    org.apache.kafka: ${KAFKA_LOGGING_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{traceId}] - %msg%n"
 # RATE LIMITING
 rate-limit:
   otp-resend:
