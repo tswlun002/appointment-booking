@@ -165,34 +165,33 @@ components:
       description: Response containing branches matching the search criteria
       required:
         - branches
-        - totalCount
+        - pagination
       properties:
         branches:
           type: array
           description: List of branches matching the search
           items:
             $ref: '#/components/schemas/BranchLocation'
-        totalCount:
-          type: integer
-          description: Total number of matching branches
-          example: 5
+        pagination:
+          type: object
+          $ref: '#/components/schemas/Pagination'
 
     NearbyBranchesResponse:
       type: object
       description: Response containing nearest branches to the given coordinates
       required:
         - branches
-        - totalCount
+        - pagination
       properties:
         branches:
           type: array
           description: List of nearby branches sorted by distance
           items:
             $ref: '#/components/schemas/BranchLocation'
-        totalCount:
-          type: integer
+        pagination:
+          type: object
           description: Total number of branches returned
-          example: 10
+          $ref: "#/components/schemas/Pagination"
 
     BranchLocation:
       type: object
@@ -306,7 +305,26 @@ components:
           type: boolean
           description: Whether this day is a holiday
           example: false
-
+    Pagination:
+      properties:
+        totalCount:
+          type: integer
+          description: Total number of appointments
+          example: 5
+        page:
+          type: integer
+        size:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+        isFirstPage:
+          type: boolean
+        isLastPage:
+          type: boolean
     ErrorResponse:
       type: object
       description: Standard error response

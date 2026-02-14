@@ -1,10 +1,12 @@
 package capitec.branch.appointment.appointment.infrastructure.controller;
 
 import capitec.branch.appointment.appointment.app.AttendAppointmentUseCase;
+import capitec.branch.appointment.appointment.app.GetCustomerAppointmentsUseCase;
 import capitec.branch.appointment.appointment.domain.Appointment;
-import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
+import capitec.branch.appointment.sharekernel.Pagination;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +30,7 @@ import java.util.UUID;
 public class StaffAppointmentController {
 
     private final AttendAppointmentUseCase attendAppointmentUseCase;
-    private final AppointmentService appointmentService;
+    private final GetCustomerAppointmentsUseCase getCustomerAppointmentsUseCase;
 
     /**
      * Start serving a customer.
@@ -133,13 +135,17 @@ public class StaffAppointmentController {
             @PathVariable("branchId") String branchId,
             @RequestParam("date") LocalDate date,
             @RequestParam(value = "status", required = false) String status,
-            @RequestHeader("Trace-Id") String traceId
+            @RequestHeader("Trace-Id") String traceId,
+            @RequestParam(value = "offset", required = false, defaultValue = "0")
+            @Min(value = 0, message = "Minimum offset must positive value") int offset,
+            @Min(value = 1, message = "Minimum limit must greater than zero")
+            @RequestParam(value = "limit", required = false, defaultValue = "50") int limit
     ) {
         log.info("Getting appointments for branch: {}, date: {}, status: {}, traceId: {}",
                 branchId, date, status, traceId);
 
         // Using existing method - may need pagination
-        var appointments = appointmentService.branchAppointments(branchId, 0, 100);
+        var appointments = getCustomerAppointmentsUseCase.branchAppointments(branchId, 0, 100);
 
         // Filter by date
         List<AppointmentResponse> filtered = appointments.stream()
@@ -148,10 +154,17 @@ public class StaffAppointmentController {
                 .map(this::toResponse)
                 .toList();
 
+        int totalCount = filtered.size();
         log.info("Found {} appointments for branch: {}, date: {}, traceId: {}",
-                filtered.size(), branchId, date, traceId);
-
-        return ResponseEntity.ok(new AppointmentsResponse(filtered, filtered.size()));
+                totalCount, branchId, date, traceId);
+        int totalPages = (int) Math.ceil((double) totalCount / offset);
+        boolean hasNext = offset < totalPages - 1;
+        boolean hasPrevious = offset > 0;
+        boolean isFirstPage = offset == 0;
+        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
+        AppointmentsResponse body = new AppointmentsResponse(filtered, new Pagination( totalCount, offset, limit, totalPages,
+                hasNext, hasPrevious, isFirstPage, isLastPage));
+        return ResponseEntity.ok(body);
     }
 
     private AppointmentResponse toResponse(Appointment appointment) {

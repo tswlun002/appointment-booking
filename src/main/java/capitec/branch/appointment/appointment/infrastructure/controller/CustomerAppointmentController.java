@@ -5,6 +5,7 @@ import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
 import capitec.branch.appointment.appointment.domain.CustomerUpdateAppointmentAction;
+import capitec.branch.appointment.sharekernel.Pagination;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -96,10 +97,18 @@ public class CustomerAppointmentController {
                 .map(this::toResponse)
                 .toList();
 
+        int totalCount = responses.size();
         log.info("Found {} appointments for customer: {}, traceId: {}",
-                responses.size(), customerUsername, traceId);
+                totalCount, customerUsername, traceId);
 
-        return ResponseEntity.ok(new AppointmentsResponse(responses, responses.size()));
+        int totalPages = (int) Math.ceil((double) totalCount / offset);
+        boolean hasNext = offset < totalPages - 1;
+        boolean hasPrevious = offset > 0;
+        boolean isFirstPage = offset == 0;
+        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
+        AppointmentsResponse body = new AppointmentsResponse(responses, new Pagination( totalCount, offset, limit, totalPages,
+                hasNext, hasPrevious, isFirstPage, isLastPage));
+        return ResponseEntity.ok(body);
     }
 
     /**

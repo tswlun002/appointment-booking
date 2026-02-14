@@ -5,6 +5,8 @@ import capitec.branch.appointment.location.app.FindNearestBranchesUseCase;
 import capitec.branch.appointment.location.app.NearbyBranchDTO;
 import capitec.branch.appointment.location.app.SearchBranchesByAreaQuery;
 import capitec.branch.appointment.location.app.SearchBranchesByAreaUseCase;
+import capitec.branch.appointment.sharekernel.Pagination;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -41,16 +43,31 @@ public class BranchLocationController {
     public ResponseEntity<BranchSearchResponse> searchBranchesByArea(
             @RequestParam("searchText")
             String searchText,
-            @RequestHeader("Trace-Id") String traceId
+            @RequestHeader("Trace-Id") String traceId,
+            @Min(value = 0, message = "Offset must be positive value")
+            @RequestParam(value = "offset", required = false,defaultValue = "0")
+            Integer offset,
+
+            @Min(value = 1, message = "Limit must be positive value")
+            @RequestParam(value = "limit", required = false,defaultValue = "10")
+            Integer limit
     ) {
         log.info("Searching branches by area: '{}', traceId: {}", searchText, traceId);
 
         SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery(searchText);
         List<NearbyBranchDTO> branches = searchBranchesByAreaUseCase.execute(query);
 
-        log.info("Found {} branches for search '{}', traceId: {}", branches.size(), searchText, traceId);
+        int totalCount = branches.size();
+        log.info("Found {} branches for search '{}', traceId: {}", totalCount, searchText, traceId);
+        int totalPages = (int) Math.ceil((double) totalCount / offset);
+        boolean hasNext = offset < totalPages - 1;
+        boolean hasPrevious = offset > 0;
+        boolean isFirstPage = offset == 0;
+        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
+        Pagination pagination = new Pagination(totalCount, offset, limit, totalPages,
+                hasNext, hasPrevious, isFirstPage, isLastPage);
 
-        return ResponseEntity.ok(new BranchSearchResponse(branches, branches.size()));
+        return ResponseEntity.ok(new BranchSearchResponse(branches, pagination));
     }
 
     /**
@@ -73,6 +90,11 @@ public class BranchLocationController {
             @RequestParam("longitude")
             Double longitude,
 
+            @Min(value = 0, message = "Offset must be postive value")
+            @RequestParam(value = "offset", required = false,defaultValue = "0")
+            Integer offset,
+
+            @Min(value = 1, message = "Limit must be positive value")
             @RequestParam(value = "limit", required = false,defaultValue = "10")
             Integer limit,
 
@@ -87,9 +109,16 @@ public class BranchLocationController {
         FindNearestBranchesQuery query = new FindNearestBranchesQuery(latitude, longitude, limit, maxDistanceKm);
         List<NearbyBranchDTO> branches = findNearestBranchesUseCase.execute(query);
 
+        int totalCount = branches.size();
         log.info("Found {} nearby branches for coordinates ({}, {}), traceId: {}",
-                branches.size(), latitude, longitude, traceId);
-
-        return ResponseEntity.ok(new NearbyBranchesResponse(branches, branches.size()));
+                totalCount, latitude, longitude, traceId);
+        int totalPages = (int) Math.ceil((double) totalCount / offset);
+        boolean hasNext = offset < totalPages - 1;
+        boolean hasPrevious = offset > 0;
+        boolean isFirstPage = offset == 0;
+        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
+        Pagination pagination = new Pagination(totalCount, offset, limit, totalPages,
+                hasNext, hasPrevious, isFirstPage, isLastPage);
+        return ResponseEntity.ok(new NearbyBranchesResponse(branches, pagination));
     }
 }

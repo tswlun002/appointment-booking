@@ -556,17 +556,38 @@ components:
       description: Response containing list of appointments
       required:
         - appointments
-        - totalCount
+        - pagination
       properties:
         appointments:
           type: array
           description: List of appointments
           items:
             $ref: '#/components/schemas/AppointmentResponse'
+        pagination:
+          type: object
+          description: pagination
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      properties:
         totalCount:
           type: integer
           description: Total number of appointments
           example: 5
+        page:
+          type: integer
+        size:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+        isFirstPage:
+          type: boolean
+        isLastPage:
+          type: boolean
 
     AppointmentStatus:
       type: string

@@ -29,7 +29,7 @@ interface SloRepository extends CrudRepository<SlotEntity, UUID> {
                 max_booking_capacity,booking_count, branch_id, status, 
                 created_at, last_modified_date, version
                 FROM slot 
-                WHERE  slot.branch_id=:branchId AND slot.day >= :date AND (:status IS NULL OR slot.status = :status)
+                WHERE  slot.branch_id=:branchId AND slot.day >= :date AND (CAST(:status AS VARCHAR) IS NULL OR slot.status = :status)
             """)
     List<SlotEntity> nextDaySlots(@Param("branchId")String branchId, @Param("date") LocalDate date, @Param("status") String status);
 
