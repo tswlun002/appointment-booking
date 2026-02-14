@@ -63,7 +63,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
     void setUpAppointment() {
         Slot slot = slots.getFirst();
         String customerUsername = guestClients.getFirst();
-        customer = getUserQuery.execute(new UsernameCommand(customerUsername));
+        customer = getUserQuery.execute(new UsernameCommand(customerUsername),UUID.randomUUID().toString());
         staffUsername = staff.getFirst();
 
         AppointmentDTO dto = new AppointmentDTO(

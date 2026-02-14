@@ -59,7 +59,7 @@ public class SendAppointmentEmailUseCase {
     public void onAppointmentBooked(@Valid AppointmentBookedEmail event) throws MailSenderException {
         log.info("Sending appointment booked email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
-        CustomerDetails user = customerLookup.findByUsername(event.customerUsername());
+        CustomerDetails user = customerLookup.findByUsername(event.customerUsername(),event.traceId());
         BranchDetails branch = getBranchDetails(event.branchId());
 
         String eventType = event.eventType().name();
@@ -87,7 +87,7 @@ public class SendAppointmentEmailUseCase {
     public void onAppointmentStatusUpdates(@Valid AppointmentStatusUpdatesEmail event) throws MailSenderException {
         log.info("Sending appointment status update email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
-        CustomerDetails user = customerLookup.findByUsername(event.customerUsername());
+        CustomerDetails user = customerLookup.findByUsername(event.customerUsername(),event.traceId());
         BranchDetails branch = getBranchDetails(event.branchId());
 
         String eventType = resolveStatusEventType(event);

@@ -13,6 +13,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
@@ -59,7 +60,7 @@ public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
                 .findFirst().orElseThrow();
         boolean isDeleted = deleteUserUseCase.deleteUser(user.getUsername(), otp.getCode(), traceId);
         assertThat(isDeleted).isTrue();
-        assertThatThrownBy(() -> getUserQuery.execute(new UsernameCommand(user.getUsername())))
+        assertThatThrownBy(() -> getUserQuery.execute(new UsernameCommand(user.getUsername()), UUID.randomUUID().toString()))
                 .isInstanceOf(NotFoundException.class)
                 .hasMessage("User is not found");
 

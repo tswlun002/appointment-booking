@@ -36,7 +36,7 @@ public class LoginUseCase {
 
     public TokenResponse execute(LoginDTO loginDTO, String traceId) {
         try {
-            log.info("User signing in. email: {}, traceId: {}", loginDTO.email(), traceId);
+            log.info("User signing in traceId: {}", traceId);
 
             checkRateLimitOrThrow(loginDTO.email(), traceId);
 

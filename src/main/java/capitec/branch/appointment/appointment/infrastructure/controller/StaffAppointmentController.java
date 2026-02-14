@@ -145,7 +145,7 @@ public class StaffAppointmentController {
                 branchId, date, status, traceId);
 
         // Using existing method - may need pagination
-        var appointments = getCustomerAppointmentsUseCase.branchAppointments(branchId, 0, 100);
+        var appointments = getCustomerAppointmentsUseCase.branchAppointments(branchId, offset, limit);
 
         // Filter by date
         List<AppointmentResponse> filtered = appointments.stream()

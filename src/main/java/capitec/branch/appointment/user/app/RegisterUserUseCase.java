@@ -112,7 +112,7 @@ public class RegisterUserUseCase {
 
     private void validateEmailNotTaken(String email, String traceId) {
         userService.getUserByEmail(email).ifPresent(__ -> {
-            log.error("Registration failed: Email already exists. email: {}, traceId: {}", email, traceId);
+            log.error("Registration failed: User with email already exists, traceId: {}", traceId);
             throw new EntityAlreadyExistException("User already exists with this email address");
         });
     }

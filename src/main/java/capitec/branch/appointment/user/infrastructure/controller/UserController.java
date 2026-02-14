@@ -32,7 +32,7 @@ public class UserController {
     public ResponseEntity<?> getUser(@PathVariable("username") String username, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Getting user traceId:{}", traceId);
-        var user = getUserQuery.execute(new UsernameCommand(username));
+        var user = getUserQuery.execute(new UsernameCommand(username),traceId);
         var isFound = user != null;
         return  new ResponseEntity<>(isFound ? user : "Failed to fetch user", isFound ? HttpStatus.OK : HttpStatus.NOT_FOUND);
     }
@@ -42,7 +42,7 @@ public class UserController {
     public ResponseEntity<?> getUserEmail(@RequestParam("email") String email, @RequestHeader("Trace-Id") String traceId) {
 
         log.info("Getting user, traceId:{}", traceId);
-        var user = getUserQuery.execute(new EmailCommand(email));
+        var user = getUserQuery.execute(new EmailCommand(email),traceId);
         return  new ResponseEntity<>(user, HttpStatus.OK);
     }
 

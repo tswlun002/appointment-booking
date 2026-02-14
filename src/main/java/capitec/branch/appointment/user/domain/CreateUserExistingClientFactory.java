@@ -18,9 +18,7 @@ public record CreateUserExistingClientFactory( String email, String firstname, S
         }
         if(!(userClientDetails.firstname().equals(firstname) || userClientDetails.lastname().equals(lastname) || userClientDetails.email().equals(email))) {
 
-            logger.info("User information is don't match with existing user, input data:  email:{}, firstname:{}, lastname:{}," +
-                    " existing data: email:{}, firstname:{}, lastname:{}", email, firstname, lastname,
-                    userClientDetails.email(), userClientDetails.firstname(), userClientDetails.lastname());
+            logger.info("User information is don't match with existing user, input data, username:{}",userClientDetails.username());
 
             throw new IllegalStateException("User information is don't match with existing user");
         }

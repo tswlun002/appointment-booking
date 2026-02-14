@@ -18,17 +18,17 @@ public class GetUserQuery {
 
     private final UserService userService;
 
-    public User execute(UsernameCommand username) {
+    public User execute(UsernameCommand username,String traceId) {
         return userService.getUserByUsername(username.username()).orElseThrow(() -> {
-            log.error("User not found with username:{}", username);
+            log.error("User not found with username:{}, traceId:{}", username,traceId);
             return new NotFoundException("User is not found");
         });
     }
 
-    public User execute(EmailCommand email) {
+    public User execute(EmailCommand email,String traceId) {
         return userService.getUserByEmail(email.email()).orElseThrow(
                 () -> {
-                    log.error("User is not found with email:{}", email);
+                    log.error("User is not found, traceId: {}",traceId);
                     return new NotFoundException("User not found");
                 }
         );

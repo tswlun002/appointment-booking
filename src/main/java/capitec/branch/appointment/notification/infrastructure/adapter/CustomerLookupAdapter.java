@@ -14,8 +14,8 @@ public class CustomerLookupAdapter implements CustomerLookup {
     private final GetUserQuery getUserQuery;
 
     @Override
-    public CustomerDetails findByUsername(String username) {
-        var user = getUserQuery.execute(new UsernameCommand(username));
+    public CustomerDetails findByUsername(String username,String traceId) {
+        var user = getUserQuery.execute(new UsernameCommand(username), traceId);
         return new CustomerDetails(username,user.getFirstname()+" "+user.getLastname(),user.getEmail());
     }
 }

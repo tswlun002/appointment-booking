@@ -144,7 +144,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         assertThat(tokenResponseOptional).isPresent();
 
-        var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()));
+        var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()),traceId);
         assertThat(verifiedUser)
                 .hasFieldOrPropertyWithValue("email", email)
                 .hasFieldOrPropertyWithValue("firstname", firstname)
@@ -179,7 +179,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
 
         assertThat(tokenResponseOptional).isPresent();
 
-        var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()));
+        var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()),traceId);
         assertThat(verifiedUser)
                 .hasFieldOrPropertyWithValue("email", email)
                 .hasFieldOrPropertyWithValue("firstname", firstname)
@@ -223,7 +223,7 @@ class RegistrationUserCaseTest extends AppointmentBookingApplicationTests {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Too many attempt to verify OTP");
 
-        var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()));
+        var verifiedUser = getUserQuery.execute(new UsernameCommand(user.getUsername()),traceId);
         assertThat(verifiedUser)
                 .hasFieldOrPropertyWithValue("email", email)
                 .hasFieldOrPropertyWithValue("firstname", firstname)

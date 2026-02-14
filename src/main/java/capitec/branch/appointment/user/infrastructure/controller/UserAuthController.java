@@ -56,7 +56,7 @@ public class UserAuthController {
 
         log.info("Verification user, traceId:{}", traceId);
 
-        var user = getUserQuery.execute(new EmailCommand(verification.email()));
+        var user = getUserQuery.execute(new EmailCommand(verification.email()), traceId);
 
         var tokenResponseOptional = verifyUserUseCase.execute(user.getUsername(), verification.otp(), verification.isCapitecClient(), traceId);
 
