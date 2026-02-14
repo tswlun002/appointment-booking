@@ -74,7 +74,7 @@ public class PasswordResetUseCase {
 
     public void passwordReset(@Valid PasswordResetDTO passwordResetDTO, String traceId) {
 
-        if(Objects.equals(passwordResetDTO.confirmPassword(),passwordResetDTO.newPassword())){
+        if(!Objects.equals(passwordResetDTO.confirmPassword(),passwordResetDTO.newPassword())){
             log.info("New password does not match with confirm password, traceId: {}", traceId);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Password do not match");
         }
