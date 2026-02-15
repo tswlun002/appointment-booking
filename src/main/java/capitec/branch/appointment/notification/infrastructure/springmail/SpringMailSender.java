@@ -3,9 +3,10 @@ package capitec.branch.appointment.notification.infrastructure.springmail;
 import capitec.branch.appointment.exeption.MailSenderException;
 import capitec.branch.appointment.exeption.NonRetryableException;
 import capitec.branch.appointment.notification.domain.NotificationService;
+
+import capitec.branch.appointment.utils.CustomerEmail;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,8 @@ public class SpringMailSender implements NotificationService {
 
     @Override
     public void sendEmail(
-            @NotBlank @Email String hostEmail,
-            @NotEmpty Set<@Email String> recipients,
+            @CustomerEmail String hostEmail,
+            @NotEmpty Set<@CustomerEmail String> recipients,
             @NotBlank String subject,
             @NotBlank String emailTemplate,
             @NotBlank String traceId) throws MailSenderException {
