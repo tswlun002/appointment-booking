@@ -1,6 +1,5 @@
 package capitec.branch.appointment.staff.infrastructure.controller;
 
-import capitec.branch.appointment.sharekernel.Pagination;
 import capitec.branch.appointment.staff.app.AddStaffUseCase;
 import capitec.branch.appointment.staff.app.GetStaffInfoUseCase;
 import capitec.branch.appointment.staff.app.StaffDTO;
@@ -8,7 +7,6 @@ import capitec.branch.appointment.staff.app.UpdateStaffWorkStatusUseCase;
 import capitec.branch.appointment.staff.domain.Staff;
 import capitec.branch.appointment.staff.domain.StaffStatus;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +52,7 @@ public class StaffController {
 
     /**
      * Get staff members for a branch filtered by status.
+     * Note: No pagination needed - branches have max 20 staff members.
      *
      * @param branchId the branch ID
      * @param status   optional staff status filter
@@ -62,40 +61,19 @@ public class StaffController {
      */
     @GetMapping("/branches/{branchId}")
     @PreAuthorize("hasAnyRole('app_staff')")
-    public ResponseEntity<StaffListResponse> getStaffByBranch(
+    public ResponseEntity<Set<String>> getStaffByBranch(
             @PathVariable("branchId") String branchId,
             @RequestParam(value = "status", required = false) String status,
-            @RequestHeader("Trace-Id") String traceId,
-            @RequestParam(value = "offset", defaultValue = "0", required = false)
-            @Min(value = 0, message = "Offset must be positive value") int offset,
-            @RequestParam(value = "limit", defaultValue = "10", required = false)
-            int limit
-
-
+            @RequestHeader("Trace-Id") String traceId
     ) {
         log.info("Getting staff for branch: {}, status: {}, traceId: {}", branchId, status, traceId);
-        StaffStatus staffStatus = status != null ? StaffStatus.valueOf(status.toUpperCase()) :null;
 
+        StaffStatus staffStatus = status != null ? StaffStatus.valueOf(status.toUpperCase()) : null;
         Set<String> staffUsernames = getStaffInfoUseCase.getStaffUsernames(branchId, staffStatus);
 
-        int totalCount = staffUsernames.size();
-        log.info("Found {} staff members for branch: {}, traceId: {}", totalCount, branchId, traceId);
-        int totalPages = (int) Math.ceil((double) totalCount / offset);
-        boolean hasNext = offset < totalPages - 1;
-        boolean hasPrevious = offset > 0;
-        boolean isFirstPage = offset == 0;
-        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
-        Pagination pagination = new Pagination(
-                totalCount,
-                offset,
-                limit,
-                totalPages,
-                hasNext,
-                hasPrevious,
-                isFirstPage,
-                isLastPage
-        );
-        return ResponseEntity.ok(new StaffListResponse(staffUsernames, pagination));
+        log.info("Found {} staff members for branch: {}, traceId: {}", staffUsernames.size(), branchId, traceId);
+
+        return ResponseEntity.ok(staffUsernames);
     }
     /**
      * Update staff work status.
