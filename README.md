@@ -269,52 +269,6 @@ PATCH  /api/v1/admin/slots/{id}/release           - Release slot (Admin)
 - **Docker & Docker Compose** (for local development)
 - **Gradle 9.2+**
 
-### Local Development Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/capitec/appointment-booking.git
-   cd appointment-booking
-   ```
-
-2. **Start infrastructure services**
-   ```bash
-   docker-compose up -d
-   ```
-
-3. **Run the application**
-   ```bash
-   ./gradlew bootRun
-   ```
-
-4. **Access the application**
-   - API: `http://localhost:8080`
-   - Keycloak: `http://localhost:8180`
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-# Database
-SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/appointment_db
-SPRING_DATASOURCE_USERNAME=postgres
-SPRING_DATASOURCE_PASSWORD=postgres
-
-# Keycloak
-KEYCLOAK_AUTH_SERVER_URL=http://localhost:8180
-KEYCLOAK_REALM=capitec
-KEYCLOAK_CLIENT_ID=appointment-service
-KEYCLOAK_CLIENT_SECRET=your-client-secret
-
-# Kafka
-SPRING_KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-
-# External Services
-BRANCH_LOCATOR_BASE_URL=http://localhost:8089
-NAGER_API_BASE_URL=http://localhost:8089
-CLIENT_DOMAIN_BASE_URL=http://localhost:8089
-```
 
 ## ⚙️ Configuration
 
@@ -325,8 +279,6 @@ CLIENT_DOMAIN_BASE_URL=http://localhost:8089
 | `default` | Local development |
 | `test` | Testing with Testcontainers |
 | `demo` | Demo environment with WireMock |
-| `qa` | QA environment |
-| `prod` | Production |
 
 ### Key Configuration Properties
 
