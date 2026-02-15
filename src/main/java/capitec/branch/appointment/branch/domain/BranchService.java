@@ -1,21 +1,15 @@
 package capitec.branch.appointment.branch.domain;
 
-
-
-
-
 import jakarta.validation.Valid;
 
-import java.util.Collection;
-import java.util.Optional;
-
+/**
+ * Domain service for branch business operations.
+ * Contains only business rules - no query/pagination concerns.
+ */
 public interface BranchService {
 
     Branch add(@Valid Branch branch);
-    Optional<Branch> getByBranchId(String branchId);
 
     boolean delete(String branchId);
-
-    Collection<Branch> getAllBranch(int offset, int limit);
 
 }

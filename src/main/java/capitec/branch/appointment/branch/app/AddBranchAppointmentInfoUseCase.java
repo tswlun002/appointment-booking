@@ -1,9 +1,9 @@
 package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.branch.app.port.BranchOperationHoursPort;
+import capitec.branch.appointment.branch.app.port.BranchQueryPort;
 import capitec.branch.appointment.branch.app.port.OperationHourDetails;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
@@ -32,7 +32,7 @@ import java.util.function.Supplier;
 public class AddBranchAppointmentInfoUseCase {
 
     private static final String COUNTRY = "South Africa";
-    private final BranchService branchService;
+    private final BranchQueryPort branchQueryPort;
     private final BranchAppointmentInfoService branchAppointmentInfoService;
     private final BranchOperationHoursPort branchOperationHoursPort;
     private final GetDateOfNextDaysQuery getDateOfNextDaysQuery;
@@ -102,7 +102,7 @@ public class AddBranchAppointmentInfoUseCase {
     }
 
     private Branch getByBranchIdOrThrow(String branchId) {
-        return branchService.getByBranchId(branchId)
+        return branchQueryPort.findByBranchId(branchId)
                 .orElseThrow(() -> {
                     log.error("Unable to find branch with id {}", branchId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");

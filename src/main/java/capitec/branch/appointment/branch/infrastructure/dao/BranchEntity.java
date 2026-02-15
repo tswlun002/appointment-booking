@@ -1,8 +1,6 @@
 package capitec.branch.appointment.branch.infrastructure.dao;
 
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.*;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
@@ -28,6 +26,21 @@ import java.util.Map;
         LocalDateTime createdAt,
         @LastModifiedDate
         @Column("last_modified_date")
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        @Transient
+        Long totalCount
         ) {
+
+    @PersistenceCreator
+    BranchEntity(
+            Long id,
+            String branchId,
+            String branchName,
+            Map<String, BranchAppointmentInfoEntity> branchAppointmentInfo,
+            Map<LocalDate, OperationHoursOverrideEntity> operationHoursOverride,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
+        this(id, branchId, branchName, branchAppointmentInfo, operationHoursOverride, createdAt, updatedAt, 0L);
+    }
 }

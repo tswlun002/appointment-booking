@@ -1,5 +1,7 @@
 package capitec.branch.appointment.branch.infrastructure.dao;
 
+import capitec.branch.appointment.branch.app.port.BranchQueryPort;
+import capitec.branch.appointment.branch.app.port.BranchQueryResult;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfoService;
@@ -24,14 +26,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @Validated
-public class BranchDaoImpl implements BranchService, BranchAppointmentInfoService, OperationHoursOverrideService {
+public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppointmentInfoService, OperationHoursOverrideService {
 
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
@@ -71,9 +72,11 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
 
     }
 
+    // ==================== BranchQueryPort Implementation ====================
+
     @Override
     @Cacheable(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId", unless = "#result == null")
-    public Optional<Branch> getByBranchId(String branchId) {
+    public Optional<Branch> findByBranchId(String branchId) {
 
         Optional<Branch> branch;
         try {
@@ -106,17 +109,27 @@ public class BranchDaoImpl implements BranchService, BranchAppointmentInfoServic
     }
 
     @Override
-    public Collection<Branch> getAllBranch(int offset, int limit) {
+    public BranchQueryResult findAll(int offset, int limit) {
 
-        Collection<BranchEntity> branchEntities= branchRepository.getAllBranch(offset,limit);
-        Set<Branch> collect = branchEntities.stream().map(BranchMapper::toDomain).collect(Collectors.toSet());
+        Collection<BranchEntity> branchEntities = branchRepository.getAllBranch(offset, limit);
+
+        // Extract total count from first entity (all entities have same count due to window function)
+        int totalCount = branchEntities.stream()
+                .findFirst()
+                .map(BranchEntity::totalCount)
+                .map(Long::intValue)
+                .orElse(0);
+
+        List<Branch> branches = branchEntities.stream()
+                .map(BranchMapper::toDomain)
+                .toList();
 
         Cache cache = cacheManager.getCache(CACHE_NAME);
         if (cache != null) {
-            collect.forEach(branch -> cache.putIfAbsent(branch.getBranchId(), branch));
+            branches.forEach(branch -> cache.putIfAbsent(branch.getBranchId(), branch));
         }
 
-        return collect;
+        return BranchQueryResult.of(branches, totalCount);
     }
 
     @EventListener(ApplicationReadyEvent.class)

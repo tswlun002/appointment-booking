@@ -104,7 +104,8 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
                 u.branch_id,
                 u.branch_name,
                 u.created_at,
-                u.last_modified_date
+                u.last_modified_date,
+                COUNT(*) OVER () AS total_count
                 FROM branch AS u
                 ORDER BY id ASC
                 OFFSET :offset LIMIT :limit

@@ -1,7 +1,7 @@
 package capitec.branch.appointment.branch.app;
 
+import capitec.branch.appointment.branch.app.port.BranchQueryPort;
 import capitec.branch.appointment.branch.domain.Branch;
-import capitec.branch.appointment.branch.domain.BranchService;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverrideService;
 import capitec.branch.appointment.utils.UseCase;
@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 @Validated
 @RequiredArgsConstructor
 public class AddBranchOperationHourOverride {
-    private final BranchService branchService;
+    private final BranchQueryPort branchQueryPort;
     private final OperationHoursOverrideService operationHoursOverrideService;
 
     public boolean execute(String branchId, @Valid BranchOperationHourOverrideDTO dto) {
@@ -43,7 +43,7 @@ public class AddBranchOperationHourOverride {
 
 
     private Branch getByBranchIdOrThrow(String branchId) {
-        return branchService.getByBranchId(branchId)
+        return branchQueryPort.findByBranchId(branchId)
                 .orElseThrow(() -> {
                     log.warn("Branch not found, branchId: {}", branchId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch is not found.");

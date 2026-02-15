@@ -1,10 +1,12 @@
 package capitec.branch.appointment.branch.infrastructure.controller;
 
 import capitec.branch.appointment.branch.app.*;
+import capitec.branch.appointment.branch.app.port.BranchQueryResult;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
+import capitec.branch.appointment.sharekernel.Pagination;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +17,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -98,15 +99,17 @@ public class BranchController {
     ) {
         log.info("Getting all branches, offset: {}, limit: {}, traceId: {}", offset, limit, traceId);
 
-        Collection<Branch> branches = getBranchQuery.execute(offset, limit);
+        BranchQueryResult result = getBranchQuery.execute(offset, limit);
 
-        List<BranchResponse> branchResponses = branches.stream()
+        List<BranchResponse> branchResponses = result.branches().stream()
                 .map(this::toResponse)
                 .toList();
 
-        log.info("Retrieved {} branches, traceId: {}", branchResponses.size(), traceId);
+        Pagination pagination = Pagination.ofOffset(offset, limit, result.totalCount());
 
-        return ResponseEntity.ok(new BranchListResponse(branchResponses, branchResponses.size()));
+        log.info("Retrieved {} branches (total: {}), traceId: {}", branchResponses.size(), result.totalCount(), traceId);
+
+        return ResponseEntity.ok(new BranchListResponse(branchResponses, pagination));
     }
 
     /**
