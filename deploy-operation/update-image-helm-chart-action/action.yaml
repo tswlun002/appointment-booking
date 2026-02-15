@@ -1,0 +1,68 @@
+name: "Helm-Argo CI/CD"
+description: "Deploy via Helm-Chart and Argo"
+
+inputs:
+  ORGANIZATION:
+    required: true
+  REPOSITORY:
+    required: true
+  MODULE:
+    required: true
+  ENVIRONMENT:
+    required: false
+    default: ""
+  IMAGE:
+    required: true
+  IMAGE_DIGEST:
+    required: false
+    default: "a9ba4b62-7689-4e15-bc8b-a6ec8d6fe312"
+  GIT_REPO_ACCESS_TOKEN:
+    required: true
+  APP_GITHUB_EMAIL:
+    required: true
+  APP_GITHUB_USERNAME:
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Clone repository
+      run: |
+        git clone  https://${{ inputs.GIT_REPO_ACCESS_TOKEN }}@github.com/${{ inputs.ORGANIZATION }}/${{ inputs.REPOSITORY }}.git
+        if [ -d "${{ inputs.REPOSITORY }}" ]; then
+          echo "Cloned  ${{ inputs.REPOSITORY }} repository successfully."
+        else
+          echo "Error: Coudn't clone ${{ inputs.REPOSITORY }} repository. Check the inputs or Access Token permission"
+          exit 1
+        fi
+        
+        ls -lrtah
+      shell: bash
+    - name: Setup yq
+      uses: chrisdickinson/setup-yq@latest
+      with:
+        yq-version: v4.29.2
+
+    # When run manage-repo, format must be: ${GITHUB_ACTION_PATH}/manage-repo.sh <repo_args1>  <module_args2> <image_args3> <environment_args4>
+    - name: Update Helm-Chart and Argo repo
+      run: |
+        chmod +x ${GITHUB_ACTION_PATH}/manage-repo.sh
+        ${GITHUB_ACTION_PATH}/manage-repo.sh ${{ inputs.REPOSITORY }} "${{ inputs.MODULE }}"   ${{ inputs.IMAGE }} ${{ inputs.ENVIRONMENT }}
+      shell: bash
+
+    - name: Commit and Push repo
+      run: |
+        image=${{ inputs.IMAGE }}
+        tag="${image#*:}"
+        cd ${{ inputs.REPOSITORY }}
+        if [[  `git status --porcelain --untracked-files=no` ]]; then
+           git config user.email  "${{ inputs.APP_GITHUB_EMAIL }}"
+           git config user.name "${{ inputs.APP_GITHUB_USERNAME }}"
+          git commit -am "Deploy image tag ${tag} to ${{ inputs.ENVIRONMENT }} for ${{  inputs.MODULE }}"
+          git push
+        else
+          echo " Warning! No changes detected"
+        fi
+
+      shell: bash
+

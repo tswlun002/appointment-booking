@@ -1,0 +1,58 @@
+name: Create new release
+on:
+  push:
+    branches:
+      - main  # Run on pushes to the main branch
+  pull_request:
+    branches:
+      - main  # Run on pull requests targeting the main branch
+  workflow_dispatch:  #Manual kickoff
+
+
+jobs:
+  build-app:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Create Github Release
+        run: |
+          # Get the current branch name
+          current_branch=$(git branch --show-current)
+          git fetch --unshallow --tags
+          # Check if the current branch is main
+          if [[ "${current_branch}" == "main" ]]; then
+            # Get the latest tag, sorted semantically
+            latest_tag=$(git tag --sort=v:refname | tail -n 1)
+            echo "latest_tag:${latest_tag}"
+            # Extract the numeric part of the version
+            declare version_number
+            if [[ -z "$latest_tag" ]]; then
+              version_number=0  # No tags found, start with v0
+            else
+              version_number=$(echo "$latest_tag" | sed 's/^v//')
+            fi
+            echo "version_number:${version_number}"
+        
+            # Increment the version number
+            version_number=$((version_number + 1))
+            echo "version_number:${version_number}"
+            # Construct the next version string
+            next_version="v${version_number}"
+            echo "next_version:${next_version}"
+            # Create the release
+            gh release create "${next_version}" --target main --generate-notes
+            BODY=$(gh release view "${next_version}" --json body --jq '.body')
+            echo "$BODY" >> release-notes.md
+            echo "" >> release-notes.md
+            echo "**Action Version **: '${next_version}' " >> release-notes.md
+            gh release edit "${next_version}" --notes-file release-notes.md
+            
+          else
+            echo "Not on main branch, skipping tag creation."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
