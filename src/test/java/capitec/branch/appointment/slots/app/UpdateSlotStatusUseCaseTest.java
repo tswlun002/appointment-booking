@@ -79,11 +79,11 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     void execute_WhenBookAction_UpdatesStatusInDatabase() {
         // Act
         // Use the actual existing Slot ID and the action
-        Slot beforeSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot beforeSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         useCase.execute(new SlotStatusTransitionAction.Book(existingSlotId, LocalDateTime.now()));
 
         // Assert: Read the updated state directly from the database
-        Slot updatedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot updatedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(updatedSlot.getStatus())
                 .as("Slot status should be updated to AVAILABLE")
                 .isEqualTo(SlotStatus.AVAILABLE);
@@ -101,11 +101,11 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     void execute_WhenMultipleBookAction_UntilSlotIsBook_Successfully() {
         // Act
         // Use the actual existing Slot ID and the action
-        Slot originalSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot originalSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         useCase.execute(new SlotStatusTransitionAction.Book(existingSlotId, LocalDateTime.now()));
 
         // Assert: Read the updated state directly from the database
-        Slot firstBooking = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot firstBooking = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(firstBooking.getStatus())
                 .as("Slot status should be updated to AVALABLE")
                 .isEqualTo(SlotStatus.AVAILABLE);
@@ -114,7 +114,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
                 .isEqualTo(1);
 
         useCase.execute(new SlotStatusTransitionAction.Book(existingSlotId, LocalDateTime.now()));
-        Slot secondBooking = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot secondBooking = slotQueryPort.findById(existingSlotId).orElseThrow();
 
         assertThat(secondBooking.getStatus())
                 .as("Slot status should be updated to BOOKED")
@@ -137,7 +137,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     @Test
     void execute_WhenReleaseAction_WhenOneSlotIsBooked_UpdatesStatusSuccessfully() {
         // Arrange: Manually set the slot state to BOOKED first to allow a valid Release transition
-        Slot slotToBook = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot slotToBook = slotQueryPort.findById(existingSlotId).orElseThrow();
         //Add one booking
         slotToBook.book(LocalDateTime.now());
 
@@ -147,7 +147,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         useCase.execute(new SlotStatusTransitionAction.Release(existingSlotId, LocalDateTime.now()));
 
         // Assert: Read the updated state directly from the database
-        Slot releasedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot releasedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(releasedSlot.getStatus())
                 .as("Slot status should be AVAILABLE after releasing")
                 .isEqualTo(SlotStatus.AVAILABLE);
@@ -165,7 +165,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         for (int i = 0; i < MAX_BOOKING_CAPACITY; i++) {
 
             // Arrange: Manually set the slot state to BOOKED first to allow a valid Release transition
-            Slot slotToBook = slotService.getSlot(existingSlotId).orElseThrow();
+            Slot slotToBook = slotQueryPort.findById(existingSlotId).orElseThrow();
             //Add one booking
             slotToBook.book(LocalDateTime.now());
             slotService.save(List.of(slotToBook)); // Persist the BOOKED state
@@ -173,7 +173,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         }
 
         // VERIFICATION
-        Slot fullyBookedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot fullyBookedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(fullyBookedSlot.getStatus())
                 .as("Slot status should be FULLY_BOOKED after releasing")
                 .isEqualTo(SlotStatus.FULLY_BOOKED);
@@ -182,7 +182,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         useCase.execute(new SlotStatusTransitionAction.Release(existingSlotId, LocalDateTime.now()));
 
         // Assert: Read the updated state directly from the database
-        Slot releasedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot releasedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(releasedSlot.getStatus())
                 .as("Slot status should be AVAILABLE after releasing")
                 .isEqualTo(SlotStatus.AVAILABLE);
@@ -202,7 +202,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         useCase.execute(new SlotStatusTransitionAction.Block(existingSlotId, LocalDateTime.now()));
 
         // Assert
-        Slot blockedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot blockedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(blockedSlot.getStatus())
                 .as("Slot status should be BLOCKED after blocking")
                 .isEqualTo(SlotStatus.BLOCKED);
@@ -213,16 +213,16 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     @Test
     void execute_WhenBlockAction_OnExistingBooking_UpdatesStatusButKeepExistingBooking() {
 
-        Slot slotToBook = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot slotToBook = slotQueryPort.findById(existingSlotId).orElseThrow();
         //Add one booking
         slotToBook.book(LocalDateTime.now());
         slotService.save(List.of(slotToBook));
-        slotToBook = slotService.getSlot(existingSlotId).orElseThrow();
+        slotToBook = slotQueryPort.findById(existingSlotId).orElseThrow();
         // Act
         useCase.execute(new SlotStatusTransitionAction.Block(existingSlotId, LocalDateTime.now()));
 
         // Assert
-        Slot blockedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot blockedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(slotToBook.getBookingCount())
                 .as("Existing booked slot booking count should be equal to blocked slot booking count")
                 .isEqualTo(blockedSlot.getBookingCount());
@@ -238,11 +238,11 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     @Test
     void execute_WhenExpireAction_UpdatesStatusInDatabase() {
         // Act
-        Slot beforeSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot beforeSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         useCase.execute(new SlotStatusTransitionAction.Expire(existingSlotId));
 
         // Assert
-        Slot blockedSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot blockedSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         assertThat(blockedSlot.getStatus())
                 .as("Slot status should be EXPIRED after blocking")
                 .isEqualTo(SlotStatus.EXPIRED);
@@ -256,13 +256,13 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         // Arrange: Slot starts AVAILABLE. Try to Release it (invalid transition)
 
         // Act & Assert (Domain logic prevents save)
-        Slot beforeSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot beforeSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
 
         assertThrows(ResponseStatusException.class,
                 () -> useCase.execute(new SlotStatusTransitionAction.Release(existingSlotId, LocalDateTime.now())));
 
         // Assert Persistence: Check the database state to ensure it was NOT saved
-        Slot slotAfterAttempt = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot slotAfterAttempt = slotQueryPort.findById(existingSlotId).orElseThrow();
 
         // State should remain AVAILABLE, as the transaction should roll back
         // or fail before save.
@@ -279,7 +279,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     void execute_ConcurrentlyBookingSlot_Succeeds() throws InterruptedException {
         // Arrange: Ensure slot is AVAILABLE and save it to establish version=0
         // (This is handled by your @BeforeEach, but we'll confirm the initial version)
-        Slot initialSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot initialSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         long initialVersion = initialSlot.getVersion();
 
         // The action both threads will attempt: BOOK
@@ -334,7 +334,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
             assertThat(successCount).as("All thread should succeed.").isEqualTo(2);
 
             // Assert Database State
-            Slot finalSlot = slotService.getSlot(existingSlotId).orElseThrow();
+            Slot finalSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
 
             assertThat(finalSlot.getStatus())
                     .as("Final status must be FULLY_BOOKED after one successful transaction.")
@@ -356,7 +356,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
     void execute_WhenSameSlotIsPickedAtSameTime_OneSucceedsAndOneFails() throws InterruptedException {
         // Arrange: Ensure slot is AVAILABLE and save it to establish version=0
         // (This is handled by your @BeforeEach, but we'll confirm the initial version)
-        Slot initialSlot = slotService.getSlot(existingSlotId).orElseThrow();
+        Slot initialSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
         long initialVersion = initialSlot.getVersion();
 
         // The action both threads will attempt: BOOK
@@ -413,7 +413,7 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
             assertThat(exception.getMessage()).isEqualTo("409 CONFLICT \"Slot is fully booked.\"");
 
             // Assert Database State
-            Slot finalSlot = slotService.getSlot(existingSlotId).orElseThrow();
+            Slot finalSlot = slotQueryPort.findById(existingSlotId).orElseThrow();
 
             assertThat(finalSlot.getStatus())
                     .as("Final status must be FULLY_BOOKED after one successful transaction.")

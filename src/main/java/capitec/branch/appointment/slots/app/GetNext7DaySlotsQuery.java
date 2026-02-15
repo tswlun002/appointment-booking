@@ -1,7 +1,7 @@
 package capitec.branch.appointment.slots.app;
 
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.slots.domain.Slot;
-import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class GetNext7DaySlotsQuery {
 
-    private final SlotService slotStorage;
+    private final SlotQueryPort slotQueryPort;
 
     /**
      * Retrieves all scheduled slots for the next 7 days starting from a given dateOfSlots.
@@ -25,8 +25,8 @@ public class GetNext7DaySlotsQuery {
      * @param fromDay The start dateOfSlots.
      * @return A map of dates to a list of slots.
      */
-    public Map<LocalDate, List<Slot>> execute(String branchId,LocalDate fromDay) {
-        List<Slot> slots = slotStorage.getSlots(branchId,fromDay);
+    public Map<LocalDate, List<Slot>> execute(String branchId, LocalDate fromDay) {
+        List<Slot> slots = slotQueryPort.findByBranchFromDate(branchId, fromDay);
         return slots.stream().collect(Collectors.groupingBy(Slot::getDay));
     }
 
@@ -36,8 +36,8 @@ public class GetNext7DaySlotsQuery {
      * @param status The status to filter. True means the slot is booked. False means the slot is not booked(AVAILABLE)
      * @return A map of dates to a list of filtered slots.
      */
-    public Map<LocalDate, List<Slot>> execute(String branchId,LocalDate fromDay, SlotStatus status) {
-        List<Slot> slots = slotStorage.getSlots(branchId,fromDay, status);
+    public Map<LocalDate, List<Slot>> execute(String branchId, LocalDate fromDay, SlotStatus status) {
+        List<Slot> slots = slotQueryPort.findByBranchFromDateAndStatus(branchId, fromDay, status);
         return slots.stream().collect(Collectors.groupingBy(Slot::getDay));
     }
 }

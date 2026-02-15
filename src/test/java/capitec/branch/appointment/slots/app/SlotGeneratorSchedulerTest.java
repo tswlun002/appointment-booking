@@ -29,7 +29,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         slotGeneratorScheduler.execute();
 
         LocalDate date = LocalDate.now().plusDays(1);
-        var allSlots = slotService.getSlots(branch.getBranchId(), date);
+        var allSlots = slotQueryPort.findByBranchFromDate(branch.getBranchId(), date);
 
         // Then
 
@@ -59,7 +59,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         // Given - generate initial slots
         slotGeneratorScheduler.execute();
         LocalDate fromDate = LocalDate.now().plusDays(1);
-        long initialCount = slotService.getSlots(branch.getBranchId(), fromDate).size();
+        long initialCount = slotQueryPort.findByBranchFromDate(branch.getBranchId(), fromDate).size();
 
         //extra day after 7 day
         Set<Day> execute = getDateOfNextDaysQuery.execute(fromDate.getDayOfWeek(), fromDate.plusDays(7).getDayOfWeek(),
@@ -73,7 +73,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
 
 
         // Then - count should increase by one  day's worth of slots if not holiday or sunday next day
-        long finalCount = slotService.getSlots(branch.getBranchId(), fromDate).size();
+        long finalCount = slotQueryPort.findByBranchFromDate(branch.getBranchId(), fromDate).size();
 
        if(extraDay.isHoliday() ||extraDay.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
            assertThat(finalCount).isEqualTo(initialCount);
@@ -89,13 +89,13 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
     void shouldBeIdempotentWhenRunTwice() {
         // Given
         slotGeneratorScheduler.execute();
-        long countAfterFirstRun = slotService.getSlots(branch.getBranchId(), LocalDate.now().plusDays(1)).size();
+        long countAfterFirstRun = slotQueryPort.findByBranchFromDate(branch.getBranchId(), LocalDate.now().plusDays(1)).size();
 
         // When - run again
         slotGeneratorScheduler.execute();
 
         // Then - no duplicates created
-        long countAfterSecondRun = slotService.getSlots(branch.getBranchId(), LocalDate.now().plusDays(1)).size();
+        long countAfterSecondRun = slotQueryPort.findByBranchFromDate(branch.getBranchId(), LocalDate.now().plusDays(1)).size();
         assertThat(countAfterSecondRun).isGreaterThanOrEqualTo(countAfterFirstRun);
     }
 
@@ -111,7 +111,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         int count = Math.toIntExact(days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count());
 
         for (Branch b : branches) {
-            List<Slot> slots = slotService.getSlots(b.getBranchId(), date);
+            List<Slot> slots = slotQueryPort.findByBranchFromDate(b.getBranchId(), date);
             assertThat(slots).isNotEmpty();
             Map<LocalDate, List<Slot>> collect = slots.stream().collect(Collectors.groupingBy(Slot::getDay));
             assertThat(collect).hasSize(5-count);
@@ -143,7 +143,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         int count = Math.toIntExact(days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count());
 
         for (Branch b : branches) {
-            List<Slot> slots = slotService.getSlots(b.getBranchId(), LocalDate.now().plusDays(1));
+            List<Slot> slots = slotQueryPort.findByBranchFromDate(b.getBranchId(), LocalDate.now().plusDays(1));
             assertThat(slots).isNotEmpty();
             Map<LocalDate, List<Slot>> collect = slots.stream().collect(Collectors.groupingBy(Slot::getDay));
             assertThat(collect).hasSize(5-count);

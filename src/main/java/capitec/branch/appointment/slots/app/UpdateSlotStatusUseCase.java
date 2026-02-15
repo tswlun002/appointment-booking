@@ -2,6 +2,7 @@ package capitec.branch.appointment.slots.app;
 
 import capitec.branch.appointment.exeption.OptimisticLockConflictException;
 import capitec.branch.appointment.exeption.SlotFullyBookedException;
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class UpdateSlotStatusUseCase {
 
     private final SlotService slotService;
+    private final SlotQueryPort slotQueryPort;
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
     public void execute(SlotStatusTransitionAction transitionAction) {
@@ -29,7 +31,7 @@ public class UpdateSlotStatusUseCase {
 
         while (retryCount < MAX_RETRY_ATTEMPTS) {
 
-            var slot = slotService.getSlot(slotId).orElseThrow(() -> {
+            var slot = slotQueryPort.findById(slotId).orElseThrow(() -> {
                 log.error("Slot not found for id: {}", slotId);
                 return new ResponseStatusException(HttpStatus.NOT_FOUND, "Slot not found.");
             });

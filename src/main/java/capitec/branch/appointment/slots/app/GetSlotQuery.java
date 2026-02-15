@@ -1,7 +1,7 @@
 package capitec.branch.appointment.slots.app;
 
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.slots.domain.Slot;
-import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,12 +16,12 @@ import java.util.UUID;
 @Validated
 @RequiredArgsConstructor
 public class GetSlotQuery {
-    private final SlotService slotService;
+    private final SlotQueryPort slotQueryPort;
 
 
     public Slot execute(UUID slotId) {
 
-        return slotService.getSlot(slotId)
+        return slotQueryPort.findById(slotId)
                 .orElseThrow(()->{
                     log.error("Slot not found: {}", slotId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Slot not found");

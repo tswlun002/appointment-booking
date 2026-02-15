@@ -9,6 +9,8 @@ import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import capitec.branch.appointment.sharekernel.day.app.GetDateOfNextDaysQuery;
 import capitec.branch.appointment.sharekernel.day.domain.Day;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
+import capitec.branch.appointment.slots.app.port.SlotCleanupPort;
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotService;
 import com.github.tomakehurst.wiremock.client.WireMock;
@@ -37,6 +39,10 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     @Autowired
     protected SlotService slotService;
     @Autowired
+    protected SlotQueryPort slotQueryPort;
+    @Autowired
+    protected SlotCleanupPort slotCleanupPort;
+    @Autowired
     private BranchService branchService;
     protected  Branch branch;
     protected  List<Branch> branches = new ArrayList<>();
@@ -60,10 +66,10 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     public void cleanupSlots() {
 
         for (Branch branch : branches) {
-            List<Slot> slots = slotService.getSlots(branch.getBranchId(),LocalDate.now().plusDays(1));
+            List<Slot> slots = slotQueryPort.findByBranchFromDate(branch.getBranchId(), LocalDate.now().plusDays(1));
 
             for (Slot slot : slots) {
-                slotService.cleanUpSlot(slot.getId());
+                slotCleanupPort.deleteSlot(slot.getId());
             }
         }
 

@@ -1,7 +1,7 @@
 package capitec.branch.appointment.slots.app;
 
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.slots.domain.Slot;
-import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
@@ -14,14 +14,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GetDailySlotsQuery {
 
-    private final SlotService slotService;
+    private final SlotQueryPort slotQueryPort;
 
     /**
      * Retrieves all scheduled slots for a specific day.
      * @param fromDay The dateOfSlots to query.
      * @return A list of slots for the given day.
      */
-    public List<Slot> execute(String branchId,LocalDate fromDay) {
-        return slotService.getDailySlot(branchId,fromDay);
+    public List<Slot> execute(String branchId, LocalDate fromDay) {
+        return slotQueryPort.findByBranchAndDay(branchId, fromDay);
     }
 }

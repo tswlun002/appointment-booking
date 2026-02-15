@@ -1,6 +1,6 @@
 package capitec.branch.appointment.slots.app;
 
-import capitec.branch.appointment.slots.domain.SlotService;
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,12 +15,12 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class GetLastestGeneratedSlotDate {
 
-    private final SlotService slotService;
+    private final SlotQueryPort slotQueryPort;
 
     public Optional<LocalDate> execute(LocalDate fromDate) {
 
         try {
-            return slotService.getLastestGeneratedSlotDate( fromDate);
+            return slotQueryPort.findLatestGeneratedSlotDate(fromDate);
         } catch (Exception e) {
             log.error("Failed to get lasted dateOfSlots of slots.", e);
             throw new RuntimeException("Failed to get lasted dateOfSlots of slots.",e);
