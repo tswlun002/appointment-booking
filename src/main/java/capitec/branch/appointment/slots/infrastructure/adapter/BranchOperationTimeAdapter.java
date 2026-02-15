@@ -67,6 +67,7 @@ public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGener
 
         // 1. Define Suppliers
         Supplier<List<Branch>> dbFetch = () -> getBranchQuery.execute(0, 1000)
+                .branches()
                 .stream()
                 //.map(this::mapDbToDto)
                 .toList();

@@ -197,7 +197,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
                 .hasFieldOrPropertyWithValue("email", user.getEmail())
                 .hasFieldOrPropertyWithValue("firstname", firstName)
                 .hasFieldOrPropertyWithValue("lastname", lastName)
-                .hasFieldOrPropertyWithValue("password", null);
+                .hasFieldOrPropertyWithValue("password", Optional.empty());
 
     }
 

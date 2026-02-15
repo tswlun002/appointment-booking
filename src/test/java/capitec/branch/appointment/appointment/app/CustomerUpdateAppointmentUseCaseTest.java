@@ -7,7 +7,6 @@ import capitec.branch.appointment.event.app.Topics;
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.sharekernel.event.metadata.AppointmentMetadata;
 import capitec.branch.appointment.slots.domain.Slot;
-import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.slots.domain.SlotStatus;
 import capitec.branch.appointment.user.app.GetUserQuery;
 import capitec.branch.appointment.user.app.dto.UsernameCommand;
@@ -52,9 +51,6 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
 
     @Autowired
     private AppointmentService appointmentService;
-
-    @Autowired
-    private SlotService slotService;
 
     private Appointment bookedAppointment;
     private User customer;

@@ -516,18 +516,24 @@ class AppointmentTest {
     @Nested
     @DisplayName("Mark as No-Show Tests")
     class MarkAsNoShowTests {
+        LocalDateTime currentTime;
+        @BeforeEach
+                void setUp() {
+             currentTime = appointmentDateTime.plusMinutes(20);
+        }
 
         @Test
         @DisplayName("Should successfully mark booked appointment as no-show")
         void shouldMarkBookedAppointmentAsNoShow() {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
 
-            appointment.markAsNoShow(now);
+
+            appointment.markAsNoShow(currentTime);
 
             assertEquals(AppointmentStatus.NO_SHOW, appointment.getStatus());
             assertEquals(AppointmentTerminationReason.CUSTOMER_NO_SHOW,
                     appointment.getTerminationReason());
-            assertEquals(now, appointment.getTerminatedAt());
+            assertEquals(currentTime, appointment.getTerminatedAt());
         }
 
         @Test
@@ -536,7 +542,7 @@ class AppointmentTest {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
             appointment.checkIn(now);
 
-            appointment.markAsNoShow(now.plusMinutes(5));
+            appointment.markAsNoShow(currentTime);
 
             assertEquals(AppointmentStatus.NO_SHOW, appointment.getStatus());
         }
@@ -547,7 +553,7 @@ class AppointmentTest {
             Appointment appointment = createCompletedAppointment();
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.markAsNoShow(now)
+                    appointment.markAsNoShow(currentTime)
             );
         }
     }

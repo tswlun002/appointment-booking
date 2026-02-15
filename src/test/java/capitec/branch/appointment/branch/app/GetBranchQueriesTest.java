@@ -64,7 +64,7 @@ class GetBranchQueriesTest extends BranchTestBase {
         addBranchUseCase.execute(dto2);
         
         // ACT
-        var allBranches = getAllBranchesQuery.execute(0, 100);
+        var allBranches = getAllBranchesQuery.execute(0, 100).branches();
         
         // ASSERT
         assertThat(allBranches)

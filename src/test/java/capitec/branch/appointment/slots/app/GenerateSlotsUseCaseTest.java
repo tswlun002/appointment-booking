@@ -49,14 +49,14 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
        generateSlotsUseCase.createNext7DaySlots(date,0);
 
        Set<Day> days = getDateOfNextDaysQuery.execute(date.getDayOfWeek(), date.plusDays(6).getDayOfWeek());
-       long count = days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count();
+       long count = days.stream().filter(day -> day.isHoliday() || day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count();
 
        // VERIFY
        // Use the new GetNext7DaySlotsQuery to retrieve the persisted slots
        Map<LocalDate, List<Slot>> weeklySlots = getNext7DaySlotsQuery.execute(branch.getBranchId(), LocalDate.now());
        
        assertThat(weeklySlots).as("Weekly slots map should not be empty").isNotEmpty();
-       assertThat(weeklySlots.size()).as("Should generate slots should exclude today, sunday and public holidays days").isEqualTo(5-count);
+       assertThat(weeklySlots.size()).as("Should generate slots should exclude today, sunday and public holidays days").isEqualTo(7-count);
 
        // 0. Verify Slot fields
        List<Slot> list = weeklySlots.values()

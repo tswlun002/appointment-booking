@@ -75,6 +75,7 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
     public void tearDown() {
         // Collect IDs before deletion to avoid modifying the collection while iterating.
         List<String> branchIds = getAllBranchesQuery.execute(0,100)
+                .branches()
                 .stream()
                 .map(Branch::getBranchId)
                 .collect(Collectors.toList());

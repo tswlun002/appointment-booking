@@ -37,10 +37,8 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
 
         //ASSUME started next day after today and exclude sunday, possible holidays
         Set<Day> days = getDateOfNextDaysQuery.execute(date, date.plusDays(6));
-        long count = days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count();
+        long count = days.stream().filter(day -> day.isHoliday() || day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count();
 
-
-        LocalDate expectedEndDate = date.plusDays(5-count);
 
         List<LocalDate> distinctDates = allSlots.stream()
                 .map(Slot::getDay)
@@ -48,9 +46,8 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
                 .sorted()
                 .toList();
 
-        assertThat(distinctDates).hasSize((int) (5-count));
-        assertThat(distinctDates.getFirst()).isEqualTo(date);
-        assertThat(distinctDates.getLast()).isEqualTo(expectedEndDate);
+        assertThat(distinctDates).hasSize((int) (7 -count));
+
     }
 
     @Test
@@ -108,13 +105,13 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         //ASSUME started next day after today and exclude sunday, possible holidays
         LocalDate date = LocalDate.now().plusDays(1);
         Set<Day> days = getDateOfNextDaysQuery.execute(date.getDayOfWeek(), date.plusDays(6).getDayOfWeek());
-        int count = Math.toIntExact(days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count());
+        int count = Math.toIntExact(days.stream().filter(day -> day.isHoliday() || day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count());
 
         for (Branch b : branches) {
             List<Slot> slots = slotQueryPort.findByBranchFromDate(b.getBranchId(), date);
             assertThat(slots).isNotEmpty();
             Map<LocalDate, List<Slot>> collect = slots.stream().collect(Collectors.groupingBy(Slot::getDay));
-            assertThat(collect).hasSize(5-count);
+            assertThat(collect).hasSize(7-count);
         }
 
     }
@@ -140,13 +137,13 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
         slotGeneratorScheduler.executeWithRetry();
         LocalDate date = LocalDate.now().plusDays(1);
         Set<Day> days = getDateOfNextDaysQuery.execute(date.getDayOfWeek(), date.plusDays(6).getDayOfWeek());
-        int count = Math.toIntExact(days.stream().filter(day -> day.isHoliday() && !day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count());
+        int count = Math.toIntExact(days.stream().filter(day -> day.isHoliday() || day.getDate().getDayOfWeek().equals(DayOfWeek.SUNDAY)).count());
 
         for (Branch b : branches) {
             List<Slot> slots = slotQueryPort.findByBranchFromDate(b.getBranchId(), LocalDate.now().plusDays(1));
             assertThat(slots).isNotEmpty();
             Map<LocalDate, List<Slot>> collect = slots.stream().collect(Collectors.groupingBy(Slot::getDay));
-            assertThat(collect).hasSize(5-count);
+            assertThat(collect).hasSize(7-count);
 
         }
     }

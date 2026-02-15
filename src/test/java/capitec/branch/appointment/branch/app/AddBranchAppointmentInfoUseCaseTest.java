@@ -33,17 +33,15 @@ class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
             "SASB9001;20;0.6;5"
     })
     public void testUpdateBranchAppointmentConfigUseCase_AddsNewConfig(String branchId, Integer duration, Double utilizationFactor, int staffCount) {
-        LocalDate day = LocalDate.now();
+        var day = DayType.TUESDAY;
 
         // ARRANGE: Create the branch first
         stubCapitecApiSuccess(capitecApiWireMock,CAPITEC_BRANCH_API_RESPONSE);
         BranchDTO branchDTO = createBranchDTO(branchId);
         addBranchUseCase.execute(branchDTO);
 
-        BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(staffCount, 
-                                                                           Duration.ofMinutes(duration), 
-                                                                           utilizationFactor,
-                DayType.valueOf(day.getDayOfWeek().name()),2);
+        BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(staffCount, Duration.ofMinutes(duration),
+                                                                           utilizationFactor, day,2);
         
         // ACT
         boolean isAdded = addBranchAppointmentInfoUseCase.execute(branchId, configDTO);
@@ -58,7 +56,7 @@ class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
         List<BranchAppointmentInfo> appointmentInfo = branch.getBranchAppointmentInfo();
         assertThat(appointmentInfo).as("Appointment info list should not be null").isNotNull();
         
-        boolean dayTypeConfigAdded = appointmentInfo.stream().anyMatch(a -> a.day().name().equals(day.getDayOfWeek().name()) &&
+        boolean dayTypeConfigAdded = appointmentInfo.stream().anyMatch(a -> a.day().name().equals(day.name()) &&
                                                                            a.staffCount() == staffCount &&
                                                                            a.slotDuration().toMinutes() == duration);
                                                                            
@@ -68,8 +66,8 @@ class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
     @Test
     void testUpdateBranchAppointmentConfigUseCase_NonExistingBranch_ThrowsNotFound() {
         // ARRANGE
-        LocalDate now = LocalDate.now();
-        BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(5, Duration.ofMinutes(30), 0.5, DayType.valueOf(now.getDayOfWeek().name()),2);
+        var now = DayType.TUESDAY;
+        BranchAppointmentInfoDTO configDTO = new BranchAppointmentInfoDTO(5, Duration.ofMinutes(30), 0.5, DayType.valueOf(now.name()),2);
 
         // ACT & ASSERT
         assertThatThrownBy(() -> addBranchAppointmentInfoUseCase.execute("SAS29300", configDTO))
