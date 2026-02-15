@@ -10,7 +10,7 @@ import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.user.app.port.UserRoleService;
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;

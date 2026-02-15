@@ -5,14 +5,12 @@ import capitec.branch.appointment.staffschedular.domain.BranchStaffAssignmentSer
 import capitec.branch.appointment.staffschedular.domain.StaffRef;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 
 @Slf4j
 @UseCase
@@ -22,7 +20,7 @@ public class AssignStaffToDayUseCase {
 
     private final BranchStaffAssignmentService branchStaffAssignmentService;
 
-    public boolean execute(String branchId, @Valid BranchStaffAssignmentDTO assignmentDTO) {
+    public void execute(String branchId, @Valid BranchStaffAssignmentDTO assignmentDTO) {
 
         var day = assignmentDTO.day();
         
@@ -33,21 +31,24 @@ public class AssignStaffToDayUseCase {
                 });
 
         var staff = new StaffRef(assignmentDTO.username());
-        var isAdded = false;
 
         try {
-
             branchStaffAssignment.addStaff(day, staff);
-            isAdded = branchStaffAssignmentService.addStaff(branchStaffAssignment);
+            boolean success = branchStaffAssignmentService.addStaff(branchStaffAssignment);
+            if (!success) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to assign staff");
+            }
         }
         catch (EntityAlreadyExistException e) {
             log.error("Error, staff:{} already scheduled to work at the given day:{}", assignmentDTO.username(), day, e);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Staff already scheduled to work at the given day.",e);
         }
+        catch (ResponseStatusException e) {
+            throw e;
+        }
         catch (Exception e) {
             log.error("Error assigning staff:{} at branch:{} at day:{}", assignmentDTO.username(), branchId, day, e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal Server Error",e);
         }
-        return isAdded;
     }
 }

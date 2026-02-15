@@ -20,7 +20,7 @@ import java.util.Set;
 @UseCase
 @Validated
 @RequiredArgsConstructor
-class CancelFutureWorkingDaysUseCase {
+public class CancelFutureWorkingDaysUseCase {
 
     private final BranchStaffAssignmentService branchStaffAssignmentService;
     public void execute(String branchId, @NotEmpty @NotNull DayOfWeek... days) {

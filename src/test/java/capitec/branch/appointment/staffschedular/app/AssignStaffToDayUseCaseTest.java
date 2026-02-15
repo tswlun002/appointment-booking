@@ -15,7 +15,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
@@ -65,13 +64,13 @@ class AssignStaffToDayUseCaseTest extends StaffSchedulerTestBase {
         setWeeklyStaffScheduleUseCase.execute(testBranchId, schedule);
 
 
-        // ACT: Add the excluded staff member (staff[0]) to TODAY
+        // ACT: Add the excluded staff member (staff[0]) to TODAY - should not throw
         BranchStaffAssignmentDTO assignmentDTO = new BranchStaffAssignmentDTO(initialStaffToExclude, today);
-        boolean added = assignStaffToDayUseCase.execute(testBranchId, assignmentDTO);
 
-        // ASSERT 1: The use case reported successful addition
-        assertThat(added).isTrue();
-
+        // ASSERT: No exception thrown means successful addition
+        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
+            assignStaffToDayUseCase.execute(testBranchId, assignmentDTO)
+        );
     }
 
     @Test

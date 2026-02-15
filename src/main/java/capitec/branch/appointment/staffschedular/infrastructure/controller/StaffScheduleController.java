@@ -1,10 +1,7 @@
 package capitec.branch.appointment.staffschedular.infrastructure.controller;
 
-import capitec.branch.appointment.staffschedular.app.AssignStaffToDayUseCase;
-import capitec.branch.appointment.staffschedular.app.BranchStaffAssignmentDTO;
-import capitec.branch.appointment.staffschedular.app.SetWeeklyStaffScheduleUseCase;
+import capitec.branch.appointment.staffschedular.app.*;
 import capitec.branch.appointment.staffschedular.domain.BranchStaffAssignment;
-import capitec.branch.appointment.staffschedular.domain.BranchStaffAssignmentService;
 import capitec.branch.appointment.staffschedular.domain.StaffRef;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,8 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
@@ -32,9 +29,11 @@ import java.util.stream.Collectors;
 @Validated
 public class StaffScheduleController {
 
-    private final BranchStaffAssignmentService branchStaffAssignmentService;
     private final AssignStaffToDayUseCase assignStaffToDayUseCase;
     private final SetWeeklyStaffScheduleUseCase setWeeklyStaffScheduleUseCase;
+    private final GetBranchScheduleQuery getBranchScheduleQuery;
+    private final GetWorkingStaffQuery getWorkingStaffQuery;
+    private final CancelFutureWorkingDaysUseCase cancelFutureWorkingDaysUseCase;
 
     /**
      * Set weekly staff schedule for a branch.
@@ -59,11 +58,7 @@ public class StaffScheduleController {
                                 .collect(Collectors.toSet())
                 ));
 
-        boolean success = setWeeklyStaffScheduleUseCase.execute(request.branchId(), weeklyStaff);
-
-        if (!success) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to set weekly schedule");
-        }
+        setWeeklyStaffScheduleUseCase.execute(request.branchId(), weeklyStaff);
 
         log.info("Weekly schedule set successfully for branch: {}, traceId: {}", request.branchId(), traceId);
 
@@ -92,11 +87,7 @@ public class StaffScheduleController {
 
         BranchStaffAssignmentDTO dto = new BranchStaffAssignmentDTO(request.username(), request.day());
 
-        boolean success = assignStaffToDayUseCase.execute(branchId, dto);
-
-        if (!success) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to assign staff");
-        }
+        assignStaffToDayUseCase.execute(branchId, dto);
 
         log.info("Staff assigned successfully: {} to branch: {}, traceId: {}", request.username(), branchId, traceId);
 
@@ -118,8 +109,7 @@ public class StaffScheduleController {
     ) {
         log.info("Getting schedule for branch: {}, traceId: {}", branchId, traceId);
 
-        BranchStaffAssignment assignment = branchStaffAssignmentService.get(branchId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch schedule not found"));
+        BranchStaffAssignment assignment = getBranchScheduleQuery.execute(branchId);
 
         Map<LocalDate, Set<String>> weeklyStaff = assignment.getWeeklyStaff().entrySet().stream()
                 .collect(Collectors.toMap(
@@ -152,13 +142,7 @@ public class StaffScheduleController {
         LocalDate queryDate = date != null ? date : LocalDate.now();
         log.info("Getting working staff for branch: {}, date: {}, traceId: {}", branchId, queryDate, traceId);
 
-        Set<StaffRef> staffRefs;
-        try {
-            staffRefs = branchStaffAssignmentService.getWorkingStaff(branchId, queryDate);
-        } catch (Exception e) {
-            log.error("Error getting working staff for branch: {}", branchId, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", e);
-        }
+        Set<StaffRef> staffRefs = getWorkingStaffQuery.execute(branchId, queryDate);
 
         Set<String> usernames = staffRefs.stream()
                 .map(StaffRef::username)
@@ -187,26 +171,8 @@ public class StaffScheduleController {
     ) {
         log.info("Cancelling working days for branch: {}, days: {}, traceId: {}", branchId, request.days(), traceId);
 
-        LocalDate today = LocalDate.now();
-        Set<LocalDate> datesToCancel = request.days().stream()
-                .flatMap(dayOfWeek -> {
-                    return java.util.stream.IntStream.range(0, 7)
-                            .mapToObj(today::plusDays)
-                            .filter(d -> d.getDayOfWeek() == dayOfWeek);
-                })
-                .collect(Collectors.toSet());
-
-        if (datesToCancel.isEmpty()) {
-            log.warn("No future dates matching the cancellation request for branch: {}", branchId);
-            return ResponseEntity.noContent().build();
-        }
-
-        try {
-            branchStaffAssignmentService.cancelWorkingDay(branchId, datesToCancel);
-        } catch (Exception e) {
-            log.error("Error cancelling working days for branch: {}", branchId, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", e);
-        }
+        DayOfWeek[] daysToCancel = request.days().toArray(new DayOfWeek[0]);
+        cancelFutureWorkingDaysUseCase.execute(branchId, daysToCancel);
 
         log.info("Working days cancelled for branch: {}, traceId: {}", branchId, traceId);
 

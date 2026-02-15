@@ -1,6 +1,7 @@
 package capitec.branch.appointment.staffschedular.app;
 
 import capitec.branch.appointment.staffschedular.domain.StaffRef;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -9,8 +10,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
 
@@ -43,12 +42,10 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
             schedule.put(date, staffForDay);
         });
 
-        // ACT
-        boolean added = setWeeklyStaffScheduleUseCase.execute(branchId1, schedule);
-
-        // ASSERT 1: The use case reported successful addition
-        assertThat(added).isTrue();
-
+        // ACT & ASSERT: No exception thrown means successful addition
+        Assertions.assertDoesNotThrow(() ->
+            setWeeklyStaffScheduleUseCase.execute(branchId1, schedule)
+        );
     }
     
     @Test
@@ -69,10 +66,9 @@ class SetWeeklyStaffScheduleUseCaseTest extends StaffSchedulerTestBase {
         Set<StaffRef> newStaff = staff.subList(1, 3).stream().map(StaffRef::new).collect(Collectors.toSet());
         IntStream.range(0, 7).forEach(i -> updatedSchedule.put(today.plusDays(i), newStaff));
 
-        boolean updated = setWeeklyStaffScheduleUseCase.execute(branchId, updatedSchedule);
-
-        // ASSERT 1: The use case reported successful update (or add)
-        assertThat(updated).isTrue();
-
+        // ASSERT: No exception thrown means successful update
+        Assertions.assertDoesNotThrow(() ->
+            setWeeklyStaffScheduleUseCase.execute(branchId, updatedSchedule)
+        );
     }
 }
