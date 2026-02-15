@@ -1,4 +1,4 @@
-﻿package capitec.branch.appointment.user.app.port;
+package capitec.branch.appointment.user.app.port;
 /**
  * DTO representing Capitec client details from external system.
  * Part of Anti-Corruption Layer (ACL).

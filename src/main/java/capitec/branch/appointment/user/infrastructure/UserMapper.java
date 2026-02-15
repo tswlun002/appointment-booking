@@ -3,10 +3,7 @@ package capitec.branch.appointment.user.infrastructure;
 import capitec.branch.appointment.user.domain.User;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.stereotype.Component;
-
 import java.util.List;
-import java.util.Map;
-
 /**
  * Maps Keycloak UserRepresentation to User domain object.
  * Uses the protected reconstitution constructor - no reflection needed.
@@ -26,7 +23,7 @@ public class UserMapper {
             return null;
         }
 
-        String username = extractUsername(userRep);
+        String username = userRep.getUsername();
         String email = userRep.getEmail();
         String firstname = userRep.getFirstName();
         String lastname = userRep.getLastName();
@@ -57,23 +54,5 @@ public class UserMapper {
                 .toList();
     }
 
-    /**
-     * Extracts username from UserRepresentation attributes.
-     * Username is stored as a custom attribute in Keycloak.
-     */
-    private String extractUsername(UserRepresentation userRep) {
-        Map<String, List<String>> attributes = userRep.getAttributes();
-
-        if (attributes == null || !attributes.containsKey(USERNAME_ATTRIBUTE)) {
-            return null;
-        }
-
-        List<String> usernameValues = attributes.get(USERNAME_ATTRIBUTE);
-        if (usernameValues == null || usernameValues.isEmpty()) {
-            return null;
-        }
-
-        return usernameValues.getFirst();
-    }
 }
 
