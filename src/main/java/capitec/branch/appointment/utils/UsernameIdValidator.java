@@ -1,6 +1,6 @@
 package capitec.branch.appointment.utils;
 
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 

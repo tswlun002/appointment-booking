@@ -2,7 +2,7 @@ package capitec.branch.appointment.utils;
 
 
 import capitec.branch.appointment.role.domain.Role;
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 @Component
