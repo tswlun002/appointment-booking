@@ -1,4 +1,4 @@
-package capitec.branch.appointment.user.domain;
+package capitec.branch.appointment.sharekernel.username;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 

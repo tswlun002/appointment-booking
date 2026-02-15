@@ -1,6 +1,6 @@
 package capitec.branch.appointment.sharekernel.event.metadata;
 
-import jakarta.validation.constraints.Email;
+import capitec.branch.appointment.utils.CustomerEmail;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.util.Assert;
 
@@ -13,8 +13,7 @@ public  record OTPMetadata(
         String fullname,
         @NotBlank(message = "username is required")
         String username,
-        @NotBlank(message = "Email is required")
-        @Email
+        @CustomerEmail
         String email,
         @NotBlank(message = "OtpCode cannot be null")
         String otpCode
