@@ -59,15 +59,16 @@ public class BranchLocationController {
 
         int totalCount = branches.size();
         log.info("Found {} branches for search '{}', traceId: {}", totalCount, searchText, traceId);
-        int totalPages = (int) Math.ceil((double) totalCount / offset);
-        boolean hasNext = offset < totalPages - 1;
-        boolean hasPrevious = offset > 0;
-        boolean isFirstPage = offset == 0;
-        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
-        Pagination pagination = new Pagination(totalCount, offset, limit, totalPages,
-                hasNext, hasPrevious, isFirstPage, isLastPage);
 
-        return ResponseEntity.ok(new BranchSearchResponse(branches, pagination));
+        // Apply pagination to results
+        List<NearbyBranchDTO> paginatedBranches = branches.stream()
+                .skip(offset)
+                .limit(limit)
+                .toList();
+
+        Pagination pagination = Pagination.ofOffset(offset, limit, totalCount);
+
+        return ResponseEntity.ok(new BranchSearchResponse(paginatedBranches, pagination));
     }
 
     /**
@@ -90,7 +91,7 @@ public class BranchLocationController {
             @RequestParam("longitude")
             Double longitude,
 
-            @Min(value = 0, message = "Offset must be postive value")
+            @Min(value = 0, message = "Offset must be positive value")
             @RequestParam(value = "offset", required = false,defaultValue = "0")
             Integer offset,
 
@@ -112,13 +113,15 @@ public class BranchLocationController {
         int totalCount = branches.size();
         log.info("Found {} nearby branches for coordinates ({}, {}), traceId: {}",
                 totalCount, latitude, longitude, traceId);
-        int totalPages = (int) Math.ceil((double) totalCount / offset);
-        boolean hasNext = offset < totalPages - 1;
-        boolean hasPrevious = offset > 0;
-        boolean isFirstPage = offset == 0;
-        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
-        Pagination pagination = new Pagination(totalCount, offset, limit, totalPages,
-                hasNext, hasPrevious, isFirstPage, isLastPage);
-        return ResponseEntity.ok(new NearbyBranchesResponse(branches, pagination));
+
+        // Apply pagination to results
+        List<NearbyBranchDTO> paginatedBranches = branches.stream()
+                .skip(offset)
+                .limit(limit)
+                .toList();
+
+        Pagination pagination = Pagination.ofOffset(offset, limit, totalCount);
+
+        return ResponseEntity.ok(new NearbyBranchesResponse(paginatedBranches, pagination));
     }
 }
