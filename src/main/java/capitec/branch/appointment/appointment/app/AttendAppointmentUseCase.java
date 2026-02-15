@@ -1,5 +1,6 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class AttendAppointmentUseCase {
 
     private final AppointmentService appointmentService;
+    private final AppointmentQueryPort appointmentQueryPort;
     private final AppointmentEventService publisher;
 
     @Transactional
@@ -130,7 +132,7 @@ public class AttendAppointmentUseCase {
 
 
     private Appointment findById(UUID appointmentId) {
-        return appointmentService.findById(appointmentId)
+        return appointmentQueryPort.findById(appointmentId)
                 .orElseThrow(() -> notFound("Appointment id:%s", appointmentId));
     }
 

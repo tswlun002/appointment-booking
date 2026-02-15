@@ -126,7 +126,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
             attendAppointmentUseCase.execute(action);
 
-            Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment updated = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo( CHECKED_IN);
 
             // Poll for Kafka event (CORRECT TOPIC)
@@ -212,7 +212,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
             attendAppointmentUseCase.execute(action);
 
-            Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment updated = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(IN_PROGRESS);
 
             // Poll for Kafka event (CORRECT TOPIC)
@@ -301,7 +301,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
             attendAppointmentUseCase.execute(action);
 
-            Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment updated = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
 
             // Poll for Kafka event (CORRECT TOPIC)
@@ -342,7 +342,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
             attendAppointmentUseCase.execute(action);
 
-            Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment updated = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             // Poll for Kafka event (CORRECT TOPIC)
             Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
@@ -386,11 +386,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
             attendAppointmentUseCase.execute(action);
 
-            Appointment updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment updated = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
 
 
-             updated = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+             updated = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(updated.getStatus()).isEqualTo(AppointmentStatus.CANCELLED);
             // Poll for Kafka event (CORRECT TOPIC)
             Optional<EventValue<String,AppointmentMetadata>> eventValueOptional = getLatestRecordForKey(
@@ -477,7 +477,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                             customer.getUsername()
                     )
             );
-            Appointment afterCheckIn = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment afterCheckIn = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(afterCheckIn.getStatus()).isEqualTo(CHECKED_IN);
 
             // Start service
@@ -487,7 +487,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                             staffUsername
                     )
             );
-            Appointment afterStart = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment afterStart = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(afterStart.getStatus()).isEqualTo(IN_PROGRESS);
 
             // Complete
@@ -497,7 +497,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                             staffUsername
                     )
             );
-            Appointment afterComplete = appointmentService.findById(bookedAppointment.getId()).orElseThrow();
+            Appointment afterComplete = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(afterComplete.getStatus()).isEqualTo(AppointmentStatus.COMPLETED);
         }
     }

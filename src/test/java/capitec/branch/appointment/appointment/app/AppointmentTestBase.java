@@ -1,6 +1,7 @@
 package capitec.branch.appointment.appointment.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.branch.app.*;
@@ -13,16 +14,17 @@ import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
 import capitec.branch.appointment.slots.app.GetNext7DaySlotsQuery;
 import capitec.branch.appointment.slots.app.SlotGeneratorScheduler;
+import capitec.branch.appointment.slots.app.port.SlotCleanupPort;
+import capitec.branch.appointment.slots.app.port.SlotQueryPort;
 import capitec.branch.appointment.sharekernel.event.metadata.AppointmentMetadata;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
 import capitec.branch.appointment.role.domain.FetchRoleByNameService;
 import capitec.branch.appointment.slots.domain.Slot;
-import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.staff.domain.Staff;
 import capitec.branch.appointment.staff.domain.StaffService;
 import capitec.branch.appointment.staff.domain.StaffStatus;
 import capitec.branch.appointment.user.app.port.UserRoleService;
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import capitec.branch.appointment.sharekernel.EventToJSONMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -57,13 +59,16 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
     @Autowired
     protected AppointmentService appointmentService;
+
+    @Autowired
+    protected AppointmentQueryPort appointmentQueryPort;
+
     public final static String ADMIN_USERNAME = "admin";
     @Autowired private DeleteBranchUseCase branchUseCase;   //
     @Autowired private AddBranchUseCase addBranchUseCase;
     @Autowired protected KeycloakService keycloakService;
     @Autowired protected FetchRoleByNameService fetchRoleByNameService;
     @Autowired protected UserRoleService userRoleService;
-    @Autowired protected SlotService slotService;
     @Autowired protected StaffService staffService;
     @Autowired
     @Qualifier("branchLocationCacheManager")
@@ -77,6 +82,10 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     protected GetDateOfNextDaysQuery getDateOfNextDaysQuery;
     @Autowired
     private SlotGeneratorScheduler slotGeneratorScheduler;
+    @Autowired
+    protected SlotQueryPort slotQueryPort;
+    @Autowired
+    protected SlotCleanupPort slotCleanupPort;
     @Autowired
     private AddBranchAppointmentInfoUseCase addBranchAppointmentInfoUseCase;
 
@@ -113,15 +122,15 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
         //clear up appointments
 
-        Collection<Appointment> appointments = appointmentService.branchAppointments(branch.getBranchId(),0,Integer.MAX_VALUE);
+        Collection<Appointment> appointments = appointmentQueryPort.findByBranchId(branch.getBranchId(),0,Integer.MAX_VALUE);
         for (Appointment appointment : appointments) {
 
                 appointmentService.deleteAppointment(appointment.getId());
             }
         // delete slots
-            slotService.getSlots(branch.getBranchId(), LocalDate.now())
+            slotQueryPort.findByBranchFromDate(branch.getBranchId(), LocalDate.now())
                     .forEach(slot -> {
-                        slotService.cleanUpSlot(slot.getId());
+                        slotCleanupPort.deleteSlot(slot.getId());
                     });
 
         // delete staff

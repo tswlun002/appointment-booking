@@ -130,7 +130,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(endTime).isNotNull().isEqualTo(slot.getEndTime());
             var day =  mapper.convertValue(stringObjectMap.get("day"), LocalDate.class);
             assertThat(day).isNotNull().isEqualTo(slot.getDay());
-            Optional<Appointment> byId = appointmentService.findById(metadata.id());
+            Optional<Appointment> byId = appointmentQueryPort.findById(metadata.id());
             assertThat(byId).isPresent();
             assertThat(byId.get().getReference()).isEqualTo(metadata.reference());
 
@@ -277,7 +277,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         assertThat(actual).isNotNull();
         assertThat(actual.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(actual.getReason()).isEqualTo("User have existing appointment on this day.");
-        var secondSlotToBookAtSameDay1 = slotService.getSlot(secondSlotToBookAtSameDay.getId()).get();
+        var secondSlotToBookAtSameDay1 = slotQueryPort.findById(secondSlotToBookAtSameDay.getId()).get();
         //VERIFY THE SLOT TRANSACTION WAS ROLLBACK WHEN SECOND APPOINTMENT FAILED
         assertThat(secondSlotToBookAtSameDay1).isEqualTo(secondSlotToBookAtSameDay);
 

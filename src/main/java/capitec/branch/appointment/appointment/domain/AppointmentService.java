@@ -7,18 +7,28 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Domain service for appointment business operations.
+ * Contains only business rules - no query/pagination concerns.
+ */
 public interface AppointmentService {
 
     Appointment book(@Valid Appointment appointment);
-    Collection<Appointment> getUnAttendedAppointments( LocalDate appointmentDate,  UUID lastProcessedId, int limit);
+
     Appointment update(@Valid Appointment appointment);
-    Collection<Appointment> update( Collection<Appointment> appointment);
 
-    Optional<Appointment> findById(UUID appointmentId);
+    Collection<Appointment> update(Collection<Appointment> appointment);
+
     boolean deleteAppointment(UUID appointmentId);
-    Collection<Appointment> branchAppointments(String branchId, int pageNumber, int pageSize);
 
+    /**
+     * Business rule: Get user's active appointment for a branch on a specific day.
+     * Used to enforce one active appointment per user per branch per day.
+     */
     Optional<Appointment> getUserActiveAppointment(String branchId, LocalDate day, String customerUsername);
 
-    Collection<Appointment> findByCustomerUsername(String customerUsername, AppointmentStatus status, int offset, int limit);
+    /**
+     * Business rule: Get unattended appointments for marking as no-show.
+     */
+    Collection<Appointment> getUnAttendedAppointments(LocalDate appointmentDate, UUID lastProcessedId, int limit);
 }

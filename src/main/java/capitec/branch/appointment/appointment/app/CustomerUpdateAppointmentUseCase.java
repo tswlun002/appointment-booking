@@ -1,5 +1,6 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
 import capitec.branch.appointment.appointment.app.port.UpdateSlotStatePort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentService;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 public class CustomerUpdateAppointmentUseCase {
 
     private final AppointmentService appointmentService;
+    private final AppointmentQueryPort appointmentQueryPort;
     private final UpdateSlotStatePort updateSlotStatePort;
     private final AppointmentEventService appointmentEventService;
 
@@ -32,7 +34,7 @@ public class CustomerUpdateAppointmentUseCase {
     public Appointment execute(CustomerUpdateAppointmentAction action) {
 
         var appointmentId = action.getId();
-        Appointment appointment = appointmentService.findById(appointmentId).orElseThrow(() -> {
+        Appointment appointment = appointmentQueryPort.findById(appointmentId).orElseThrow(() -> {
                     log.error("Appointment not found. Appointment id {}", appointmentId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found.");
                 });
@@ -97,11 +99,7 @@ public class CustomerUpdateAppointmentUseCase {
                         LocalDateTime.now()
                 );
             }
-
-
         };
-
-
 
         return appointment;
 

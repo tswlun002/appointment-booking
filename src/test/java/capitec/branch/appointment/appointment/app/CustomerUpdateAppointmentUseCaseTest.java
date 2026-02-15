@@ -125,14 +125,14 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
                     customer.getUsername()
             );
 
-            Slot slotBefore = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            Slot slotBefore = slotQueryPort.findById(bookedAppointment.getSlotId()).orElseThrow();
 
             Appointment result = customerUpdateAppointmentUseCase.execute(action);
 
             assertThat(result.getStatus()).isEqualTo(CANCELLED);
 
             //VERIFY slot is released
-            Slot slotAfter = slotService.getSlot(result.getSlotId()).orElseThrow();
+            Slot slotAfter = slotQueryPort.findById(result.getSlotId()).orElseThrow();
             assertThat(slotAfter.getId()).isEqualTo(slotBefore.getId());
             assertThat(slotAfter.getStatus()).isEqualTo(SlotStatus.AVAILABLE);
             assertThat(slotAfter.getBookingCount()).isEqualTo(slotBefore.getBookingCount()-1);
@@ -215,7 +215,7 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should reschedule appointment successfully")
         void shouldRescheduleAppointmentSameDay_Successfully() {
 
-            Slot oldSlot = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            Slot oldSlot = slotQueryPort.findById(bookedAppointment.getSlotId()).orElseThrow();
 
             Slot newSlot = slots.get(1);
             LocalDateTime newDateTime = LocalDateTime.of(newSlot.getDay(), newSlot.getStartTime());
@@ -233,12 +233,12 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(result.getSlotId()).isEqualTo(newSlot.getId());
 
             //VERIFY slot is released
-            Slot slotAfter = slotService.getSlot(result.getSlotId()).orElseThrow();
+            Slot slotAfter = slotQueryPort.findById(result.getSlotId()).orElseThrow();
             // verify new slot
             assertThat(slotAfter.getId()).isEqualTo(newSlot.getId());
             assertThat(slotAfter.getBookingCount()).isEqualTo(newSlot.getBookingCount()+1);
             // verify old slot
-            Slot oldSlotAfterReschedule = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            Slot oldSlotAfterReschedule = slotQueryPort.findById(bookedAppointment.getSlotId()).orElseThrow();
             assertThat(oldSlot.getId()).isEqualTo(oldSlotAfterReschedule.getId())
                     .isNotEqualTo(slotAfter.getId()).isNotEqualTo(newSlot.getId());
 
@@ -252,7 +252,7 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
         @DisplayName("Should reschedule appointment successfully")
         void shouldRescheduleAppointmentOtherDay_Successfully() {
 
-            Slot oldSlot = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            Slot oldSlot = slotQueryPort.findById(bookedAppointment.getSlotId()).orElseThrow();
 
             Slot newSlot = slots.get(2);
             LocalDateTime newDateTime = LocalDateTime.of(newSlot.getDay(), newSlot.getStartTime());
@@ -270,12 +270,12 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
             assertThat(result.getSlotId()).isEqualTo(newSlot.getId());
 
             //VERIFY slot is released
-            Slot slotAfter = slotService.getSlot(result.getSlotId()).orElseThrow();
+            Slot slotAfter = slotQueryPort.findById(result.getSlotId()).orElseThrow();
             // verify new slot
             assertThat(slotAfter.getId()).isEqualTo(newSlot.getId());
             assertThat(slotAfter.getBookingCount()).isEqualTo(newSlot.getBookingCount()+1);
             // verify old slot
-            Slot oldSlotAfterReschedule = slotService.getSlot(bookedAppointment.getSlotId()).orElseThrow();
+            Slot oldSlotAfterReschedule = slotQueryPort.findById(bookedAppointment.getSlotId()).orElseThrow();
             assertThat(oldSlot.getId()).isEqualTo(oldSlotAfterReschedule.getId())
                     .isNotEqualTo(slotAfter.getId()).isNotEqualTo(newSlot.getId());
 

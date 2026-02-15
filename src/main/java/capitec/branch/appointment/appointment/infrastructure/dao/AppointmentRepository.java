@@ -134,7 +134,8 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
             assigned_consultant_id,
             service_notes,
             previous_slot_id,
-            reschedule_count
+            reschedule_count,
+            COUNT(*) OVER () AS total_appointments_count
             FROM appointment
             WHERE customer_username = :customerUsername
             AND (CAST(:status AS VARCHAR) IS NULL OR status = :status)

@@ -1,8 +1,9 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
+import capitec.branch.appointment.appointment.app.port.AppointmentQueryResult;
 import capitec.branch.appointment.appointment.app.port.BranchInfoPort;
 import capitec.branch.appointment.appointment.domain.Appointment;
-import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,25 +25,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GetCustomerAppointmentsUseCase {
 
-    private final AppointmentService appointmentService;
+    private final AppointmentQueryPort appointmentQueryPort;
     private final BranchInfoPort branchInfoPort;
 
-    public List<AppointmentWithBranchDTO> execute(@Valid GetCustomerAppointmentsQuery query) {
+    public CustomerAppointmentsResult execute(@Valid GetCustomerAppointmentsQuery query) {
         log.info("Fetching appointments for customer: {}, status filter: {}, offset: {}, limit: {}",
                 query.customerUsername(), query.status(), query.offset(), query.limit());
 
         try {
-            Collection<Appointment> appointments = appointmentService.findByCustomerUsername(
+            AppointmentQueryResult queryResult = appointmentQueryPort.findByCustomerUsername(
                     query.customerUsername(),
                     query.status(),
                     query.offset(),
                     query.limit()
             );
 
-            log.info("Found {} appointments for customer: {}", appointments.size(), query.customerUsername());
-            return appointments.stream()
+            log.info("Found {} appointments for customer: {} (total: {})",
+                    queryResult.appointments().size(), query.customerUsername(), queryResult.totalCount());
+
+            List<AppointmentWithBranchDTO> enrichedAppointments = queryResult.appointments().stream()
                     .map(this::enrichWithBranchInfo)
                     .toList();
+
+            return CustomerAppointmentsResult.of(enrichedAppointments, queryResult.totalCount());
 
         } catch (Exception e) {
             log.error("Failed to fetch appointments for customer: {}", query.customerUsername(), e);
@@ -62,11 +67,10 @@ public class GetCustomerAppointmentsUseCase {
 
     public Collection<Appointment> branchAppointments(String branchId, int offset, int limit) {
         try {
-            return appointmentService.branchAppointments(branchId, offset, limit);
-        }catch (Exception e) {
-
+            return appointmentQueryPort.findByBranchId(branchId, offset, limit);
+        } catch (Exception e) {
             log.error("Failed to fetch appointments for branch: {}", branchId, e);
-            throw  new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch branch appointments", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to fetch branch appointments", e);
         }
     }
 }

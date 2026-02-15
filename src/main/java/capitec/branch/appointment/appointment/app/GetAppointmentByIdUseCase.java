@@ -1,7 +1,7 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
 import capitec.branch.appointment.appointment.domain.Appointment;
-import capitec.branch.appointment.appointment.domain.AppointmentService;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,12 +19,12 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class GetAppointmentByIdUseCase {
 
-    private final AppointmentService appointmentService;
+    private final AppointmentQueryPort appointmentQueryPort;
 
     public Appointment execute(@Valid GetAppointmentByIdQuery query) {
         log.info("Fetching appointment by ID: {}", query.appointmentId());
 
-        return appointmentService.findById(query.appointmentId())
+        return appointmentQueryPort.findById(query.appointmentId())
                 .orElseThrow(() -> {
                     log.warn("Appointment not found: {}", query.appointmentId());
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found");

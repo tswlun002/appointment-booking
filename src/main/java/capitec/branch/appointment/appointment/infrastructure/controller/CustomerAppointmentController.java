@@ -91,23 +91,17 @@ public class CustomerAppointmentController {
         AppointmentStatus statusFilter = status != null ? AppointmentStatus.valueOf(status) : null;
         GetCustomerAppointmentsQuery query = new GetCustomerAppointmentsQuery(customerUsername, statusFilter, offset, limit);
 
-        List<AppointmentWithBranchDTO> appointments = getCustomerAppointmentsUseCase.execute(query);
+        CustomerAppointmentsResult result = getCustomerAppointmentsUseCase.execute(query);
 
-        List<AppointmentResponse> responses = appointments.stream()
+        List<AppointmentResponse> responses = result.appointments().stream()
                 .map(this::toResponse)
                 .toList();
 
-        int totalCount = responses.size();
-        log.info("Found {} appointments for customer: {}, traceId: {}",
-                totalCount, customerUsername, traceId);
+        log.info("Found {} appointments for customer: {} (total: {}), traceId: {}",
+                responses.size(), customerUsername, result.totalCount(), traceId);
 
-        int totalPages = (int) Math.ceil((double) totalCount / offset);
-        boolean hasNext = offset < totalPages - 1;
-        boolean hasPrevious = offset > 0;
-        boolean isFirstPage = offset == 0;
-        boolean isLastPage = offset == totalPages - 1 || totalCount == 0;
-        AppointmentsResponse body = new AppointmentsResponse(responses, new Pagination( totalCount, offset, limit, totalPages,
-                hasNext, hasPrevious, isFirstPage, isLastPage));
+        Pagination pagination = Pagination.ofOffset(offset, limit, result.totalCount());
+        AppointmentsResponse body = new AppointmentsResponse(responses, pagination);
         return ResponseEntity.ok(body);
     }
 
