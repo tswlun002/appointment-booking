@@ -10,10 +10,10 @@ import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.KafkaProperties;
 import capitec.branch.appointment.sharekernel.event.metadata.MetaData;
 import capitec.branch.appointment.sharekernel.event.metadata.OTPMetadata;
+import capitec.branch.appointment.utils.CustomerEmail;
 import capitec.branch.appointment.utils.OTPCode;
 import capitec.branch.appointment.utils.Username;
 import capitec.branch.appointment.utils.ValidatorMessages;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.InternalServerErrorException;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +41,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
     @Override
     public CompletableFuture<Boolean> sendRegistrationEvent(@Username String username,
-                                                            @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS) String email,
+                                                            @CustomerEmail String email,
                                                             @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME) String fullname,
                                                             @OTPCode String otpCode,
                                                             @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS) String traceId) {
@@ -91,7 +91,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
     @Override
     public CompletableFuture<Boolean> sendPasswordResetRequestEvent(@Username String username,
-                                                                    @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS) String email,
+                                                                    @CustomerEmail String email,
                                                                     @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME) String fullname,
                                                                     @OTPCode String OTP,
                                                                     @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS) String traceId) {
@@ -106,7 +106,7 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
 
     @Override
     public CompletableFuture<Boolean> deleteUserRequestEvent(@Username String username,
-                                                             @NotBlank(message = ValidatorMessages.EMAIL_MESS) @Email(message = ValidatorMessages.EMAIL_MESS) String email,
+                                                             @CustomerEmail String email,
                                                              @NotBlank(message = ValidatorMessages.FIRSTNAME + " " + ValidatorMessages.LASTNAME) String fullname,
                                                              @OTPCode String OTP,
                                                              @NotBlank(message = ValidatorMessages.EVENT_TRACE_ID_MESS) String traceId) {
