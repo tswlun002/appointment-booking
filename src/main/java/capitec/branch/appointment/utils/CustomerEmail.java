@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
  */
 @Documented
 @Constraint(validatedBy = NotBlankEmailValidator.class)
-@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD, ElementType.ANNOTATION_TYPE, ElementType.TYPE_USE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CustomerEmail {
 
