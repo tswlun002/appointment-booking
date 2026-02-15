@@ -1,9 +1,10 @@
 package capitec.branch.appointment.user.domain;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import capitec.branch.appointment.utils.Name;
 import capitec.branch.appointment.utils.NamesValidator;
+import capitec.branch.appointment.utils.CustomerEmail;
+import capitec.branch.appointment.utils.NotBlankEmailValidator;
 import capitec.branch.appointment.utils.Password;
 import capitec.branch.appointment.utils.PasswordValidator;
 import capitec.branch.appointment.utils.Username;
@@ -11,6 +12,7 @@ import capitec.branch.appointment.utils.ValidatorMessages;
 import org.springframework.util.Assert;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * User aggregate root.
@@ -26,12 +28,12 @@ public class User {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(User.class);
     private static final NamesValidator NAME_VALIDATOR = new NamesValidator();
     private static final PasswordValidator PASSWORD_VALIDATOR = new PasswordValidator();
+    private static final NotBlankEmailValidator EMAIL_VALIDATOR = new NotBlankEmailValidator();
     public static final int NAMES_FIELD_LENGTH = 2;
     @Username
     private final String username;
 
-    @Email(message = ValidatorMessages.EMAIL_MESS)
-    @NotBlank(message = ValidatorMessages.EMAIL_MESS)
+    @CustomerEmail
     private final String email;
 
     @Name
@@ -52,7 +54,8 @@ public class User {
      * Used for new user registration.
      */
     public User(String email, String firstname, String lastname, String password) {
-        Assert.hasText(email, ValidatorMessages.EMAIL_MESS);
+
+        Assert.isTrue(EMAIL_VALIDATOR.isValid(email, null), ValidatorMessages.EMAIL_MESS);
         Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), ValidatorMessages.FIRSTNAME);
         Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), ValidatorMessages.LASTNAME);
         Assert.isTrue(PASSWORD_VALIDATOR.isValid(password, null), ValidatorMessages.PASSWORD_MESS);
@@ -67,16 +70,18 @@ public class User {
 
         log.debug("User created. username: {}", username);
     }
-
     /**
-     * Reconstitutes a User from persistence.
-     * Protected to ensure only domain/infrastructure can use it.
+     * Reconstitutes a User from existing capitec client data.
+     * Password is required as client needs to set new password for booking app.
      */
     protected User(String username, String email, String firstname, String lastname,
                    String password, boolean verified, boolean enabled) {
-        Assert.hasText(username, ValidatorMessages.USERNAME_MESSAGE);
+
         Assert.isTrue(UsernameGenerator.isValid(username), ValidatorMessages.USERNAME_MESSAGE);
-        Assert.hasText(email, ValidatorMessages.EMAIL_MESS);
+        Assert.isTrue(EMAIL_VALIDATOR.isValid(email, null), ValidatorMessages.EMAIL_MESS);
+        Assert.isTrue(PASSWORD_VALIDATOR.isValid(password, null), ValidatorMessages.PASSWORD_MESS);
+        Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), ValidatorMessages.FIRSTNAME);
+        Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), ValidatorMessages.LASTNAME);
 
         this.username = username;
         this.email = email;
@@ -86,17 +91,49 @@ public class User {
         this.verified = verified;
         this.enabled = enabled;
 
-        log.debug("User reconstituted. username: {}", username);
+        log.debug("User reconstituted from existing client. username: {}", username);
     }
 
-    // ==================== Getters ====================
+    /**
+     * Private constructor for persistence reconstitution.
+     */
+    private User(String username, String email, String firstname, String lastname, boolean verified, boolean enabled) {
+
+        Assert.isTrue(UsernameGenerator.isValid(username), ValidatorMessages.USERNAME_MESSAGE);
+        Assert.isTrue(EMAIL_VALIDATOR.isValid(email, null), ValidatorMessages.EMAIL_MESS);
+        Assert.isTrue(NAME_VALIDATOR.isValid(firstname, null), ValidatorMessages.FIRSTNAME);
+        Assert.isTrue(NAME_VALIDATOR.isValid(lastname, null), ValidatorMessages.LASTNAME);
+
+        this.username = username;
+        this.email = email;
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.password = null;
+        this.verified = verified;
+        this.enabled = enabled;
+    }
+
+    /**
+     * Reconstitutes a User from existing persistence data.
+     */
+    public static User reconstitute(
+            String username,
+            String email,
+            String firstname,
+            String lastname,
+            boolean verified,
+            boolean enabled
+    ) {
+        return new User(username, email, firstname, lastname, verified, enabled);
+    }
+
 
     @Username
     public String getUsername() {
         return username;
     }
 
-    @Email
+    @CustomerEmail
     public String getEmail() {
         return email;
     }
@@ -111,9 +148,13 @@ public class User {
         return lastname;
     }
 
-    @Password
-    public String getPassword() {
-        return password;
+    /**
+     * Returns the user's password wrapped in Optional.
+     * Password may be null when user is reconstituted from persistence queries.
+     * Callers must handle the Optional appropriately.
+     */
+    public Optional<String> getPassword() {
+        return Optional.ofNullable(password);
     }
 
     public boolean isVerified() {

@@ -1,12 +1,11 @@
 package capitec.branch.appointment.user.infrastructure.controller;
 
-import jakarta.validation.constraints.Email;
+import capitec.branch.appointment.utils.CustomerEmail;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record VerificationDTO(
-        @NotBlank
-        @Email String email,
+        @CustomerEmail String email,
         @NotBlank
         String otp,
         @NotNull

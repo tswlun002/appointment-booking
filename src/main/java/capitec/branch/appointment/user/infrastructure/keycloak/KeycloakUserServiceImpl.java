@@ -2,13 +2,13 @@ package capitec.branch.appointment.user.infrastructure.keycloak;
 
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserDomainException;
-import capitec.branch.appointment.user.domain.UserService;
-import capitec.branch.appointment.user.infrastructure.UserMapperReflection;
+import capitec.branch.appointment.user.infrastructure.UserMapper;
+import capitec.branch.appointment.utils.CustomerEmail;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.ws.rs.core.Response;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -31,19 +31,22 @@ import static capitec.branch.appointment.utils.KeycloakUtils.keyCloakRequest;
 
 @Slf4j
 @Service
-public class KeycloakUserServiceImpl implements UserService {
+public class KeycloakUserServiceImpl implements UserPersistencePort, UserQueryPort {
 
     private final String authType;
     private final KeycloakService keycloakService;
     private final KeycloakUserHelper userHelper;
+    private final UserMapper userMapper;
 
     public KeycloakUserServiceImpl(
             @Value("${keycloak.user_auth_type}") String authType,
             KeycloakService keycloakService,
-            KeycloakUserHelper userHelper) {
+            KeycloakUserHelper userHelper,
+            UserMapper userMapper) {
         this.authType = authType;
         this.keycloakService = keycloakService;
         this.userHelper = userHelper;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -88,13 +91,13 @@ public class KeycloakUserServiceImpl implements UserService {
     @Override
     public Optional<User> getUserByUsername(String username) {
         return userHelper.findByUsername(username)
-                .map(UserMapperReflection::mapToUser);
+                .map(userMapper::toDomain);
     }
 
     @Override
-    public Optional<User> getUserByEmail(@NotBlank @Email String email) {
+    public Optional<User> getUserByEmail(@CustomerEmail String email) {
         return userHelper.findByEmail(email)
-                .map(UserMapperReflection::mapToUser);
+                .map(userMapper::toDomain);
     }
 
     @Override
@@ -120,7 +123,7 @@ public class KeycloakUserServiceImpl implements UserService {
     }
 
     @Override
-    public void updateUseStatus(String username, Boolean useStatus) {
+    public void updateUserStatus(String username, Boolean useStatus) {
         keyCloakRequest(() -> {
             UserRepresentation representation = userHelper.findByUsernameOrThrow(username);
             representation.setEnabled(useStatus);
@@ -138,13 +141,14 @@ public class KeycloakUserServiceImpl implements UserService {
     @Override
     public boolean resetPassword(@Valid User user) {
         Assert.notNull(user, "User must not be null");
-        Assert.hasText(user.getPassword(), "User password must not be blank");
+        String password = user.getPassword()
+                .orElseThrow(() -> new IllegalArgumentException("User password must not be blank"));
 
         UserResource userResource = userHelper.getUserResource(user.getUsername());
 
         boolean result = keyCloakRequest(() -> {
             CredentialRepresentation credential = new CredentialRepresentation();
-            credential.setValue(user.getPassword());
+            credential.setValue(password);
             credential.setType(CredentialRepresentation.PASSWORD);
             credential.setTemporary(Boolean.FALSE);
 
@@ -208,10 +212,13 @@ public class KeycloakUserServiceImpl implements UserService {
 
     @NonNull
     private CredentialRepresentation createCredential(User user) {
+        String password = user.getPassword()
+                .orElseThrow(() -> new IllegalArgumentException("User password must not be blank for credential creation"));
+
         CredentialRepresentation credential = new CredentialRepresentation();
         credential.setType(AuthType.fromAuthType(authType).name());
         credential.setTemporary(Boolean.FALSE);
-        credential.setValue(user.getPassword());
+        credential.setValue(password);
         return credential;
     }
 

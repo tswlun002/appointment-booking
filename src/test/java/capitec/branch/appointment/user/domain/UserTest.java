@@ -22,7 +22,7 @@ class UserTest {
         User user = new User(email, firstname, lastname, password);
         String output = user.getEmail();
         assertThat(output).isNotBlank().isEqualTo(email);
-        assertThat(user.getPassword()).isNotNull().isEqualTo(password);
+        assertThat(user.getPassword()).isPresent().hasValue(password);
     }
 
 
@@ -48,9 +48,9 @@ class UserTest {
     @CsvSource(value = {"@Vswuny0010","Lul+thatha1"})
     void setValidUserPassword(String password) {
         User user = new User("2004lu@yahoo.com", "MaksimBala", "KunRocha", password);
-        assertThat(user.getPassword()).
-                isNotNull()
-                .isEqualTo(password);
+        assertThat(user.getPassword())
+                .isPresent()
+                .hasValue(password);
         assertThat(user).isInstanceOf(User.class);
         assertThat(user.getEmail()).isNotNull().isEqualTo("2004lu@yahoo.com");
         assertThat(user.getFirstname()).isNotNull().isEqualTo("MaksimBala");

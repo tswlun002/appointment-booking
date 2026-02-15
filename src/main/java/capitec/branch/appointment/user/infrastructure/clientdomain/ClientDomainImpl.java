@@ -2,8 +2,8 @@ package capitec.branch.appointment.user.infrastructure.clientdomain;
 
 
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
-import capitec.branch.appointment.user.domain.ClientDomain;
-import capitec.branch.appointment.user.domain.UserClientDetails;
+import capitec.branch.appointment.user.app.port.CapitecClientDetails;
+import capitec.branch.appointment.user.app.port.CapitecClientPort;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.AccessTokenResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,9 +18,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Optional;
 
 @Service
-
 @Slf4j
-public class ClientDomainImpl implements ClientDomain {
+public class ClientDomainImpl implements CapitecClientPort {
 
 
     private final RestClient clientDomainClient;
@@ -28,21 +27,19 @@ public class ClientDomainImpl implements ClientDomain {
     private final KeycloakService keycloakService;
 
 
-    public ClientDomainImpl( @Qualifier("clientDomainRestClient")RestClient clientDomainClient, KeycloakService keycloakService) {
+    public ClientDomainImpl(@Qualifier("clientDomainRestClient") RestClient clientDomainClient, KeycloakService keycloakService) {
         this.clientDomainClient = clientDomainClient;
         this.keycloakService = keycloakService;
-
-
     }
 
     @Override
-    public Optional<UserClientDetails> findByUsername(String IDNumber) {
+    public Optional<CapitecClientDetails> findByIdNumber(String IDNumber) {
 
 
         //Assume admin has role to call client api
         AccessTokenResponse accessToken = keycloakService.getTokenManager().getAccessToken();
 
-        return  clientDomainClient.get()
+        return clientDomainClient.get()
                 .uri("/v1/clients?IDNumber=" + IDNumber)
                 .accept(MediaType.APPLICATION_JSON)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken.getToken())
@@ -51,10 +48,10 @@ public class ClientDomainImpl implements ClientDomain {
                     if (HttpStatusCode.valueOf(response.getStatusCode().value()).is2xxSuccessful()) {
 
                         log.debug("User found with IDNumber: {}", IDNumber);
-                        return Optional.ofNullable(response.bodyTo(UserClientDetails.class));
+                        return Optional.ofNullable(response.bodyTo(CapitecClientDetails.class));
                     } else if (HttpStatus.NOT_FOUND == response.getStatusCode()) {
 
-                        log.debug("User not found with IIDNumber: {}, error:[ status {} , statusText:{}]", IDNumber, response.getStatusCode(), response.getStatusText());
+                        log.debug("User not found with IDNumber: {}, error:[ status {} , statusText:{}]", IDNumber, response.getStatusCode(), response.getStatusText());
                         return Optional.empty();
                     } else {
 

@@ -1,17 +1,18 @@
 package capitec.branch.appointment.user.domain;
 
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import java.util.stream.IntStream;
-import static capitec.branch.appointment.user.domain.UsernameGenerator.username_ALLOWED_CONSECUTIVE_IDENTICAL_DIGITS;
+import static capitec.branch.appointment.sharekernel.username.UsernameGenerator.username_ALLOWED_CONSECUTIVE_IDENTICAL_DIGITS;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class UsernameGeneratorTest {
 
     @Test
     public  void generateId() {
-        UsernameGenerator  username = new UsernameGenerator();
+        UsernameGenerator username = new UsernameGenerator();
         String  usernameString =String.valueOf( username.getId());
         var valid = usernameString.charAt(0) != 0
                 &&  usernameString.length() == UsernameGenerator.username_LENGTH_MAX_VALUE;

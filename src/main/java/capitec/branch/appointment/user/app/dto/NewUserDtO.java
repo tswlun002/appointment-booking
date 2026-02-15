@@ -1,9 +1,6 @@
 package capitec.branch.appointment.user.app.dto;
 
-import capitec.branch.appointment.utils.Password;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
+import capitec.branch.appointment.utils.*;
 import org.springframework.util.Assert;
 
 public record NewUserDtO(
@@ -16,13 +13,11 @@ public record NewUserDtO(
         boolean isCapitecClient
 ) {
 
- public   NewUserDtO(@Email
+ public   NewUserDtO(@CustomerEmail
                      String email,
-                     @NotBlank
-                     @Pattern(regexp = "[a-zA-Z]{2,}")
+                     @Name(message = ValidatorMessages.FIRSTNAME)
                      String firstname,
-                     @NotBlank
-                     @Pattern(regexp = "[a-zA-Z]{2,}")
+                     @Name(message = ValidatorMessages.LASTNAME)
                      String lastname,
                      @Password
                      String password,

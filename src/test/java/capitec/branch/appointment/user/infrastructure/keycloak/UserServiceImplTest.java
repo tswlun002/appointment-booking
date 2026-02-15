@@ -3,8 +3,9 @@ package capitec.branch.appointment.user.infrastructure.keycloak;
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.keycloak.domain.KeycloakService;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
 import capitec.branch.appointment.user.domain.User;
-import capitec.branch.appointment.user.domain.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +39,9 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @Value("${default_roles.users}")
     private List<String> defaultUsersRoles;
     @Autowired
-   private UserService userService;
+    private UserPersistencePort userPersistencePort;
+    @Autowired
+    private UserQueryPort userQueryPort;
     @Autowired
     private  KeycloakService keycloakService;
 
@@ -90,7 +93,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @CsvSource(value = {"nklsip001@gmail.com;White;Joel;@NkLlun00033"}, delimiter = ';')
     void registerUserValidUser(String email, String firstName, String lastName, String password) {
         var user = new User(email, firstName, lastName, password);
-        var userEntity = userService.registerUser(user);
+        var userEntity = userPersistencePort.registerUser(user);
         assertThat(userEntity).isNotNull()
                 .isExactlyInstanceOf(User.class)
                 .hasFieldOrPropertyWithValue("email", email)
@@ -118,8 +121,8 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
         var user = new User(email, firstName, lastName, password);
         var user2 = new User(email, "ElisabethCeng",
                 "DonnaLeon", "6Bb30201-6668-4e54-9d2b-85a3374a82f2");
-        user = userService.registerUser(user);
-        assertThatException().isThrownBy(() -> userService.registerUser(user2))
+        user = userPersistencePort.registerUser(user);
+        assertThatException().isThrownBy(() -> userPersistencePort.registerUser(user2))
                 .isExactlyInstanceOf(EntityAlreadyExistException.class)
                 .withMessage("User already exists");
         assertThat(user).isNotNull()
@@ -139,12 +142,12 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     void verifySavedUser(String email, String firstName, String lastName, String password) {
 
         var user = new User(email, firstName, lastName, password);
-        user = userService.registerUser(user);
+        user = userPersistencePort.registerUser(user);
         assertThat(user).isNotNull()
                 .hasFieldOrPropertyWithValue("verified", false);
-        boolean verifyUser = userService.verifyUser(user.getUsername());
+        boolean verifyUser = userPersistencePort.verifyUser(user.getUsername());
         assertThat(verifyUser).isTrue();
-        user = userService.getUserByUsername(user.getUsername()).orElseThrow();
+        user = userQueryPort.getUserByUsername(user.getUsername()).orElseThrow();
 
         assertThat(user).isNotNull()
                 .hasFieldOrPropertyWithValue("verified", true);
@@ -160,13 +163,13 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @CsvSource(value = {"nklsip001@gmail.com;White;Joel;@NkLlun00033"}, delimiter = ';')
     void deleteSavedUser(String email, String firstName, String lastName, String password) {
         var user = new User(email, firstName, lastName, password);
-        var userEntity = userService.registerUser(user);
-        var expected = userService.getUserByUsername(user.getUsername()).orElseThrow();
+        var userEntity = userPersistencePort.registerUser(user);
+        var expected = userQueryPort.getUserByUsername(user.getUsername()).orElseThrow();
         assertThat(userEntity.getUsername()).isEqualTo(expected.getUsername());
         var users = keycloakService.getUsersResources();
         assertThat(users.count()).isEqualTo(2);
-        userService.verifyUser(user.getUsername());
-        var isDeleted = userService.deleteUser(user.getUsername());
+        userPersistencePort.verifyUser(user.getUsername());
+        var isDeleted = userPersistencePort.deleteUser(user.getUsername());
         assertThat(isDeleted).isTrue();
         var first = users.searchByEmail(email, true);
         assertThat(first).isEmpty();
@@ -175,7 +178,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(value = {"38310942437"}, delimiter = ';')
     void deleteNoneExistingUser(String username) {
-        assertThatException().isThrownBy(() -> userService.deleteUser(username))
+        assertThatException().isThrownBy(() -> userPersistencePort.deleteUser(username))
                 .isExactlyInstanceOf(ResponseStatusException.class)
                 .withMessageContaining("User not found");
 
@@ -185,8 +188,8 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033"}, delimiter = ';')
     public void getUserByUsernameExists(String email, String firstName, String lastName, String password) {
         var user = new User(email, firstName, lastName, password);
-        user= userService.registerUser(user);
-        var user1 = userService.getUserByUsername(user.getUsername()).orElseThrow();
+        user= userPersistencePort.registerUser(user);
+        var user1 = userQueryPort.getUserByUsername(user.getUsername()).orElseThrow();
         assertThat(user1).isNotNull()
                 .hasFieldOrPropertyWithValue("verified", user.isVerified())
                 .hasFieldOrPropertyWithValue("enabled", user.isEnabled())
@@ -201,7 +204,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(value = {"3344778899"}, delimiter = ';')
     public void getUserByUsernameDoneNotExists(String username) {
-        var user = userService.getUserByUsername(username);
+        var user = userQueryPort.getUserByUsername(username);
         assertThat(user.isEmpty()).isTrue();
 
 
@@ -211,8 +214,8 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @CsvSource(value = {"nadiamanuel1@gmail.com;Nadia;manuel;@NkLlun00033"}, delimiter = ';')
     public void getUserByEmailExists(String email, String firstName, String lastName, String password) {
         var user = new User(email, firstName, lastName, password);
-        userService.registerUser(user);
-        user = userService.getUserByEmail(user.getEmail()).orElseThrow();
+        userPersistencePort.registerUser(user);
+        user = userQueryPort.getUserByEmail(user.getEmail()).orElseThrow();
         assertThat(user).isNotNull()
                 .hasFieldOrPropertyWithValue("verified", user.isVerified())
                 .hasFieldOrPropertyWithValue("enabled", user.isEnabled())
@@ -226,7 +229,7 @@ public class UserServiceImplTest  extends AppointmentBookingApplicationTests {
     @ParameterizedTest
     @CsvSource(value = {"nadiamanuel1@gmail.com"}, delimiter = ';')
     public void getUserByEmailDoneNotExists(String emil) {
-        Optional<User> user = userService.getUserByEmail(emil);
+        Optional<User> user = userQueryPort.getUserByEmail(emil);
         assertThat(user.isEmpty()).isTrue();
     }
 

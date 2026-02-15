@@ -6,16 +6,16 @@ import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
 import capitec.branch.appointment.user.app.event.PasswordResetRequestEvent;
 import capitec.branch.appointment.user.app.event.PasswordUpdatedEvent;
 import capitec.branch.appointment.user.app.port.OtpValidationPort;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserDomainException;
 import capitec.branch.appointment.user.domain.UserPasswordService;
-import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.CustomerEmail;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitPurpose;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +32,8 @@ import java.util.Objects;
 @Validated
 public class PasswordResetUseCase {
 
-    private final UserService userService;
+    private final UserPersistencePort userPersistencePort;
+    private final UserQueryPort userQueryPort;
     private final UserPasswordService userPasswordService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final OtpValidationPort otpValidationPort;
@@ -47,7 +48,7 @@ public class PasswordResetUseCase {
     @Value("${rate-limit.otp-resend.cooldown-seconds:60}")
     private int cooldownSeconds;
 
-    public void passwordResetRequest(@Email @NotBlank String email, String traceId) {
+    public void passwordResetRequest(@CustomerEmail String email, String traceId) {
         log.info("Password reset requested. email: {}, traceId: {}", email, traceId);
 
         User user = findUserByEmailOrThrow(email, traceId);
@@ -60,7 +61,7 @@ public class PasswordResetUseCase {
         log.info("Password change requested. username: {}, traceId: {}", username, traceId);
 
         User user = findUserByUsernameOrThrow(username, traceId);
-        boolean isVerified = userService.verifyUserCurrentPassword(username, password, traceId);
+        boolean isVerified = userPersistencePort.verifyUserCurrentPassword(username, password, traceId);
 
         if (isVerified) {
             publishPasswordResetRequestEvent(user, traceId);
@@ -152,7 +153,7 @@ public class PasswordResetUseCase {
 
 
     private User findUserByEmailOrThrow(String email, String traceId) {
-        return userService.getUserByEmail(email)
+        return userQueryPort.getUserByEmail(email)
                 .orElseThrow(() -> {
                     log.error("User not found. email: {}, traceId: {}", email, traceId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "User is not found");
@@ -160,7 +161,7 @@ public class PasswordResetUseCase {
     }
 
     private User findUserByUsernameOrThrow(String username, String traceId) {
-        return userService.getUserByUsername(username)
+        return userQueryPort.getUserByUsername(username)
                 .orElseThrow(() -> {
                     log.error("User not found. username: {}, traceId: {}", username, traceId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "User is not found");
@@ -202,7 +203,7 @@ public class PasswordResetUseCase {
     private void handleOtpValidationError(String username, String traceId, ResponseStatusException e) {
         if (HttpStatus.LOCKED.equals(e.getStatusCode())) {
             log.error("OTP locked due to too many attempts. Disabling user. username: {}, traceId: {}", username, traceId);
-            userService.updateUseStatus(username, false);
+            userPersistencePort.updateUserStatus(username, false);
         }
         throw e;
     }
@@ -212,7 +213,7 @@ public class PasswordResetUseCase {
         User updatedUser = userPasswordService.changePassword(user, newPassword);
 
         // 2. Persist the updated user to infrastructure (Keycloak)
-        boolean persisted = userService.resetPassword(updatedUser);
+        boolean persisted = userPersistencePort.resetPassword(updatedUser);
 
         if (!persisted) {
             log.error("Failed to persist password. username: {}, traceId: {}", user.getUsername(), traceId);

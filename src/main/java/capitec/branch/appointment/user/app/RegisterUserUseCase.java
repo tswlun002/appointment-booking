@@ -3,7 +3,12 @@ package capitec.branch.appointment.user.app;
 import capitec.branch.appointment.exeption.EntityAlreadyExistException;
 import capitec.branch.appointment.user.app.dto.NewUserDtO;
 import capitec.branch.appointment.user.app.event.UserCreatedEvent;
-import capitec.branch.appointment.user.domain.*;
+import capitec.branch.appointment.user.app.port.CapitecClientPort;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
+import capitec.branch.appointment.user.domain.CreateUserExistingClientFactory;
+import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserDomainException;
 import capitec.branch.appointment.utils.UseCase;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +28,10 @@ public class RegisterUserUseCase {
 
     private static final int MAX_USERNAME_GENERATION_ATTEMPTS = 3;
 
-    private final UserService userService;
+    private final UserPersistencePort userPersistencePort;
+    private final UserQueryPort userQueryPort;
     private final ApplicationEventPublisher applicationEventPublisher;
-    private final ClientDomain clientDomain;
+    private final CapitecClientPort capitecClientPort;
 
     @Transactional
     public User execute(@Valid NewUserDtO registerDTO, String traceId) {
@@ -72,7 +78,7 @@ public class RegisterUserUseCase {
         );
 
         return factory.createUser(() ->
-                clientDomain.findByUsername(registerDTO.idNumber())
+                capitecClientPort.findByIdNumber(registerDTO.idNumber())
                         .orElseThrow(() -> {
                             log.error("Capitec client not found with idNumber: {}, traceId: {}", registerDTO.idNumber(), traceId);
                             return new ResponseStatusException(HttpStatus.NOT_FOUND, "User does not exist as a Capitec client");
@@ -86,7 +92,7 @@ public class RegisterUserUseCase {
     }
 
     private void validateNotCapitecClient(String idNumber, String traceId) {
-        clientDomain.findByUsername(idNumber).ifPresent(__ -> {
+        capitecClientPort.findByIdNumber(idNumber).ifPresent(__ -> {
             log.error("Registration conflict: ID number belongs to existing Capitec client. idNumber: {}, traceId: {}", idNumber, traceId);
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This ID number is already registered as a Capitec client. Please register as an existing client.");
         });
@@ -101,7 +107,7 @@ public class RegisterUserUseCase {
                     registerDTO.password()
             );
 
-            if (!userService.checkIfUserExists(user.getUsername())) {
+            if (!userQueryPort.checkIfUserExists(user.getUsername())) {
                 return user;
             }
         }
@@ -111,14 +117,14 @@ public class RegisterUserUseCase {
     }
 
     private void validateEmailNotTaken(String email, String traceId) {
-        userService.getUserByEmail(email).ifPresent(__ -> {
+        userQueryPort.getUserByEmail(email).ifPresent(__ -> {
             log.error("Registration failed: User with email already exists, traceId: {}", traceId);
             throw new EntityAlreadyExistException("User already exists with this email address");
         });
     }
 
     private User persistUser(User user, String traceId) {
-        User registeredUser = userService.registerUser(user);
+        User registeredUser = userPersistencePort.registerUser(user);
 
         if (registeredUser == null) {
             log.error("Failed to persist user to identity provider, traceId: {}", traceId);

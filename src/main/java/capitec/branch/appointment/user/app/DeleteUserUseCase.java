@@ -4,9 +4,10 @@ import capitec.branch.appointment.exeption.OTPExpiredException;
 import capitec.branch.appointment.otp.app.ValidateOTPService;
 import capitec.branch.appointment.user.app.event.DeleteUserEvent;
 import capitec.branch.appointment.user.app.event.DeleteUserRequestEvent;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.domain.UserDomainException;
-import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitPurpose;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitService;
@@ -25,7 +26,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Validated
 public class DeleteUserUseCase {
 
-    private final UserService userService;
+    private final UserPersistencePort userPersistencePort;
+    private final UserQueryPort userQueryPort;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final ValidateOTPService validateOTPService;
     private final RateLimitService rateLimitService;
@@ -43,7 +45,7 @@ public class DeleteUserUseCase {
     public boolean deleteUserRequest(String username, String password, String traceId) {
         try {
             User user = findUserOrThrow(username, traceId);
-            boolean isVerified = userService.verifyUserCurrentPassword(username, password, traceId);
+            boolean isVerified = userPersistencePort.verifyUserCurrentPassword(username, password, traceId);
 
             if (isVerified) {
                 publishDeleteUserRequestEvent(user, traceId);
@@ -66,7 +68,7 @@ public class DeleteUserUseCase {
             resetRateLimit(username);
 
             // Transactional delete
-            Boolean deleted = transactionTemplate.execute(status -> userService.deleteUser(username));
+            Boolean deleted = transactionTemplate.execute(status -> userPersistencePort.deleteUser(username));
 
             if (Boolean.TRUE.equals(deleted)) {
                 publishDeleteUserEvent(user, OTP, traceId);
@@ -85,7 +87,7 @@ public class DeleteUserUseCase {
     // ==================== Helper Methods ====================
 
     private User findUserOrThrow(String username, String traceId) {
-        return userService.getUserByUsername(username)
+        return userQueryPort.getUserByUsername(username)
                 .orElseThrow(() -> {
                     log.error("User not found. username: {}, traceId: {}", username, traceId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
@@ -127,7 +129,7 @@ public class DeleteUserUseCase {
     private void handleOtpValidationError(String username, String traceId, ResponseStatusException e) {
         if (HttpStatus.LOCKED.equals(e.getStatusCode())) {
             log.error("OTP locked due to too many attempts. Disabling user. username: {}, traceId: {}", username, traceId);
-            userService.updateUseStatus(username, false);
+            userPersistencePort.updateUserStatus(username, false);
         }
         throw e;
     }

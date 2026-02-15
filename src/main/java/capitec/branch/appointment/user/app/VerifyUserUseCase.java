@@ -7,10 +7,11 @@ import capitec.branch.appointment.user.app.event.UserVerifiedEvent;
 import capitec.branch.appointment.user.app.port.AuthenticationPort;
 import capitec.branch.appointment.user.app.port.OtpValidationPort;
 import capitec.branch.appointment.user.app.port.RoleAssignmentPort;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
 import capitec.branch.appointment.user.domain.USER_TYPES;
 import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.user.app.port.UserRoleService;
-import capitec.branch.appointment.user.domain.UserService;
 import capitec.branch.appointment.utils.UseCase;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitPurpose;
 import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitService;
@@ -30,7 +31,8 @@ import java.util.Optional;
 @Validated
 public class VerifyUserUseCase {
 
-    private final UserService userService;
+    private final UserPersistencePort userPersistencePort;
+    private final UserQueryPort userQueryPort;
     private final UserRoleService userRoleService;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final RoleAssignmentPort roleAssignmentPort;
@@ -80,7 +82,7 @@ public class VerifyUserUseCase {
     }
 
     private User findUserOrThrow(String username, String traceId) {
-        return userService.getUserByUsername(username)
+        return userQueryPort.getUserByUsername(username)
                 .orElseThrow(() -> {
                     log.error("User not found. username: {}, traceId: {}", username, traceId);
                     return new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
@@ -126,13 +128,13 @@ public class VerifyUserUseCase {
     private void handleOtpValidationError(String username, String traceId, ResponseStatusException e) {
         if (HttpStatus.LOCKED.equals(e.getStatusCode())) {
             log.error("OTP locked due to too many attempts. Disabling user. username: {}, traceId: {}", username, traceId);
-            userService.updateUseStatus(username, false);
+            userPersistencePort.updateUserStatus(username, false);
         }
         throw e;
     }
 
     private void verifyUserStatus(String username, String traceId) {
-        boolean verified = userService.verifyUser(username);
+        boolean verified = userPersistencePort.verifyUser(username);
 
         if (!verified) {
             log.error("Failed to update user verification status. username: {}, traceId: {}", username, traceId);
