@@ -6,7 +6,7 @@ import capitec.branch.appointment.otp.domain.OTP;
 import capitec.branch.appointment.otp.domain.OTPPurpose;
 import capitec.branch.appointment.otp.domain.OTPService;
 import capitec.branch.appointment.otp.domain.OTPStatus;
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import capitec.branch.appointment.user.infrastructure.keycloak.KeycloakUserCacheConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

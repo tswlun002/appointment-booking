@@ -1,6 +1,6 @@
 package capitec.branch.appointment.otp.domain;
 
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import capitec.branch.appointment.utils.OTPCode;
 import capitec.branch.appointment.utils.Username;
 import jakarta.validation.constraints.Min;

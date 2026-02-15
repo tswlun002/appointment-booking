@@ -1,7 +1,7 @@
 package capitec.branch.appointment.otp.app;
 
 import capitec.branch.appointment.otp.domain.OTPPurpose;
-import capitec.branch.appointment.user.domain.UsernameGenerator;
+import capitec.branch.appointment.sharekernel.username.UsernameGenerator;
 import capitec.branch.appointment.utils.Username;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
