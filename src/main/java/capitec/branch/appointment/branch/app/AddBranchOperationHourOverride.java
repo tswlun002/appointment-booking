@@ -15,6 +15,55 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.function.Supplier;
 
+/**
+ * Use case for adding or updating operation hours override for a specific branch and date.
+ *
+ * <p>Operation hours overrides allow branch administrators to temporarily change the standard
+ * operating hours for specific dates (e.g., early closing on holidays, special events, or
+ * emergency closures). These overrides take precedence over the default branch operating hours
+ * when generating appointment slots.</p>
+ *
+ * <h2>Execution Flow:</h2>
+ * <ol>
+ *   <li>Fetches the branch from database (throws 404 if not found)</li>
+ *   <li>Creates an {@link OperationHoursOverride} domain object with the override details</li>
+ *   <li>Updates the branch with the new operation hours override</li>
+ *   <li>Persists the override to the database</li>
+ * </ol>
+ *
+ * <h2>Input ({@link BranchOperationHourOverrideDTO}):</h2>
+ * <ul>
+ *   <li><b>effectiveDate</b> - The date when this override applies (must be today or future)</li>
+ *   <li><b>openTime</b> - Override opening time for the branch</li>
+ *   <li><b>closingTime</b> - Override closing time for the branch</li>
+ *   <li><b>isClosed</b> - If true, the branch is closed on this date</li>
+ *   <li><b>reason</b> - Mandatory reason for the override (e.g., "Public Holiday", "Staff Training")</li>
+ * </ul>
+ *
+ * <h2>Business Rules:</h2>
+ * <ul>
+ *   <li>Branch must exist</li>
+ *   <li>Effective date must be today or in the future (cannot override past dates)</li>
+ *   <li>Open time must be before closing time</li>
+ *   <li>If branch is marked as closed, a reason must be provided</li>
+ * </ul>
+ *
+ * <h2>Example Use Case:</h2>
+ * <p>Admin wants to close branch 470010 early on December 24th for Christmas Eve:</p>
+ * <pre>
+ * {
+ *   "effectiveDate": "2026-12-24",
+ *   "openTime": "08:00",
+ *   "closingTime": "13:00",
+ *   "isClosed": false,
+ *   "reason": "Christmas Eve - Early closing"
+ * }
+ * </pre>
+ *
+ * @see OperationHoursOverride
+ * @see BranchOperationHourOverrideDTO
+ * @see OperationHoursOverrideService
+ */
 @UseCase
 @Slf4j
 @Validated

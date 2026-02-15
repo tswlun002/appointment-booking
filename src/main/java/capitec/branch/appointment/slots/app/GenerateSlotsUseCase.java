@@ -15,6 +15,71 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
+/**
+ * Use case for generating bookable appointment slots for branches.
+ *
+ * <p>This use case generates time slots for all active branches based on their
+ * operation hours and appointment configuration. It is typically invoked by a
+ * scheduler to create slots for upcoming days (rolling window).</p>
+ *
+ * <h2>Slot Generation Algorithm:</h2>
+ * <ol>
+ *   <li>Fetches all active branches with their operation times and appointment info</li>
+ *   <li>For each branch and each day in the rolling window:
+ *     <ul>
+ *       <li>Checks if branch is open (has operation times and not closed)</li>
+ *       <li>Checks if appointment info exists for that day type</li>
+ *       <li>Calculates available capacity based on staff count and utilization factor</li>
+ *       <li>Generates slots from opening time to closing time with configured duration</li>
+ *     </ul>
+ *   </li>
+ *   <li>Persists all generated slots in bulk</li>
+ * </ol>
+ *
+ * <h2>Capacity Calculation:</h2>
+ * <pre>
+ * workingMinutes = closingTime - openingTime
+ * theoreticalSlotsPerStaff = workingMinutes / slotDuration
+ * totalCapacity = staffCount × theoreticalSlotsPerStaff
+ * availableCapacity = totalCapacity × utilizationFactor
+ * </pre>
+ *
+ * <h2>Configuration:</h2>
+ * <ul>
+ *   <li><b>ROLLING_WINDOW_DAYS:</b> Default 7 days - how many days ahead to generate slots</li>
+ *   <li><b>SLOTS_DISTRIBUTION_FACTOR:</b> 2 - spacing factor between slot start times</li>
+ *   <li><b>COUNTRY:</b> "South Africa" - country for branch filtering</li>
+ * </ul>
+ *
+ * <h2>Example:</h2>
+ * <p>Branch 470010 configuration:</p>
+ * <ul>
+ *   <li>Opens: 08:00, Closes: 17:00 (9 hours = 540 minutes)</li>
+ *   <li>Slot duration: 30 minutes</li>
+ *   <li>Staff count: 3</li>
+ *   <li>Utilization factor: 0.8</li>
+ * </ul>
+ * <p>Calculation:</p>
+ * <pre>
+ * theoreticalSlotsPerStaff = 540 / 30 = 18
+ * totalCapacity = 3 × 18 = 54
+ * availableCapacity = 54 × 0.8 = 43 slots
+ * </pre>
+ *
+ * <h2>Error Handling:</h2>
+ * <ul>
+ *   <li>Branches without operation times are skipped with warning log</li>
+ *   <li>Branches without appointment info are skipped with warning log</li>
+ *   <li>Closed days are skipped</li>
+ *   <li>If no slots are generated, a warning is logged (no exception thrown)</li>
+ * </ul>
+ *
+ * @see Slot
+ * @see SlotService
+ * @see BranchOperationTimesDetails
+ * @see AppointmentInfoDetails
+ * @see GetActiveBranchesForSlotGenerationPort
+ */
 @Slf4j
 @UseCase
 @Validated

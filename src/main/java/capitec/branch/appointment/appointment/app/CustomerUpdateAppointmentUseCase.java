@@ -18,6 +18,69 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 
+/**
+ * Use case for handling customer-initiated appointment updates.
+ *
+ * <p>This use case allows customers to modify their existing appointments through
+ * rescheduling or cancellation. It manages the slot state transitions and publishes
+ * appropriate events for downstream notifications.</p>
+ *
+ * <h2>Supported Actions ({@link CustomerUpdateAppointmentAction}):</h2>
+ * <ul>
+ *   <li><b>Reschedule</b> - Move appointment to a different slot (releases old slot, reserves new slot)</li>
+ *   <li><b>Cancel</b> - Cancel the appointment (releases the slot back to available)</li>
+ * </ul>
+ *
+ * <h2>Execution Flow:</h2>
+ * <ol>
+ *   <li>Fetches the appointment by ID (throws 404 if not found)</li>
+ *   <li>Captures the previous status for event publishing</li>
+ *   <li>Updates slot state based on action:
+ *     <ul>
+ *       <li>Reschedule: releases old slot, reserves new slot</li>
+ *       <li>Cancel: releases the slot</li>
+ *     </ul>
+ *   </li>
+ *   <li>Executes the state transition on the appointment domain object</li>
+ *   <li>Persists the updated appointment (with optimistic locking)</li>
+ *   <li>Publishes the appropriate event (reschedule or cancellation) for email notifications</li>
+ * </ol>
+ *
+ * <h2>Business Rules:</h2>
+ * <ul>
+ *   <li>Appointment must exist</li>
+ *   <li>Appointment must be in a valid state for the action (e.g., cannot cancel already cancelled)</li>
+ *   <li>For reschedule: new slot must have available capacity</li>
+ * </ul>
+ *
+ * <h2>Error Handling:</h2>
+ * <ul>
+ *   <li><b>NOT_FOUND (404)</b> - Appointment doesn't exist</li>
+ *   <li><b>BAD_REQUEST (400)</b> - Invalid state transition or illegal argument</li>
+ *   <li><b>CONFLICT (409)</b> - Optimistic lock conflict (concurrent modification)</li>
+ *   <li><b>INTERNAL_SERVER_ERROR (500)</b> - Unexpected errors</li>
+ * </ul>
+ *
+ * <h2>Example Use Cases:</h2>
+ *
+ * <p><b>1. Customer Reschedules Appointment:</b></p>
+ * <pre>
+ * Reschedule action = new Reschedule(appointmentId, newSlotId);
+ * // Releases old slot, reserves new slot, updates appointment, sends reschedule email
+ * </pre>
+ *
+ * <p><b>2. Customer Cancels Appointment:</b></p>
+ * <pre>
+ * Cancel action = new Cancel(appointmentId, "Personal reasons");
+ * // Releases slot, marks appointment as CANCELLED, sends cancellation email
+ * </pre>
+ *
+ * @see CustomerUpdateAppointmentAction
+ * @see Appointment
+ * @see AppointmentStatus
+ * @see UpdateSlotStatePort
+ * @see AppointmentEventService
+ */
 @UseCase
 @Slf4j
 @RequiredArgsConstructor

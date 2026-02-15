@@ -14,6 +14,74 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Use case for updating slot status with optimistic locking and retry support.
+ *
+ * <p>This use case handles slot state transitions (reserve, release) with built-in
+ * resilience for concurrent access scenarios. It implements optimistic locking
+ * with automatic retry to handle high-traffic booking situations.</p>
+ *
+ * <h2>Supported Actions ({@link SlotStatusTransitionAction}):</h2>
+ * <ul>
+ *   <li><b>Reserve:</b> Increments booking count when customer books appointment</li>
+ *   <li><b>Release:</b> Decrements booking count when appointment is cancelled/rescheduled</li>
+ * </ul>
+ *
+ * <h2>Execution Flow:</h2>
+ * <ol>
+ *   <li>Fetches the slot by ID (throws 404 if not found)</li>
+ *   <li>Executes the state transition on the slot domain object</li>
+ *   <li>Persists the updated slot with optimistic locking</li>
+ *   <li>On conflict, retries up to {@code MAX_RETRY_ATTEMPTS} times with exponential backoff</li>
+ * </ol>
+ *
+ * <h2>Concurrency Handling:</h2>
+ * <ul>
+ *   <li><b>Optimistic Locking:</b> Uses version field to detect concurrent modifications</li>
+ *   <li><b>Retry Strategy:</b> Up to 3 attempts with 50ms × retryCount backoff</li>
+ *   <li><b>Conflict Resolution:</b> Re-fetches slot on each retry to get latest state</li>
+ * </ul>
+ *
+ * <h2>Error Handling:</h2>
+ * <ul>
+ *   <li><b>NOT_FOUND (404)</b> - Slot doesn't exist</li>
+ *   <li><b>CONFLICT (409)</b> - Max retries exceeded due to high traffic, or slot fully booked</li>
+ *   <li><b>BAD_REQUEST (400)</b> - Invalid state transition (e.g., releasing unbooked slot)</li>
+ *   <li><b>INTERNAL_SERVER_ERROR (500)</b> - Unexpected errors</li>
+ * </ul>
+ *
+ * <h2>Example Use Cases:</h2>
+ *
+ * <p><b>1. Reserve Slot (Customer Books):</b></p>
+ * <pre>
+ * SlotStatusTransitionAction.Reserve action = new Reserve(slotId);
+ * updateSlotStatusUseCase.execute(action);
+ * // Slot booking count: 2 → 3
+ * </pre>
+ *
+ * <p><b>2. Release Slot (Customer Cancels):</b></p>
+ * <pre>
+ * SlotStatusTransitionAction.Release action = new Release(slotId);
+ * updateSlotStatusUseCase.execute(action);
+ * // Slot booking count: 3 → 2
+ * </pre>
+ *
+ * <h2>High Traffic Scenario:</h2>
+ * <p>When multiple customers try to book the same slot simultaneously:</p>
+ * <ol>
+ *   <li>First request succeeds, increments booking count</li>
+ *   <li>Second request detects version conflict</li>
+ *   <li>Second request retries with fresh slot data</li>
+ *   <li>If slot still has capacity, booking succeeds</li>
+ *   <li>If slot is full, returns 409 Conflict with "Slot is fully booked"</li>
+ * </ol>
+ *
+ * @see SlotStatusTransitionAction
+ * @see SlotService
+ * @see SlotQueryPort
+ * @see OptimisticLockConflictException
+ * @see SlotFullyBookedException
+ */
 @Slf4j
 @UseCase
 @Validated
@@ -35,7 +103,6 @@ public class UpdateSlotStatusUseCase {
                 log.error("Slot not found for id: {}", slotId);
                 return new ResponseStatusException(HttpStatus.NOT_FOUND, "Slot not found.");
             });
-//9ba4a2b4-831a-459f-9900-f3b7a88e4537
             try {
 
                 slot = transitionAction.execute(slot);

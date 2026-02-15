@@ -19,6 +19,73 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Use case for managing appointment attendance lifecycle transitions.
+ *
+ * <p>This use case handles all state transitions that occur when a customer attends their
+ * appointment at a branch. It uses a sealed interface pattern ({@link AttendingAppointmentStateTransitionAction})
+ * to ensure type-safe handling of different attendance actions.</p>
+ *
+ * <h2>Supported Actions ({@link AttendingAppointmentStateTransitionAction}):</h2>
+ * <ul>
+ *   <li><b>CheckIn</b> - Customer checks in at branch (BOOKED → CHECKED_IN)</li>
+ *   <li><b>StartService</b> - Staff starts serving the customer (CHECKED_IN → IN_PROGRESS)</li>
+ *   <li><b>CompleteAttendingAppointment</b> - Staff completes the appointment (IN_PROGRESS → COMPLETED)</li>
+ *   <li><b>CancelByStaff</b> - Staff cancels the appointment with reason (any status → CANCELLED)</li>
+ * </ul>
+ *
+ * <h2>Execution Flow:</h2>
+ * <ol>
+ *   <li>Resolves the appointment based on the action type:
+ *     <ul>
+ *       <li>CheckIn: finds by branchId, date, and customerUsername</li>
+ *       <li>Other actions: finds by appointmentId</li>
+ *     </ul>
+ *   </li>
+ *   <li>Captures the previous status for event publishing</li>
+ *   <li>Executes the state transition on the appointment domain object</li>
+ *   <li>Persists the updated appointment (with optimistic locking)</li>
+ *   <li>Publishes the appropriate event for downstream consumers (emails, notifications)</li>
+ * </ol>
+ *
+ * <h2>Error Handling:</h2>
+ * <ul>
+ *   <li><b>NOT_FOUND (404)</b> - Appointment doesn't exist</li>
+ *   <li><b>BAD_REQUEST (400)</b> - Invalid state transition (e.g., completing a cancelled appointment)</li>
+ *   <li><b>CONFLICT (409)</b> - Optimistic lock conflict (concurrent modification)</li>
+ * </ul>
+ *
+ * <h2>Example Use Cases:</h2>
+ *
+ * <p><b>1. Customer Check-In:</b></p>
+ * <pre>
+ * CheckIn action = new CheckIn("470010", LocalDate.now(), "john.doe");
+ * // Customer arrives at branch 470010 and checks in for today's appointment
+ * </pre>
+ *
+ * <p><b>2. Staff Starts Service:</b></p>
+ * <pre>
+ * StartService action = new StartService(appointmentId, "staff.username");
+ * // Staff member begins serving the checked-in customer
+ * </pre>
+ *
+ * <p><b>3. Complete Appointment:</b></p>
+ * <pre>
+ * CompleteAttendingAppointment action = new CompleteAttendingAppointment(appointmentId, "Customer assisted with account query");
+ * // Staff marks appointment as completed with notes
+ * </pre>
+ *
+ * <p><b>4. Staff Cancellation:</b></p>
+ * <pre>
+ * CancelByStaff action = new CancelByStaff("staff.username", "Customer left before service", appointmentId);
+ * // Staff cancels appointment with reason
+ * </pre>
+ *
+ * @see AttendingAppointmentStateTransitionAction
+ * @see Appointment
+ * @see AppointmentStatus
+ * @see AppointmentEventService
+ */
 @UseCase
 @Slf4j
 @RequiredArgsConstructor

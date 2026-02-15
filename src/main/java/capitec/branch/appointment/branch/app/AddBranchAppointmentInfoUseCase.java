@@ -25,6 +25,69 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
+/**
+ * Use case for configuring appointment slot settings for a specific branch and day type.
+ *
+ * <p>This configuration is used by the {@code SlotGeneratorScheduler} to create bookable
+ * appointment slots. Each branch can have different slot configurations for different day types
+ * (Monday-Sunday, Public Holidays).</p>
+ *
+ * <h2>Input ({@link BranchAppointmentInfoDTO}):</h2>
+ * <ul>
+ *   <li><b>staffCount</b> - Number of staff available for appointments on that day</li>
+ *   <li><b>slotDuration</b> - Duration of each appointment slot (e.g., PT30M for 30 minutes)</li>
+ *   <li><b>utilizationFactor</b> - Efficiency factor (e.g., 0.8 means 80% of time is bookable)</li>
+ *   <li><b>day</b> - Day type: MONDAY, TUESDAY, ..., SUNDAY, or PUBLIC_HOLIDAY</li>
+ *   <li><b>maxBookingCapacity</b> - Maximum number of appointments per slot</li>
+ * </ul>
+ *
+ * <h2>Execution Flow:</h2>
+ * <ol>
+ *   <li>Fetches the branch from database (throws 404 if not found)</li>
+ *   <li>Creates a {@link BranchAppointmentInfo} domain object with slot configuration</li>
+ *   <li>Determines operation hours (openAt, closeAt) using the following priority:
+ *     <ul>
+ *       <li>First, checks for {@link OperationHoursOverride} matching the day type</li>
+ *       <li>If no override found, fetches from Branch Locator API</li>
+ *       <li>For PUBLIC_HOLIDAY: gets all remaining holidays this year and uses the shortest
+ *           operating window to ensure slot config works for all holidays</li>
+ *     </ul>
+ *   </li>
+ *   <li>Validates the branch is open on that day</li>
+ *   <li>Updates the branch with the appointment info and persists to database</li>
+ * </ol>
+ *
+ * <h2>Business Rules:</h2>
+ * <ul>
+ *   <li>Branch must exist</li>
+ *   <li>Operation hours must exist (either from override or Branch Locator API)</li>
+ *   <li>Branch must be open on that day (cannot configure slots for closed days)</li>
+ * </ul>
+ *
+ * <h2>Example Use Case:</h2>
+ * <p>Admin configures Monday appointments for branch 470010:</p>
+ * <pre>
+ * {
+ *   "staffCount": 3,
+ *   "slotDuration": "PT30M",
+ *   "utilizationFactor": 0.8,
+ *   "day": "MONDAY",
+ *   "maxBookingCapacity": 5
+ * }
+ * </pre>
+ * <p>The system will:</p>
+ * <ol>
+ *   <li>Find branch 470010</li>
+ *   <li>Check if there's an override for any Monday → No</li>
+ *   <li>Get operation hours from Branch Locator API for next Monday → Opens 8:00, Closes 17:00</li>
+ *   <li>Save: "On Mondays, branch 470010 has 30-min slots, 3 staff, max 5 bookings per slot"</li>
+ * </ol>
+ *
+ * @see BranchAppointmentInfo
+ * @see BranchAppointmentInfoDTO
+ * @see OperationHoursOverride
+ * @see BranchAppointmentInfoService
+ */
 @Slf4j
 @UseCase
 @Validated
@@ -36,6 +99,7 @@ public class AddBranchAppointmentInfoUseCase {
     private final BranchAppointmentInfoService branchAppointmentInfoService;
     private final BranchOperationHoursPort branchOperationHoursPort;
     private final GetDateOfNextDaysQuery getDateOfNextDaysQuery;
+
 
     public boolean execute(String branchId, @Valid BranchAppointmentInfoDTO dto) {
 
