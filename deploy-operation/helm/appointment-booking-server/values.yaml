@@ -54,7 +54,7 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   hosts:
-      - host: appointment.server.local
+      - host: ""
         paths:
           - path: /api
             pathType: Prefix
@@ -129,25 +129,25 @@ baseEnv:
   - name: DATABASE_CATALOG
     value: ""
   - name: DATABASE_HOST
-    value: "capitec-db-dev-postgresql"
+    value: ""
 
   # ---- Security & Auth Server env ---------
   - name: AUTH_SERVER_TOKEN_URL
-    value: "http://keycloak-idp.capitec.svc.cluster.local:8080/realms/appointment-booking-DEV/protocol/openid-connect/certs"
+    value: ""
   - name: ISSUER_URI
-    value: "http://keycloak-idp.capitec.svc.cluster.local:8080/realms/appointment-booking-DEV"
+    value: ""
   - name: CORS_ALLOWED_ORIGIN
-    value: "http://localhost:5174,http://localhost:5173,http://localhost:3000,http://appointment.client.local" #"http://0.0.0.0:3000,http://127.0.0.1:3000"
+    value: ""
   - name: CORS_CERTS_CACHE_PERIOD
     value: "30"
 
   # ---- Keycloak env ---------
   - name: KEYCLOAK_REALM
-    value: "appointment-booking-DEV"
+    value: ""
   - name: KEYCLOAK_DOMAIN
-    value: "keycloak-idp.capitec.svc.cluster.local:8080"
+    value: ""
   - name: KEYCLOAK_ADMIN_CLIENT_ID
-    value: "appointment-booking"
+    value: ""
   - name: KEYCLOAK_ADMIN_CLIENT_SECRETE
     value: ""
   - name: KEYCLOAK_ADMIN_SCOPE
@@ -157,11 +157,11 @@ baseEnv:
   - name: KEYCLOAK_CLIENT_TYPE
     value: "authenticationClientId"
   - name: KEYCLOAK_AUTH_URL
-    value: "http://keycloak-idp.capitec.svc.cluster.local:8080"
+    value: ""
   - name: KEYCLOAK_USER_AUTH_TYPE
     value: "password"
   - name: KEYCLOAK_USERNAME
-    value: "admin"
+    value: ""
   - name: KEYCLOAK_PASSWORD
     value: ""
 
@@ -185,7 +185,7 @@ baseEnv:
   - name: KAFKA_REPLICAS
     value: "2"
   - name: BROKER_BOOTSTRAP_SERVERS
-    value: capitec-kafka-broker-0.capitec-kafka-broker-headless:9094,capitec-kafka-broker-1.capitec-kafka-broker-headless:9094 ,capitec-kafka-broker-2.capitec-kafka-broker-headless:9094
+    value: ""
   - name: EVENT_TOPICS
     value: "registration-event,email-verified-event,
             retryable-letter,dead-letter,complete-registration-event,
@@ -199,11 +199,11 @@ baseEnv:
 
   # ---- Email env ---------
   - name: MAIL_HOST
-    value: "smtp.zoho.com"
+    value: ""
   - name: MAIL_PROTOCOL
     value: "smtp"
   - name: MAIL_PORT
-    value: "465"
+    value: ""
   - name: MAIL_USERNAME
     value: ""
   - name: MAIL_PASSWORD
@@ -211,11 +211,11 @@ baseEnv:
 
   # ---- External Clients env ---------
   - name: CLIENT_DOMAIN_BASE_URL
-    value: "http://wiremock:9021"
+    value: ""
   - name: HOLIDAYS_CLIENT_API
-    value: "https://date.nager.at"
+    value: ""
   - name: CAPITEC_BRANCH_LOCATOR_API
-    value: "http://wiremock:9021/api/v1/branches"
+    value: ""
   - name: COOKIE_SAMESITE_TYPE
     value: "NONE"
 active: true

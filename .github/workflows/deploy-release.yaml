@@ -1,9 +1,67 @@
 name: Java CI/CD With Gradle 🛠️🔨🌩️🔥🔥😂😭
 on:
   workflow_dispatch: #Manual kickoff
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'generate-username-ui-register-module/**'
+      - 'validate-credential-module/**'
+      - '*.md'
+      - 'docs/**'
+
+# Prevent multiple deployments from running simultaneously
+concurrency:
+  group: deployment-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel in-progress deployments, queue new ones
 
 jobs:
+  # Check if deployment should be skipped based on changed files
+  check-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.filter.outputs.should_deploy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for deployment-relevant changes
+        id: filter
+        run: |
+          # Get list of changed files
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger - proceeding with deployment"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          
+          # Check if all changes are in ignored folders
+          ONLY_KEYCLOAK_MODULES=true
+          for file in $CHANGED_FILES; do
+            if [[ ! "$file" =~ ^generate-username-ui-register-module/ ]] && \
+               [[ ! "$file" =~ ^validate-credential-module/ ]] && \
+               [[ ! "$file" =~ \.md$ ]] && \
+               [[ ! "$file" =~ ^docs/ ]]; then
+              ONLY_KEYCLOAK_MODULES=false
+              break
+            fi
+          done
+          
+          if [ "$ONLY_KEYCLOAK_MODULES" == "true" ] && [ -n "$CHANGED_FILES" ]; then
+            echo "Only Keycloak module changes detected - skipping deployment"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "Deployment-relevant changes detected - proceeding"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          fi
+
   build-app:
+    needs: check-changes
+    if: needs.check-changes.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     container:
       image: gradle:9.2.0
@@ -68,12 +126,62 @@ jobs:
           REGISTRY_ACCESS_ID: ${{ secrets.IMAGE_ACCESS_KEY }}
           REGISTRY_ACCESS_SECRET: ${{ secrets.IMAGE_SECRET_KEY }}
           REGISTRY_REGION: ${{ vars.IMAGE_SERVER_REGION }}
+
+  deploy:
+    name: Deploy to Docker Hub
+    needs:
+      - build-app
+      - build-docker
+    runs-on: ubuntu-latest
+    outputs:
+      DOCKERHUB_IMAGE: ${{ steps.deploy.outputs.DOCKERHUB_IMAGE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Docker Hub
+        id: deploy
+        uses: ./.github/actions/docker-deploy
+        with:
+          SOURCE_IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
+          SOURCE_REGISTRY: ${{ vars.IMAGE_REGISTRY }}
+          SOURCE_REGISTRY_USERNAME: ${{ secrets.IMAGE_ACCESS_KEY }}
+          SOURCE_REGISTRY_PASSWORD: ${{ secrets.IMAGE_SECRET_KEY }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
+          VERSION: ${{ needs.build-app.outputs.VERSION }}
+          PUSH_LATEST: "true"
+
+  update-helm:
+    name: Update Helm Chart
+    needs:
+      - build-app
+      - deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Helm Chart with new image
+        uses: ./.github/actions/update-helm-image
+        with:
+          ORGANIZATION: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+          MODULE: "appointment-booking-server"
+          ENVIRONMENT: ${{ vars.ENVIRONMENT || 'dev' }}
+          IMAGE: ${{ needs.deploy.outputs.DOCKERHUB_IMAGE }}
+          GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
+          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+
   release-notes:
     name: Create Release Notes
     needs:
       - build-app
       - build-docker
-#      - Deploy
+      - deploy
+      - update-helm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -84,9 +192,11 @@ jobs:
           BODY=$(gh release view $VERSION --json body --jq '.body')
           echo "$BODY" >> release-notes.md
           echo "" >> release-notes.md
-          echo "**Docker Image**: ${IMAGE}" >> release-notes.md
+          echo "**Docker Image (Source)**: ${IMAGE}" >> release-notes.md
+          echo "**Docker Hub Image**: ${DOCKERHUB_IMAGE}" >> release-notes.md
           gh release edit $VERSION --notes-file release-notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.build-app.outputs.VERSION }}
           IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
+          DOCKERHUB_IMAGE: ${{ needs.deploy.outputs.DOCKERHUB_IMAGE }}

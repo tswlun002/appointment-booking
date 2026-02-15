@@ -385,6 +385,49 @@ rate-limit:
 | **Redis Cache** | Replace Caffeine with Redis for distributed caching in multi-instance deployments | Medium |
 | **Database Read Replicas** | Add read replicas for query-heavy operations | Low |
 
+#### Infrastructure & Security
+
+| Enhancement | Description | Priority |
+|-------------|-------------|----------|
+| **JAR Artifact Registry** | Set up a private artifact registry (e.g., Nexus, Artifactory, GitHub Packages) for Keycloak SPI JARs instead of storing in ConfigMaps. This enables versioning, dependency management, and cleaner CI/CD pipelines. | High |
+| **HashiCorp Vault Integration** | Replace hardcoded credentials in Helm values with HashiCorp Vault for secure secret management. Use Vault Agent Injector or External Secrets Operator to inject secrets at runtime. | High |
+| **Sealed Secrets** | Alternative to Vault - use Bitnami Sealed Secrets for encrypting secrets in Git | Medium |
+
+**Proposed Vault Integration:**
+```yaml
+# Instead of hardcoded values in values.yaml:
+# DATABASE_PASSWORD: "plaintext-password"
+
+# Use Vault annotations:
+podAnnotations:
+  vault.hashicorp.com/agent-inject: "true"
+  vault.hashicorp.com/role: "appointment-booking"
+  vault.hashicorp.com/agent-inject-secret-db: "secret/data/appointment-booking/database"
+  vault.hashicorp.com/agent-inject-template-db: |
+    {{- with secret "secret/data/appointment-booking/database" -}}
+    export DATABASE_PASSWORD="{{ .Data.data.password }}"
+    {{- end -}}
+```
+
+**Proposed JAR Registry Setup:**
+```yaml
+# Keycloak deployment with JAR from registry:
+initContainers:
+  - name: download-spis
+    image: curlimages/curl
+    command:
+      - sh
+      - -c
+      - |
+        curl -o /providers/generate-username-spi.jar \
+          https://registry.example.com/repository/keycloak-spis/generate-username-spi-${VERSION}.jar
+        curl -o /providers/validate-credential-spi.jar \
+          https://registry.example.com/repository/keycloak-spis/validate-credential-spi-${VERSION}.jar
+    volumeMounts:
+      - name: providers
+        mountPath: /providers
+```
+
 #### Monitoring & Observability
 
 | Enhancement | Description | Priority |
@@ -394,22 +437,120 @@ rate-limit:
 
 ### CI/CD Pipeline
 
-The project uses GitHub Actions for CI/CD:
+The project uses GitHub Actions for automated build, test, and deployment.
+
+#### Main Application Pipeline (`deploy-release.yaml`)
+
+Triggered on push to `main` branch (excluding Keycloak modules, docs, and markdown files) or manual dispatch.
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Build App  │ ──▶ │ Build Docker│ ──▶ │  Release    │
-│  (Gradle)   │     │   Image     │     │   Notes     │
-└─────────────┘     └─────────────┘     └─────────────┘
-                          │
-                          ▼
-                    ┌─────────────┐
-                    │  Docker Hub │
-                    │   (Public)  │
-                    └─────────────┘
+┌─────────────────┐
+│  check-changes  │ ← Skip if only Keycloak modules/docs changed
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   build-app     │ ← Gradle build + tests
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  build-docker   │ ← Build Docker image, push to source registry
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│     deploy      │ ← Push to Docker Hub
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   update-helm   │ ← Update Helm chart values.yaml with new image
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  release-notes  │ ← Create GitHub Release with notes
+└─────────────────┘
 ```
 
-**Workflow**: `.github/workflows/deploy-release.yaml`
+**Features:**
+- ✅ Concurrency control (no parallel deployments)
+- ✅ Path filtering (skip for Keycloak modules, docs, md files)
+- ✅ Automatic version stamping (date + git SHA)
+- ✅ Automatic Helm chart updates
+- ✅ GitHub Release creation with release notes
+
+#### Keycloak Modules Pipeline (`build-keycloak-modules.yaml`)
+
+Triggered on changes to Keycloak SPI module folders or manual dispatch with module selection.
+
+```
+┌─────────────────┐
+│ detect-changes  │ ← Detect which module changed
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+┌────────┐ ┌────────┐
+│ build  │ │ build  │ ← Build JAR, upload artifact (15 days retention)
+│ gen-usr│ │ val-crd│
+└───┬────┘ └───┬────┘
+    │          │
+    ▼          ▼
+┌────────┐ ┌────────┐
+│ update │ │ update │ ← Apply ConfigMap to K8s, commit metadata only
+│  helm  │ │  helm  │
+└───┬────┘ └───┬────┘
+    │          │
+    └────┬─────┘
+         ▼
+   ┌───────────┐
+   │  summary  │ ← Build summary table
+   └───────────┘
+```
+
+**Features:**
+- ✅ Conditional builds (only changed modules)
+- ✅ Manual trigger with module selection (all, generate-username, validate-credential)
+- ✅ JAR artifacts with 15-day retention
+- ✅ ConfigMap applied to K8s, JAR not committed to git (too large)
+
+#### GitHub Actions
+
+| Action | Location | Purpose |
+|--------|----------|---------|
+| `gradle-build` | `.github/actions/gradle-build/` | Build JAR with version stamping |
+| `docker-build` | `.github/actions/docker-build/` | Build & push Docker image |
+| `docker-deploy` | `.github/actions/docker-deploy/` | Push to Docker Hub |
+| `update-helm-image` | `.github/actions/update-helm-image/` | Update app Helm chart |
+| `update-keycloak-spi` | `.github/actions/update-keycloak-spi/` | Update Keycloak ConfigMap |
+
+#### Required Secrets & Variables
+
+**Secrets:**
+
+| Name | Purpose |
+|------|---------|
+| `DOCKERHUB_USERNAME` | Docker Hub login |
+| `DOCKERHUB_TOKEN` | Docker Hub access token |
+| `IMAGE_ACCESS_KEY` | Source registry access |
+| `IMAGE_SECRET_KEY` | Source registry secret |
+| `GIT_REPO_ACCESS_TOKEN` | Push Helm changes |
+| `KUBECONFIG` | K8s access (base64 encoded, optional) |
+
+**Variables:**
+
+| Name | Purpose |
+|------|---------|
+| `DOCKERHUB_REPOSITORY` | e.g., `username/appointment-booking` |
+| `IMAGE_REGISTRY` | Source registry URL |
+| `IMAGE_REPOSITORY` | Source repo name |
+| `IMAGE_SERVER_REGION` | Source registry region |
+| `ENVIRONMENT` | dev/staging/prod |
+| `APP_GITHUB_EMAIL` | Git commit email |
+| `APP_GITHUB_USERNAME` | Git commit username |
+| `K8S_NAMESPACE` | Kubernetes namespace (default: `capitec`) |
 
 ### Docker Image
 
@@ -450,36 +591,446 @@ docker-compose --profile app up -d
 
 #### Option 2: Minikube (Recommended for Testing K8s Deployment)
 
-For testing Kubernetes deployment locally:
+For testing Kubernetes deployment locally, follow these steps in order:
+
+---
+
+##### Step 1: Set Up Minikube
 
 ```bash
-# 1. Start Minikube
-minikube start --memory=4096 --cpus=2
+# Start Minikube with recommended resources
+# Default: 10GB memory, 6 CPUs (adjust as needed, minimum 8GB/4CPU recommended)
+minikube start --memory=9735 --cpus=6
 
-# 2. Enable ingress addon
+# Enable required addons
 minikube addons enable ingress
+minikube addons enable storage-provisioner
+minikube addons enable default-storageclass
 
-# 3. Create namespace
-kubectl create namespace appointment-booking
+# Verify addons are enabled
+minikube addons list | grep -E "ingress|storage"
 
-# 4. Deploy WireMock (for external service mocks)
-kubectl apply -f deploy-operation/wiremock/configmap-mappings.yaml
-kubectl apply -f deploy-operation/wiremock/configmap-responses.yaml
+# Set Kubernetes namespace to capitec
+kubectl create namespace capitec
+kubectl config set-context --current --namespace=capitec
+
+# Make Docker images visible to Minikube context
+# Run this in EVERY new terminal session
+eval $(minikube docker-env)
+
+# Verify Minikube is running
+minikube status
+kubectl get nodes
+```
+
+> **Note:** If you need to scale down resources, adjust `--memory` and `--cpus` values. Minimum recommended: `--memory=8192 --cpus=4`
+
+---
+
+##### Step 2: Install PostgreSQL Database
+
+```bash
+# Navigate to helm directory
+cd deploy-operation/helm
+
+# Add Bitnami Helm repository (if not already added)
 helm repo add bitnami https://charts.bitnami.com/bitnami
-helm upgrade --install wiremock bitnami/wiremock -n appointment-booking -f deploy-operation/wiremock/helm/values.yaml
+helm repo update
 
-# 5. Deploy the application (uses latest image from Docker Hub)
-kubectl apply -f deploy-operation/k8s/
+# Install PostgreSQL
+# IMPORTANT: Note the release name (capitec-db) - it will be used as the database host
+helm upgrade --install capitec-db bitnami/postgresql \
+  -n capitec \
+  -f capitec-db/values.yaml \
+  --set auth.username=appointment_user \
+  --set auth.database=appointment_db \
+  --set auth.password=your_secure_password
 
-# 6. Access the application
-minikube service appointment-booking -n appointment-booking
+# Wait for database to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgresql -n capitec --timeout=120s
+
+# Verify database is running
+kubectl get pods -n capitec | grep capitec-db
+
+# Get the database password (save this for later steps)
+export POSTGRES_PASSWORD=$(kubectl get secret --namespace capitec capitec-db-postgresql -o jsonpath="{.data.password}" | base64 -d)
+echo "Database Password: $POSTGRES_PASSWORD"
+
+# Database connection details (save these):
+# Host: capitec-db-postgresql.capitec.svc.cluster.local
+# Port: 5432
+# Database: appointment_db
+# Username: appointment_user
+# Password: <value from above>
+```
+
+---
+
+##### Step 3: Install Keycloak
+
+Keycloak uses the external PostgreSQL database installed in Step 2.
+
+```bash
+# Navigate to helm directory
+cd deploy-operation/helm
+
+# Before installing, update keycloak/values.yaml with database credentials:
+# 
+# externalDatabase:
+#   host: "capitec-db-postgresql.capitec.svc.cluster.local"
+#   port: 5432
+#   user: "appointment_user"
+#   database: "appointment_db"
+#   password: "<POSTGRES_PASSWORD from Step 2>"
+#
+# extraEnvVars:
+#   - name: KC_DB_URL
+#     value: "jdbc:postgresql://capitec-db-postgresql.capitec.svc.cluster.local:5432/appointment_db"
+
+# Install Keycloak
+helm upgrade --install keycloak-idp bitnami/keycloak \
+  -n capitec \
+  -f keycloak/values.yaml \
+  --set externalDatabase.host=capitec-db-postgresql.capitec.svc.cluster.local \
+  --set externalDatabase.port=5432 \
+  --set externalDatabase.user=appointment_user \
+  --set externalDatabase.database=appointment_db \
+  --set externalDatabase.password=$POSTGRES_PASSWORD
+
+# Wait for Keycloak to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n capitec --timeout=300s
+
+# Verify Keycloak is running
+kubectl get pods -n capitec | grep keycloak
+
+# Apply Keycloak SPI ConfigMaps (IMPORTANT: Do this after Keycloak is running)
+kubectl apply -f generate-username-spi-configmaps.yaml -n capitec
+kubectl apply -f validate-credentials-spi-configmaps.yaml -n capitec
+
+# Verify ConfigMaps were applied and have data (data should NOT be zero)
+kubectl get configmap -n capitec | grep spi
+kubectl describe configmap generate-username-ui-register-spi -n capitec | head -20
+kubectl describe configmap validate-credential-spi -n capitec | head -20
+
+# Restart Keycloak to pick up the SPIs
+kubectl rollout restart deployment keycloak-idp -n capitec
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=keycloak -n capitec --timeout=300s
+
+# Get Keycloak admin password (save for appointment-server configuration)
+export KEYCLOAK_ADMIN_PASSWORD=$(kubectl get secret --namespace capitec keycloak-idp -o jsonpath="{.data.admin-password}" | base64 -d)
+echo "Keycloak Admin Password: $KEYCLOAK_ADMIN_PASSWORD"
+
+# Keycloak connection details (save these):
+# Host: keycloak-idp.capitec.svc.cluster.local
+# Port: 8080
+# Admin Username: admin (or as configured)
+# Admin Password: <value from above>
+# Realm: appointment-booking-DEV (create this in Keycloak UI)
+```
+
+---
+
+##### Step 4: Install Apache Kafka
+
+```bash
+# Navigate to helm directory
+cd deploy-operation/helm
+
+# Install Kafka
+# IMPORTANT: Note the release name (capitec-kafka) - used for broker connection
+helm upgrade --install capitec-kafka bitnami/kafka \
+  -n capitec \
+  -f kafka/values.yaml
+
+# Wait for Kafka to be ready (this may take a few minutes)
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kafka -n capitec --timeout=300s
+
+# Verify Kafka pods are running
+# Should see 3 controllers and 3 brokers (6 total replicas)
+kubectl get pods -n capitec | grep kafka
+
+# Kafka connection details (save these):
+# Bootstrap Servers: capitec-kafka-broker-0.capitec-kafka-broker-headless:9094,capitec-kafka-broker-1.capitec-kafka-broker-headless:9094,capitec-kafka-broker-2.capitec-kafka-broker-headless:9094
+```
+
+---
+
+##### Step 5: Install WireMock (External Service Mocks)
+
+WireMock provides mocks for external services (Branch Locator, Nager Holidays, Client Domain).
+
+```bash
+# Navigate to helm directory
+cd deploy-operation/helm
+
+# Apply WireMock ConfigMaps (mappings and responses)
+kubectl apply -f wiremock/configmap-mappings.yaml -n capitec
+kubectl apply -f wiremock/configmap-responses.yaml -n capitec
+
+# Install WireMock
+helm upgrade --install wiremock bitnami/wiremock \
+  -n capitec \
+  -f wiremock/values.yaml
+
+# Wait for WireMock to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=wiremock -n capitec --timeout=120s
+
+# Verify WireMock is running
+kubectl get pods -n capitec | grep wiremock
+
+# WireMock connection details:
+# Host: wiremock.capitec.svc.cluster.local
+# Port: 9021
+
+# To add custom mappings/responses, edit the ConfigMaps:
+# kubectl edit configmap wiremock-mappings -n capitec
+# kubectl edit configmap wiremock-responses -n capitec
+# Then restart WireMock: kubectl rollout restart deployment wiremock -n capitec
+```
+
+---
+
+##### Step 6: Install Appointment-Booking-Server
+
+Before installing, ensure all prerequisites are running:
+- ✅ PostgreSQL (Step 2)
+- ✅ Keycloak (Step 3)
+- ✅ Kafka (Step 4)
+- ✅ WireMock (Step 5)
+
+> **Note:** The `values.yaml` file has empty placeholders for sensitive data. You must fill in all required values before deployment.
+
+```bash
+# Navigate to helm directory
+cd deploy-operation/helm
+
+# Verify all dependencies are running
+kubectl get pods -n capitec
+
+# IMPORTANT: Update appointment-booking-server/values.yaml with your credentials
+# All sensitive values are empty placeholders that need to be configured:
+#
+# baseEnv:
+#   # Database (from Step 2)
+#   - name: DATABASE_HOST
+#     value: "capitec-db-postgresql"  # Your PostgreSQL release name
+#   - name: DATABASE_DATABASE
+#     value: "appointment_db"
+#   - name: DATABASE_USERNAME
+#     value: "appointment_user"
+#   - name: DATABASE_PASSWORD
+#     value: "<POSTGRES_PASSWORD from Step 2>"
+#
+#   # Keycloak (from Step 3)
+#   - name: AUTH_SERVER_TOKEN_URL
+#     value: "http://keycloak-idp.capitec.svc.cluster.local:8080/realms/<YOUR_REALM>/protocol/openid-connect/certs"
+#   - name: ISSUER_URI
+#     value: "http://keycloak-idp.capitec.svc.cluster.local:8080/realms/<YOUR_REALM>"
+#   - name: KEYCLOAK_REALM
+#     value: "<YOUR_REALM>"
+#   - name: KEYCLOAK_DOMAIN
+#     value: "keycloak-idp.capitec.svc.cluster.local:8080"
+#   - name: KEYCLOAK_AUTH_URL
+#     value: "http://keycloak-idp.capitec.svc.cluster.local:8080"
+#   - name: KEYCLOAK_ADMIN_CLIENT_ID
+#     value: "<YOUR_CLIENT_ID>"
+#   - name: KEYCLOAK_USERNAME
+#     value: "admin"
+#   - name: KEYCLOAK_PASSWORD
+#     value: "<KEYCLOAK_ADMIN_PASSWORD from Step 3>"
+#
+#   # Kafka (from Step 4)
+#   - name: BROKER_BOOTSTRAP_SERVERS
+#     value: "capitec-kafka-broker-0.capitec-kafka-broker-headless:9094,capitec-kafka-broker-1.capitec-kafka-broker-headless:9094,capitec-kafka-broker-2.capitec-kafka-broker-headless:9094"
+#
+#   # External Services
+#   - name: CLIENT_DOMAIN_BASE_URL
+#     value: "http://wiremock:9021"
+#   - name: HOLIDAYS_CLIENT_API
+#     value: "https://date.nager.at"
+#   - name: CAPITEC_BRANCH_LOCATOR_API
+#     value: "http://wiremock:9021/api/v1/branches"
+#
+#   # Email (configure your SMTP server)
+#   - name: MAIL_HOST
+#     value: "<YOUR_SMTP_HOST>"
+#   - name: MAIL_PORT
+#     value: "<YOUR_SMTP_PORT>"
+#   - name: MAIL_USERNAME
+#     value: "<YOUR_SMTP_USERNAME>"
+#   - name: MAIL_PASSWORD
+#     value: "<YOUR_SMTP_PASSWORD>"
+#
+#   # CORS (update for your frontend URLs)
+#   - name: CORS_ALLOWED_ORIGIN
+#     value: "http://localhost:3000,http://your-frontend-url"
+#
+# ingress:
+#   hosts:
+#     - host: "<YOUR_INGRESS_HOST>"  # e.g., appointment.your-domain.com
+
+# Install Appointment-Booking-Server
+helm upgrade --install appointment-booking-server ./appointment-booking-server \
+  -n capitec \
+  -f appointment-booking-server/values.yaml \
+  --set baseEnv[0].value="$POSTGRES_PASSWORD" \
+  --set baseEnv[1].value="$KEYCLOAK_ADMIN_PASSWORD"
+
+# Wait for application to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=appointment-booking-server -n capitec --timeout=300s
+
+# Verify application is running
+kubectl get pods -n capitec | grep appointment-booking
+
+# Check application logs
+kubectl logs -f deployment/appointment-booking-server -n capitec
+
+# Access the application
+minikube service appointment-booking-server -n capitec --url
+```
+
+---
+
+##### Step 7: Install Appointment-Booking-Web-Client (Optional)
+
+> **Note:** The web client has its own separate repository at:
+> **https://github.com/tswlun002/appointment-booking-web-client.git**
+
+You have two options to get the Docker image:
+
+**Option A: Pull from Docker Hub (Recommended)**
+
+```bash
+# Pull the latest web client image from Docker Hub
+docker pull capitec/appointment-booking-web-client:latest
+```
+
+**Option B: Build Locally from Source**
+
+```bash
+# Clone the web client repository
+git clone https://github.com/tswlun002/appointment-booking-web-client.git
+cd appointment-booking-web-client
+
+# Make Minikube see local Docker images
+eval $(minikube docker-env)
+
+# Build the Docker image locally
+docker build -t appointment-booking-web-client:latest .
+
+# Verify the image is available
+docker images | grep appointment-booking-web-client
+```
+
+**Install the Web Client:**
+
+```bash
+# Navigate to helm directory
+cd deploy-operation/helm
+
+# IMPORTANT: Update appointment-booking-web-client/values.yaml with your configuration
+# All sensitive values are empty placeholders that need to be configured:
+#
+# baseEnv:
+#   - name: VITE_API_BASE_URL
+#     value: "http://<YOUR_SERVER_INGRESS_HOST>"  # URL to appointment-booking-server
+#   - name: VITE_INTERNAL_BASE_URL
+#     value: "http://<YOUR_SERVER_INGRESS_HOST>"
+#   - name: VITE_REALM
+#     value: "<YOUR_KEYCLOAK_REALM>"
+#
+# ingress:
+#   hosts:
+#     - host: "<YOUR_CLIENT_INGRESS_HOST>"  # e.g., appointment.your-domain.com
+
+# Install the web client
+helm upgrade --install appointment-booking-web-client ./appointment-booking-web-client \
+  -n capitec \
+  -f appointment-booking-web-client/values.yaml
+
+# Wait for web client to be ready
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=appointment-booking-web-client -n capitec --timeout=120s
+
+# Verify web client is running
+kubectl get pods -n capitec | grep web-client
+
+# Access the web client
+minikube service appointment-booking-web-client -n capitec --url
+```
+
+---
+
+##### Quick Reference: All Connection Details
+
+| Service | Host | Port | Notes |
+|---------|------|------|-------|
+| PostgreSQL | `capitec-db-postgresql.capitec.svc.cluster.local` | 5432 | Database: `appointment_db` |
+| Keycloak | `keycloak-idp.capitec.svc.cluster.local` | 8080 | Realm: `<YOUR_REALM>` |
+| Kafka | `capitec-kafka-broker-headless` | 9094 | 3 brokers |
+| WireMock | `wiremock.capitec.svc.cluster.local` | 9021 | External service mocks |
+| App Server | `appointment-booking-server.capitec.svc.cluster.local` | 8083 | Main application |
+| Web Client | `appointment-booking-web-client.capitec.svc.cluster.local` | 3000 | Frontend (separate repo) |
+
+---
+
+##### Troubleshooting
+
+```bash
+# Check pod status
+kubectl get pods -n capitec
+
+# View logs for a specific pod
+kubectl logs -f <pod-name> -n capitec
+
+# Describe pod for events/errors
+kubectl describe pod <pod-name> -n capitec
+
+# Check services
+kubectl get svc -n capitec
+
+# Check ingress
+kubectl get ingress -n capitec
+
+# Restart a deployment
+kubectl rollout restart deployment <deployment-name> -n capitec
+
+# Delete and recreate Minikube (fresh start)
+minikube delete
+minikube start --memory=9735 --cpus=6
+
+# Port forward to access a service directly
+kubectl port-forward svc/appointment-booking-server 8083:8083 -n capitec
+kubectl port-forward svc/keycloak-idp 8080:8080 -n capitec
+```
+
+---
+
+##### Clean Up
+
+```bash
+# Uninstall all Helm releases
+helm uninstall appointment-booking-web-client -n capitec
+helm uninstall appointment-booking-server -n capitec
+helm uninstall wiremock -n capitec
+helm uninstall capitec-kafka -n capitec
+helm uninstall keycloak-idp -n capitec
+helm uninstall capitec-db -n capitec
+
+# Delete namespace (removes everything)
+kubectl delete namespace capitec
+
+# Stop Minikube
+minikube stop
+
+# Delete Minikube cluster
+minikube delete
 ```
 
 **Requirements for Minikube:**
 - Minikube installed (`brew install minikube` or [download](https://minikube.sigs.k8s.io/docs/start/))
 - kubectl installed
 - Helm installed
-- Minimum 4GB RAM allocated to Minikube
+- Minimum 10GB RAM and 6 CPUs allocated to Minikube (can scale down to 8GB/4CPU)
 
 ### Kubernetes Deployment
 

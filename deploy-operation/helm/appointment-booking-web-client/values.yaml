@@ -55,7 +55,7 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   hosts:
-    - host: appointment.client.local
+    - host: ""
       paths:
         - path: /
           pathType: Prefix
