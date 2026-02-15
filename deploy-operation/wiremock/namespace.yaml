@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: appointment-booking
-  labels:
-    name: appointment-booking
-    environment: demo

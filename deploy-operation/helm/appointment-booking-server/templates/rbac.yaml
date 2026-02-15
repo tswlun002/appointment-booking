@@ -1,0 +1,47 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: {{ include "appointment-booking-server.fullname" . }}-reader
+  labels:
+    {{- include "appointment-booking-server.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - "pods"
+      - "services"
+      - "endpoints"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups: ["apps"]
+    resources:
+      - "pods"
+      - "services"
+      - "endpoints"
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "appointment-booking-server.fullname" . }}-reader-binding
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "appointment-booking-server.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "appointment-booking-server.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+    apiGroup: ""
+roleRef:
+  kind: Role
+  name: {{ include "appointment-booking-server.fullname" . }}-reader
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

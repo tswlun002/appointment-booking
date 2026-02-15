@@ -1,0 +1,47 @@
+{{- if (or .Values.mappingsAsConfigmap .Values.mappingsFromConfigmap) -}}
+{{- $files := .Files }}
+{{- $root := . }}
+
+{{/* Get all unique subdirectories in mappings/ */}}
+{{- $subdirs := dict }}
+{{- range $path, $_ := $files.Glob "mappings/**/*.json" }}
+  {{- $relativePath := trimPrefix "mappings/" $path }}
+  {{- if contains "/" $relativePath }}
+    {{- $subdir := dir $relativePath | trimPrefix "mappings/" }}
+    {{- $_ := set $subdirs $subdir true }}
+  {{- end }}
+{{- end }}
+
+{{/* Create a ConfigMap for each subdirectory */}}
+{{- range $subdir, $_ := $subdirs }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wiremock.fullname" $root }}-mappings-{{ $subdir }}
+  labels:
+    {{- include "wiremock.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: mappings
+    wiremock.mapping.type: {{ $subdir }}
+data:
+  {{- range $path, $_ := $files.Glob (printf "mappings/%s/*.json" $subdir) }}
+  {{- $filename := base $path }}
+  {{ $filename }}: {{ $files.Get $path | quote }}
+  {{- end }}
+{{- end }}
+
+{{/* Optional: Include additional mappings from values.yaml */}}
+{{- with .Values.mappings }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wiremock.fullname" $root }}-mappings-custom
+  labels:
+    {{- include "wiremock.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: mappings
+    wiremock.mapping.type: custom
+data:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end -}}

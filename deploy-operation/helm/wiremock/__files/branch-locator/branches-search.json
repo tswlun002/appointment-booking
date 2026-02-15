@@ -1,0 +1,214 @@
+{
+  "branches": [
+    {
+      "id": "470010",
+      "code": "470010",
+      "name": "Rondebosch Main Road",
+      "addressLine1": "Shop 4, Main Road",
+      "latitude": -33.960553,
+      "longitude": 18.473562,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "TUESDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "THURSDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "FRIDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false },
+        "SUNDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "PUBLIC_HOLIDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true }
+      }
+    },
+    {
+      "id": "470020",
+      "code": "470020",
+      "name": "Claremont Cavendish",
+      "addressLine1": "Cavendish Square, Dreyer St",
+      "latitude": -33.981234,
+      "longitude": 18.465432,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "TUESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "THURSDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "FRIDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "17:00:00", "closed": false },
+        "SUNDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false },
+        "PUBLIC_HOLIDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false }
+      }
+    },
+    {
+      "id": "470030",
+      "code": "470030",
+      "name": "Wynberg Main Road",
+      "addressLine1": "Corner Main and Church Rd",
+      "latitude": -34.0021,
+      "longitude": 18.4712,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "TUESDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "THURSDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "FRIDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "SATURDAY": { "openAt": "08:30:00", "closeAt": "13:00:00", "closed": false },
+        "SUNDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "PUBLIC_HOLIDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true }
+      }
+    },
+    {
+      "id": "470040",
+      "code": "470040",
+      "name": "Mowbray Service Centre",
+      "addressLine1": "62 Main Road, Mowbray",
+      "latitude": -33.9431,
+      "longitude": 18.4682,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "TUESDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "THURSDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "FRIDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false },
+        "SUNDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "PUBLIC_HOLIDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true }
+      }
+    },
+    {
+      "id": "470050",
+      "code": "470050",
+      "name": "Kenilworth Centre",
+      "addressLine1": "Kenilworth Centre, Doncaster Rd",
+      "latitude": -33.9915,
+      "longitude": 18.4756,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "TUESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "THURSDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "FRIDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "17:00:00", "closed": false },
+        "SUNDAY": { "openAt": "09:00:00", "closeAt": "14:00:00", "closed": false },
+        "PUBLIC_HOLIDAY": { "openAt": "09:00:00", "closeAt": "14:00:00", "closed": false }
+      }
+    },
+    {
+      "id": "470060",
+      "code": "470060",
+      "name": "Blue Route Mall",
+      "addressLine1": "Shop G52, Blue Route Mall",
+      "latitude": -34.0254,
+      "longitude": 18.4523,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "TUESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "THURSDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "FRIDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "17:00:00", "closed": false },
+        "SUNDAY": { "openAt": "09:00:00", "closeAt": "15:00:00", "closed": false },
+        "PUBLIC_HOLIDAY": { "openAt": "09:00:00", "closeAt": "15:00:00", "closed": false }
+      }
+    },
+    {
+      "id": "470070",
+      "code": "470070",
+      "name": "Muizenberg Checkers Centre",
+      "addressLine1": "Checkers Centre, Main Road",
+      "latitude": -34.0452,
+      "longitude": 18.4688,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "TUESDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "THURSDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "FRIDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false },
+        "SUNDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "PUBLIC_HOLIDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true }
+      }
+    },
+    {
+      "id": "470080",
+      "code": "470080",
+      "name": "Plumstead Main",
+      "addressLine1": "142 Main Road, Plumstead",
+      "latitude": -34.0182,
+      "longitude": 18.4954,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "TUESDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "THURSDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "FRIDAY": { "openAt": "08:00:00", "closeAt": "17:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false },
+        "SUNDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "PUBLIC_HOLIDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true }
+      }
+    },
+    {
+      "id": "470090",
+      "code": "470090",
+      "name": "Newlands Cricket",
+      "addressLine1": "Cricket Ground, Campground Rd",
+      "latitude": -33.9555,
+      "longitude": 18.4855,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "TUESDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "THURSDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "FRIDAY": { "openAt": "08:30:00", "closeAt": "17:00:00", "closed": false },
+        "SATURDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "SUNDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true },
+        "PUBLIC_HOLIDAY": { "openAt": "00:00:00", "closeAt": "00:00:00", "closed": true }
+      }
+    },
+    {
+      "id": "470100",
+      "code": "470100",
+      "name": "Constantia Village",
+      "addressLine1": "Constantia Village, Spaanschemat River Rd",
+      "latitude": -34.0321,
+      "longitude": 18.4354,
+      "city": "Cape Town",
+      "province": "Western Cape",
+      "isClosed": false,
+      "operationhours": {
+        "MONDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "TUESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "WEDNESDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "THURSDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "FRIDAY": { "openAt": "09:00:00", "closeAt": "18:00:00", "closed": false },
+        "SATURDAY": { "openAt": "09:00:00", "closeAt": "15:00:00", "closed": false },
+        "SUNDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false },
+        "PUBLIC_HOLIDAY": { "openAt": "09:00:00", "closeAt": "13:00:00", "closed": false }
+      }
+    }
+  ]
+}

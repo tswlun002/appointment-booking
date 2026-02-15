@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appointment-booking-server-deploy
+  labels:
+    app: appointment-booking-server-deploy
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: appointment-booking-server
+      app.kubernetes.io/name: appointment-booking-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: appointment-booking-server
+        app.kubernetes.io/name: appointment-booking-server
+    spec:
+      containers:
+        - name: springboot-app
+          image: springio/gs-spring-boot-docker:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: JAVA_OPS
+              value: "-Xms256m -Xmx512m"
+
