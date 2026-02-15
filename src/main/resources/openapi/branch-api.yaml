@@ -455,20 +455,69 @@ components:
 
     BranchListResponse:
       type: object
-      description: Response containing list of branches
+      description: Response containing list of branches with pagination
       required:
         - branches
-        - totalCount
+        - pagination
       properties:
         branches:
           type: array
           description: List of branches
           items:
             $ref: '#/components/schemas/BranchResponse'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      description: Pagination metadata for paginated responses
+      required:
+        - totalCount
+        - page
+        - limit
+        - totalPages
+        - hasNext
+        - hasPrevious
+        - isFirstPage
+        - isLastPage
+      properties:
         totalCount:
           type: integer
-          description: Total number of branches
-          example: 10
+          minimum: 0
+          description: Total number of items across all pages
+          example: 125
+        page:
+          type: integer
+          minimum: 0
+          description: Current page number (0-based, calculated from offset/limit)
+          example: 0
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of items per page
+          example: 20
+        totalPages:
+          type: integer
+          minimum: 0
+          description: Total number of pages
+          example: 7
+        hasNext:
+          type: boolean
+          description: Whether there is a next page
+          example: true
+        hasPrevious:
+          type: boolean
+          description: Whether there is a previous page
+          example: false
+        isFirstPage:
+          type: boolean
+          description: Whether this is the first page
+          example: true
+        isLastPage:
+          type: boolean
+          description: Whether this is the last page
+          example: false
 
     ErrorResponse:
       type: object

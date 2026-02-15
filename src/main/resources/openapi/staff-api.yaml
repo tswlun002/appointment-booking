@@ -89,7 +89,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/StaffListResponse'
+                $ref: '#/components/schemas/StaffUsernamesResponse'
         '400':
           description: Invalid request parameters
           content:
@@ -216,22 +216,12 @@ components:
           description: Branch identifier
           example: "470010"
 
-    StaffListResponse:
-      type: object
-      description: Response containing list of staff usernames
-      required:
-        - usernames
-        - pagination
-      properties:
-        usernames:
-          type: array
-          description: List of staff usernames
-          items:
-            type: string
-          example: ["john.doe123", "jane.smith456"]
-        pagination:
-          type: object
-          $ref: '#/components/schemas/Pagination'
+    StaffUsernamesResponse:
+      type: array
+      description: List of staff usernames (max 20 per branch, no pagination needed)
+      items:
+        type: string
+      example: ["john.doe123", "jane.smith456"]
 
     StaffStatus:
       type: string
@@ -241,26 +231,7 @@ components:
         - WORKING
         - LEAVE
       example: WORKING
-    Pagination:
-      properties:
-        totalCount:
-          type: integer
-          description: Total number of appointments
-          example: 5
-        page:
-          type: integer
-        size:
-          type: integer
-        totalPages:
-          type: integer
-        hasNext:
-          type: boolean
-        hasPrevious:
-          type: boolean
-        isFirstPage:
-          type: boolean
-        isLastPage:
-          type: boolean
+
     ErrorResponse:
       type: object
       description: Standard error response
