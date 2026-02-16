@@ -108,9 +108,10 @@ public class NoShowBatchUseCase {
      */
     @Scheduled(cron = "${appointment.unattended.cron:0 5 6-18 * * *}", zone = "Africa/Johannesburg") // Every 1hour 5minutes
     public void processNoShowsForPreviousDay() {
-        log.info("Starting no-show batch processing for previous day");
 
         LocalDate previousDay = LocalDate.now().minusDays(markNoSinceInDays);
+        log.info("Starting no-show batch processing for from  day: {}",  previousDay);
+
         LocalDateTime processingTime = LocalDateTime.now();
 
         UUID lastProcessedId = null;
@@ -144,9 +145,11 @@ public class NoShowBatchUseCase {
 
         return transactionTemplate.execute(status -> {
             try {
+
                 Collection<Appointment> candidates = appointmentService.getUnAttendedAppointments(
                         appointmentDate, lastProcessedId, BATCH_SIZE
                 );
+
 
                 if (candidates.isEmpty()) {
                     return Collections.emptyList();

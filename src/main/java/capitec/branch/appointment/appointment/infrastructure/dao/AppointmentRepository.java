@@ -79,33 +79,34 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
 
     @Query("""
             SELECT 
-            id,
-            slot_id,
-            branch_id,
-            customer_username,
-            service_type,
-            status,
-            reference,
-            date_time,
-            version,
-            created_at,
-            updated_at,
-            checked_in_at,
-            in_progress_at,
-            completed_at,
-            terminated_at,
-            terminated_by,
-            termination_reason,
-            termination_notes,
-            assigned_consultant_id,
-            service_notes,
-            previous_slot_id,
-            reschedule_count
-            FROM appointment
-            WHERE DATE(date_time) = :appointmentDate
-              AND status IN ('BOOKED', 'CHECKED_IN')
-              AND (CAST(:lastProcessedId AS UUID) IS NULL OR id > :lastProcessedId)
-            ORDER BY id ASC
+            a.id,
+            a.slot_id,
+            a.branch_id,
+            a.customer_username,
+            a.service_type,
+            a.status,
+            a.reference,
+            a.date_time,
+            a.version,
+            a.created_at,
+            a.updated_at,
+            a.checked_in_at,
+            a.in_progress_at,
+            a.completed_at,
+            a.terminated_at,
+            a.terminated_by,
+            a.termination_reason,
+            a.termination_notes,
+            a.assigned_consultant_id,
+            a.service_notes,
+            a.previous_slot_id,
+            a.reschedule_count
+            FROM appointment AS a INNER JOIN  slot AS s ON s.id = a.slot_id
+                AND a.status IN ('BOOKED', 'CHECKED_IN')
+                AND ( s.day + s.end_time) < NOW()
+                AND DATE(a.date_time) >= :appointmentDate
+                AND (CAST(:lastProcessedId AS UUID) IS NULL OR a.id > :lastProcessedId)
+            ORDER BY a.id ASC
             LIMIT :limit
         
         """)
