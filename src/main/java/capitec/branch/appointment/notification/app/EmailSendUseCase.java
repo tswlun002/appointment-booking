@@ -50,13 +50,21 @@ public class EmailSendUseCase {
 
     @EventListener(OTPEmail.class)
     public void sendOTPEmail(@Valid OTPEmail event) throws MailSenderException {
-        log.info("Sending OTP email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
+        try {
+            log.debug("Event:{}", event);
 
-        String subject = getSubject(event.eventType());
-        String body = buildEmailBody(event.eventType(), event.fullname(), event.OTPCode());
-        notificationService.sendEmail(hostEmail, Set.of(event.email()), subject, body, event.traceId());
+            log.info("Sending OTP email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
-        log.info("OTP email sent successfully. traceId: {}", event.traceId());
+            String subject = getSubject(event.eventType());
+            String body = buildEmailBody(event.eventType(), event.fullname(), event.OTPCode());
+            log.debug("Body:{}", body);
+            notificationService.sendEmail(hostEmail, Set.of(event.email()), subject, body, event.traceId());
+
+            log.info("OTP email sent successfully. traceId: {}", event.traceId());
+        }catch (Exception e) {
+            log.error("Error sending OTP email. traceId: {}", event.traceId(), e);
+            throw e;
+        }
     }
 
     @EventListener(ConfirmationEmail.class)

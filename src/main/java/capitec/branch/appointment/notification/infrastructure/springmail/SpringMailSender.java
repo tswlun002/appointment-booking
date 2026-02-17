@@ -38,7 +38,7 @@ public class SpringMailSender implements NotificationService {
             @NotBlank String emailTemplate,
             @NotBlank String traceId) throws MailSenderException {
 
-        log.debug("Sending email. subject: {}, recipients: {}, traceId: {}", subject, recipients.size(), traceId);
+        log.info("Sending email. subject: {}, recipients: {}, traceId: {}", subject, recipients.size(), traceId);
 
         try {
             MimeMessage message = createMimeMessage(hostEmail, recipients, subject, emailTemplate);
