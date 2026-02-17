@@ -140,6 +140,130 @@ The application follows **Domain-Driven Design (DDD)** principles with clearly s
 - **Apache Kafka** - Event streaming
 - **Spring Mail** - Email notifications
 
+### Kafka Event Strategy
+
+The application uses Apache Kafka for reliable event-driven communication. This section documents the current strategy and planned improvements.
+
+#### Event Flow Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           PRODUCER SIDE                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  App → KafkaEventPublisher → Kafka                                          │
+│              │                  │                                           │
+│              │ (on failure)     │ (success)                                 │
+│              ▼                  ▼                                           │
+│        DeadLetterImpl      Message delivered                                │
+│              │                                                              │
+│              ▼                                                              │
+│         Database                                                            │
+│    (user_dead_letter_event)                                                 │
+│              │                                                              │
+│              ▼                                                              │
+│  RetryEventPublisherScheduler                                               │
+│         (re-publish)                                                        │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CONSUMER SIDE                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Kafka → @KafkaListener → Business Logic                                    │
+│              │                   │                                          │
+│              │                   │ (on failure)                             │
+│              │                   ▼                                          │
+│              │           DefaultErrorHandler                                │
+│              │                   │                                          │
+│              │                   │ (retries exhausted)                      │
+│              │                   ▼                                          │
+│              │      DeadLetterPublishingRecoverer                           │
+│              │                   │                                          │
+│              │        ┌──────────┴──────────┐                               │
+│              │        │                     │                               │
+│              │   isRetryable?          !isRetryable                         │
+│              │        │                     │                               │
+│              │        ▼                     ▼                               │
+│              │   topic.retry            topic.DLT                           │
+│              │        │                     │                               │
+│              │        ▼                     ▼                               │
+│              │  Recovery Listener      Dead Letter                          │
+│              │   (reprocesses)         (investigation)                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Error Handling Strategy
+
+| Scenario | Strategy | Outcome |
+|----------|----------|---------|
+| **Producer fails to send** | Save to DB via `DeadLetterImpl` | Scheduler retries later |
+| **Consumer processing fails (retryable)** | Retry with backoff → `.retry` topic | Recovery listener reprocesses |
+| **Consumer processing fails (non-retryable)** | Send to `.DLT` topic | Manual investigation |
+| **DLT publish fails** | Fail fast, don't acknowledge | Consumer retries same message |
+
+#### Exception Classification
+
+**Retryable Exceptions** (will be retried):
+- `SocketException`, `ConnectException`, `TimeoutException`
+- `NotEnoughReplicasException`, `TransactionTimedOutException`
+- `MailSenderException` (email server temporarily down)
+
+**Non-Retryable Exceptions** (go directly to DLT):
+- `DeserializationException`, `ClassCastException`
+- `NullPointerException`, `IllegalArgumentException`
+- `ValidateException`
+
+#### Topic Naming Convention
+
+| Original Topic | Retry Topic | Dead Letter Topic |
+|----------------|-------------|-------------------|
+| `registration-event` | `registration-event.retry` | `registration-event.DLT` |
+| `appointment-booked` | `appointment-booked.retry` | `appointment-booked.DLT` |
+
+#### Polymorphic Serialization
+
+Events use Jackson `@JsonTypeInfo` annotations for polymorphic serialization:
+
+```java
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@eventType")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = OriginEventValue.class, name = "OriginEventValue"),
+    @JsonSubTypes.Type(value = EventError.class, name = "EventError")
+})
+public sealed interface EventValue<K,T> { ... }
+```
+
+**Key Configuration:**
+- Producer: `setAddTypeInfo(false)` - Relies on `@JsonTypeInfo` annotations
+- Consumer: `setUseTypeHeaders(false)` - Reads type from JSON payload, not headers
+
+#### Future Improvements
+
+| Enhancement | Description | Priority |
+|-------------|-------------|----------|
+| **Database Fallback for Consumer DLT** | When Kafka DLT publish fails, save to database as fallback. Requires `FailureSource` enum to distinguish producer vs consumer failures. | High |
+| **Consumer Dead Letter Reprocessing** | Add scheduler to reprocess consumer failures from database (different from producer retry which re-publishes). | Medium |
+| **Idempotency Keys** | Add idempotency tracking to prevent duplicate processing on retry. | Medium |
+| **Event Schema Registry** | Use Confluent Schema Registry for schema evolution and compatibility. | Low |
+| **Distributed Tracing** | Add trace IDs to Kafka headers for end-to-end observability. | Medium |
+
+**Proposed Database Fallback Flow:**
+```
+Consumer DLT publish fails
+         │
+         ▼
+Save to DB with failureSource=CONSUMER
+         │
+         ▼
+Consumer Retry Scheduler (separate from producer scheduler)
+         │
+         ▼
+Reprocess (not re-publish) the event
+```
+
 ### Authentication
 - **Keycloak 26.0.5** - Identity and access management
 - **OAuth2 Resource Server** - JWT validation
