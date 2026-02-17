@@ -170,6 +170,7 @@ logging:
     org.keycloak: ${KEYCLOAK_LOGGING_LEVEL:INFO}
     org.springframework.kafka: ${KAFKA_LOGGING_LEVEL:INFO}
     org.apache.kafka: ${KAFKA_LOGGING_LEVEL:INFO}
+    org.springframework.mail: ${MAIL_LOG_LEVEL:INFO}
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{traceId}] - %msg%n"
