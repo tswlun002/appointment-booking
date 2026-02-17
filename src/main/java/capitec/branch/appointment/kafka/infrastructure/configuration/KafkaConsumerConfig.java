@@ -1,5 +1,6 @@
 package capitec.branch.appointment.kafka.infrastructure.configuration;
 
+import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.sharekernel.EventToJSONMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +64,7 @@ public class KafkaConsumerConfig<K extends  Serializable,V extends Serializable>
         props.putAll(consumerConfigs());
 
         // Use shared ObjectMapper that respects @JsonTypeInfo annotations on EventValue and MetaData
-        JsonDeserializer<V> valueDeserializer = new JsonDeserializer<>(EventToJSONMapper.getMapper());
+        JsonDeserializer<EventValue<K,V>> valueDeserializer = new JsonDeserializer<>(EventValue.class,EventToJSONMapper.getMapper());
 
         // Trust packages for polymorphic deserialization
         String[] trustedPackages = consumerProperties.getAllowedPackages().split(",");
@@ -75,10 +76,10 @@ public class KafkaConsumerConfig<K extends  Serializable,V extends Serializable>
         // Wrap with ErrorHandlingDeserializer if bypass is enabled
         Deserializer<K> kDeserializer = (Deserializer<K>) new StringDeserializer();
         if (consumerProperties.getBypassUnserializedMessages()) {
-            ErrorHandlingDeserializer<V> errorHandlingDeserializer = new ErrorHandlingDeserializer<>(valueDeserializer);
-            return new DefaultKafkaConsumerFactory<>(props, kDeserializer, errorHandlingDeserializer);
+            ErrorHandlingDeserializer<EventValue<K,V>> errorHandlingDeserializer = new ErrorHandlingDeserializer<>(valueDeserializer);
+            return (ConsumerFactory<K, V>) new DefaultKafkaConsumerFactory<>(props, kDeserializer, errorHandlingDeserializer);
         }
 
-        return new DefaultKafkaConsumerFactory<>(props, kDeserializer, valueDeserializer);
+        return (ConsumerFactory<K, V>) new DefaultKafkaConsumerFactory<>(props, kDeserializer, valueDeserializer);
     }
 }
