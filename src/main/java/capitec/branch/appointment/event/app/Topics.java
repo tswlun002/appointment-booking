@@ -17,21 +17,21 @@ public class Topics {
     public static String OTPEmailPattern() {
 
         return ("(" + REGISTRATION_EVENT + "|" + DELETE_USER_ACCOUNT_REQUEST_EVENT + "|"
-                + PASSWORD_RESET_REQUEST_EVENT + ")(\\.retry)?");
+                + PASSWORD_RESET_REQUEST_EVENT + ")\\.retry");
     }
 
     public static String confirmationEmailPattern() {
 
         return ("(" + COMPLETE_REGISTRATION_EVENT + "|" + DELETE_USER_ACCOUNT_EVENT + "|"
-                + PASSWORD_UPDATED_EVENT + ")(\\.retry)?");
+                + PASSWORD_UPDATED_EVENT + ")\\.retry");
     }
 
     public static String bookedAppointmentPattern() {
 
-        return ("(" + APPOINTMENT_RESCHEDULED + "|" + APPOINTMENT_BOOKED + ")(\\.retry)?");
+        return ("(" + APPOINTMENT_RESCHEDULED + "|" + APPOINTMENT_BOOKED + ")\\.retry");
     }
     public static String appointmentUpdatesPattern() {
 
-        return ("(" + APPOINTMENT_CANCELED + "|" + ATTENDED_APPOINTMENT + ")(\\.retry)?");
+        return ("(" + APPOINTMENT_CANCELED + "|" + ATTENDED_APPOINTMENT + ")\\.retry");
     }
 }
