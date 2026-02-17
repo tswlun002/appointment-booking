@@ -1,13 +1,14 @@
 package capitec.branch.appointment.sharekernel.event.metadata;
 
 import capitec.branch.appointment.utils.CustomerEmail;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.util.Assert;
 
 import java.io.Serializable;
 
-
-public  record OTPMetadata(
+@JsonTypeName("OTPMetadata")
+public record OTPMetadata(
 
         @NotBlank(message = "Event name is required")
         String fullname,
@@ -19,13 +20,11 @@ public  record OTPMetadata(
         String otpCode
 ) implements MetaData, Serializable {
 
-    public  OTPMetadata {
+    public OTPMetadata {
         Assert.hasText(fullname, "Fullname is required");
         Assert.hasText(username, "Fullname is required");
         Assert.hasText(email, "Email is required");
         Assert.hasText(otpCode, "OtpCode is required");
     }
-
-
 
 }

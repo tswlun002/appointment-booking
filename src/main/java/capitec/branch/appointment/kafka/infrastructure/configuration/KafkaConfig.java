@@ -1,15 +1,8 @@
 package capitec.branch.appointment.kafka.infrastructure.configuration;
 
-
-
-
-
-
 import capitec.branch.appointment.kafka.domain.EventValue;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.*;
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.ConsumerProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -28,7 +21,6 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.*;
 import org.springframework.kafka.support.ExponentialBackOffWithMaxRetries;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.util.backoff.BackOff;
 import org.springframework.util.backoff.FixedBackOff;
 
@@ -202,15 +194,6 @@ public class KafkaConfig<K extends Serializable, V extends Serializable> {
         }
     }
 
-    @Primary
-    @Bean
-    public JsonSerializer<Object> jsonSerializer() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        JsonSerializer<Object> serializer = new JsonSerializer<>(objectMapper);
-        serializer.setAddTypeInfo(false);
-        return serializer;
-    }
 
     protected EventValue<K,V> getAnonymousDefaultErrorValue(ConsumerRecord< K , EventValue<K,V>> results, EventValue<K,V> event, Throwable throwable, boolean isRetryable) {
 

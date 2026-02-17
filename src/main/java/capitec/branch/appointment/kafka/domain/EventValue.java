@@ -1,9 +1,24 @@
 package capitec.branch.appointment.kafka.domain;
 
+import capitec.branch.appointment.sharekernel.event.metadata.AppointmentMetadata;
+import capitec.branch.appointment.sharekernel.event.metadata.OTPMetadata;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public sealed interface EventValue<K,T> extends  Serializable{
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.NAME,
+        include = JsonTypeInfo.As.PROPERTY,
+        property = "@eventType"
+)
+@JsonSubTypes({
+        @JsonSubTypes.Type(value = EventValue.OriginEventValue.class, name = "OriginEventValue"),
+        @JsonSubTypes.Type(value = EventValue.EventError.class, name = "EventError")
+})
+public sealed interface EventValue<K,T> extends Serializable {
 
 
     boolean isError();
@@ -17,8 +32,14 @@ public sealed interface EventValue<K,T> extends  Serializable{
     default String source() { return "unknown"; }
     default String eventType() { return EventValue.class.getSimpleName(); }
 
+    @JsonTypeName("OriginEventValue")
     record OriginEventValue<K,T>(
             K key,
+            @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
+            @JsonSubTypes({
+                    @JsonSubTypes.Type(value = OTPMetadata.class, name = "OTPMetadata"),
+                    @JsonSubTypes.Type(value = AppointmentMetadata.class, name = "AppointmentMetadata")
+            })
             T value,
             String traceId,
             String topic,
@@ -45,10 +66,16 @@ public sealed interface EventValue<K,T> extends  Serializable{
         }
     }
 
+    @JsonTypeName("EventError")
     record EventError<K,T> (
 
             //original values
             K key,
+            @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
+            @JsonSubTypes({
+                    @JsonSubTypes.Type(value = OTPMetadata.class, name = "OTPMetadata"),
+                    @JsonSubTypes.Type(value = AppointmentMetadata.class, name = "AppointmentMetadata")
+            })
             T value,
             String traceId,
             String topic,

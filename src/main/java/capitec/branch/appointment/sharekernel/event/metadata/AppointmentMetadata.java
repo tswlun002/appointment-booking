@@ -1,5 +1,6 @@
 package capitec.branch.appointment.sharekernel.event.metadata;
 
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.util.Assert;
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
 
-
+@JsonTypeName("AppointmentMetadata")
 public record AppointmentMetadata(
         @NotNull(message = "AppointmentId is required")
         UUID id,
