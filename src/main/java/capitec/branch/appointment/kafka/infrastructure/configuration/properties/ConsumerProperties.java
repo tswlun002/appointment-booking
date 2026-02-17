@@ -60,13 +60,13 @@ public class ConsumerProperties {
     private Set<Class<? extends Exception>> retryableExceptions=Set.of(
             SocketException.class, TransactionTimedOutException.class,
             ConnectException.class, UnknownHostException.class, IOException.class,
-            TimeoutException.class, NotEnoughReplicasException.class, DeserializationException.class,
+            TimeoutException.class, NotEnoughReplicasException.class,
             MailSenderException.class
 
     );
 
     private List<Class<? extends Exception>> noneRetryableExceptions=List.of(
-          NullPointerException.class, ValidateException.class
+          NullPointerException.class, ValidateException.class,DeserializationException.class, ClassCastException.class
     );
 
     private Boolean seekAfterError=false;

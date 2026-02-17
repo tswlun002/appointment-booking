@@ -89,7 +89,6 @@ kafka:
       - org.apache.kafka.common.errors.TimeoutException
       - org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException
       - org.apache.kafka.common.errors.NotEnoughReplicasException
-      - org.springframework.kafka.support.serializer.DeserializationException
       - jakarta.mail.MessagingException
     event-publisher-default-impl:
       enabled: true

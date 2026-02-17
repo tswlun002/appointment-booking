@@ -5,7 +5,6 @@ import capitec.branch.appointment.kafka.infrastructure.configuration.properties.
 import capitec.branch.appointment.kafka.infrastructure.configuration.properties.ConsumerProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
@@ -54,6 +53,10 @@ public class KafkaConfig<K extends Serializable, V extends Serializable> {
         this.producerFactory = producerFactory;
         this.securityProperties = securityProperties;
         this.applicationEventPublisher = applicationEventPublisher;
+
+        // Uses both consumer and producer exception lists because this is a monolith
+        // where the same application acts as both producer and consumer.
+        // Example: OTP verification flow produces "verified" event and consumes it to update OTP status.
         isRetryable = exception -> isInstanceOfRetryableExceptions().apply(exception, consumerProperties.getRetryableExceptions()) ||
                 isInstanceOfRetryableExceptions().apply(exception, producerProperties.getRetryableExceptions());
     }
@@ -130,7 +133,9 @@ public class KafkaConfig<K extends Serializable, V extends Serializable> {
     }
 
 
-    @Bean(name = "applicationEventPublishingErrorHandler")
+  /*
+    Do other buiness logic when error happen, this can help to failing dead letter on app
+   @Bean(name = "applicationEventPublishingErrorHandler")
     public DefaultErrorHandler applicationEventPublishingErrorHandler() {
 
         BackOff backOff = getBackOff();
@@ -143,47 +148,58 @@ public class KafkaConfig<K extends Serializable, V extends Serializable> {
         consumerProperties.getNoneRetryableExceptions().forEach(defaultErrorHandler::addNotRetryableExceptions);
 
         return defaultErrorHandler;
-    }
+    }*/
 
     @Bean
     @Primary
     public DeadLetterPublishingRecoverer createRecordRecover() {
 
-        return new DeadLetterPublishingRecoverer(kafkaTemplate(),
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate(),
                 (r, e) -> {
-                    log.info("Exception in the recovery: {}", e.getMessage(), e);
+                    log.warn("Exception in the recovery: {}", e.getMessage(), e);
 
                     if (isRetryable.test(e)) {
 
-                        log.info("Recoverable exception in the recovery: {}", e.getMessage(), e);
-                        return new TopicPartition(r.topic()+".retry", r.partition());
+                        log.warn("Recoverable exception in the recovery: {}", e.getMessage(), e);
+                        return new TopicPartition(r.topic()+".retry", 0);
 
                     } else {
 
-                        log.info("Non recoverable exception in the recovery: {}", e.getMessage(), e);
-                        return new TopicPartition(r.topic()+".DLT", r.partition());
+                        log.error("Non recoverable exception in the recovery: {}", e.getMessage(), e);
+                        return new TopicPartition(r.topic()+".DLT", 0);
                     }
                 });
+
+        // Configure recoverer to fail fast if send fails
+        // This will throw exception, message won't be acknowledged, consumer will retry
+        // Future improvement: Add database fallback for catastrophic Kafka failures
+        recoverer.setFailIfSendResultIsError(true);
+        recoverer.setThrowIfNoDestinationReturned(true);
+
+        return recoverer;
     }
 
+
+    /*
+     * Alternative recovery that publishes Spring ApplicationEvent instead of Kafka DLT.
+     * Commented out - use deadLetterErrorHandler with DeadLetterPublishingRecoverer instead.
+     *
     private void createRecordRecover(ConsumerRecord<K, EventValue<K,V>> record, Exception exception) {
-
-
 
         try {
 
-            log.info("Exception in the recovery: {}", exception.getMessage(), exception);
+            log.warn("Exception in the recovery: {}", exception.getMessage(), exception);
 
             if (isRetryable.test(exception)) {
 
-                log.info("Recoverable exception in the recovery: {}", exception.getMessage(), exception);
+                log.warn("Recoverable exception in the recovery: {}", exception.getMessage(), exception);
 
                 var event = getAnonymousDefaultErrorValue(record,record.value(),exception,true);
                 applicationEventPublisher.publishEvent(event);
 
             } else {
 
-                log.info("Non recoverable exception in the recovery: {}", exception.getMessage(), exception);
+                log.error("Non recoverable exception in the recovery: {}", exception.getMessage(), exception);
                 var event = getAnonymousDefaultErrorValue(record,record.value(),exception,false);
                 applicationEventPublisher.publishEvent(event);
             }
@@ -198,10 +214,11 @@ public class KafkaConfig<K extends Serializable, V extends Serializable> {
     protected EventValue<K,V> getAnonymousDefaultErrorValue(ConsumerRecord< K , EventValue<K,V>> results, EventValue<K,V> event, Throwable throwable, boolean isRetryable) {
 
         Throwable cause = throwable.getCause();
-        String exception = cause != null ? throwable.getMessage() : throwable.getMessage();
-        var causeClass= cause != null ? throwable.getClass().getName() :exception.getClass().toString();
-        String stackTrace = throwable.getStackTrace()!=null&&throwable.getStackTrace().length!=0 ? Arrays.toString(throwable.getStackTrace()) :
-                throwable.fillInStackTrace().toString();
+        String exceptionMessage = cause != null ? cause.getMessage() : throwable.getMessage();
+        String causeClass = cause != null ? cause.getClass().getName() : throwable.getClass().getName();
+        String stackTrace = throwable.getStackTrace() != null && throwable.getStackTrace().length != 0
+                ? Arrays.toString(throwable.getStackTrace())
+                : throwable.fillInStackTrace().toString();
 
         return new EventValue.EventError<K,V>(
                 event.key(),
@@ -212,12 +229,14 @@ public class KafkaConfig<K extends Serializable, V extends Serializable> {
                 event.publishTime(),
                 (long)results.partition(),
                 results.offset(),
-                exception,
+                exceptionMessage,
                 throwable.getClass().getName(),
-                causeClass,stackTrace,
+                causeClass,
+                stackTrace,
                 isRetryable
         );
     }
+    */
 
     private BackOff getBackOff() {
 
