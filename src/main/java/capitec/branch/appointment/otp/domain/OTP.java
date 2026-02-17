@@ -110,7 +110,18 @@ public class OTP {
 
 
     private static long calculate(LocalDateTime creationDate, LocalDateTime expiresDate, ChronoUnit units) {
-       return Duration.between(creationDate, expiresDate).get(units);
+        Duration duration = Duration.between(creationDate, expiresDate);
+        return switch (units) {
+            case NANOS -> duration.toNanos();
+            case MICROS -> duration.toNanos() / 1000;
+            case MILLIS -> duration.toMillis();
+            case SECONDS -> duration.toSeconds();
+            case MINUTES -> duration.toMinutes();
+            case HOURS -> duration.toHours();
+            case HALF_DAYS -> duration.toHours() / 12;
+            case DAYS -> duration.toDays();
+            default -> throw new InternalError("Unsupported unit: " + units);
+        };
     }
     public void renewOTP() {
 
