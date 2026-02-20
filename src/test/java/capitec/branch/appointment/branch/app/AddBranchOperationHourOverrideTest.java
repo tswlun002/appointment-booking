@@ -1,5 +1,6 @@
 package capitec.branch.appointment.branch.app;
 
+import capitec.branch.appointment.branch.app.port.BranchQueryPort;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
 import jakarta.validation.ConstraintViolationException;
@@ -22,7 +23,7 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
     @Autowired
     private AddBranchUseCase addBranchUseCase;
     @Autowired
-    private GetBranchQuery getBranchByIdQuery;
+    private BranchQueryPort branchQueryPort1;
     @Autowired
     private AddBranchOperationHourOverride addBranchOperationHourOverride;
 
@@ -54,7 +55,7 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
         // ASSERT
         assertThat(isAdded).isTrue();
 
-        Branch branch = getBranchByIdQuery.execute(branchId);
+        Branch branch = branchQueryPort1.findByBranchId(branchId).get();
         List<OperationHoursOverride> overrides = branch.getOperationHoursOverride();
 
         assertThat(overrides).hasSize(1);
@@ -86,7 +87,7 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
         addBranchOperationHourOverride.execute(branchId, secondOverride);
 
         // ASSERT
-        Branch branch = getBranchByIdQuery.execute(branchId);
+        Branch branch = branchQueryPort1.findByBranchId(branchId).get();
         List<OperationHoursOverride> overrides = branch.getOperationHoursOverride();
 
         assertThat(overrides).hasSize(1);
@@ -225,7 +226,7 @@ class AddBranchOperationHourOverrideTest extends BranchTestBase {
         addBranchOperationHourOverride.execute(branchId, override2);
 
         // ASSERT
-        Branch branch = getBranchByIdQuery.execute(branchId);
+        Branch branch = branchQueryPort1.findByBranchId(branchId).get();
         List<OperationHoursOverride> overrides = branch.getOperationHoursOverride();
 
         assertThat(overrides).hasSize(2);

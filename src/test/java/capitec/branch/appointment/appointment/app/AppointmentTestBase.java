@@ -205,7 +205,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         Duration.ofMinutes(30),
                         0.3,
                         DayType.valueOf(day.getDate().getDayOfWeek().name()),
-                        1
+                        2
                 );
                 addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
             }

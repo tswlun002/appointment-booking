@@ -171,7 +171,6 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
         // Another user pick same slot
         AppointmentDTO appointmentDTO = new AppointmentDTO(slot.getId(), branch.getBranchId(), guestClients.get(1), serviceType,slot.getDay(),slot.getStartTime(),slot.getEndTime());
         result = bookAppointmentUseCase.execute(appointmentDTO) ;
-        user = getUserQuery.execute(new UsernameCommand(guestClients.get(1)),UUID.randomUUID().toString());
         assertThat(result).isNotNull();
         eventValueOptional = getLatestRecordForKey(
                 testConsumer,

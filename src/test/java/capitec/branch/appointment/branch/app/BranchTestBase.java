@@ -1,6 +1,7 @@
 package capitec.branch.appointment.branch.app;
 
 import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.branch.app.port.BranchQueryPort;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.infrastructure.dao.BranchDaoImpl;
 import capitec.branch.appointment.location.infrastructure.api.CapitecBranchLocationFetcher;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +40,8 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
     protected CacheManager cacheManagerBranches;
     @Autowired
     protected CircuitBreakerRegistry circuitBreakerRegistry;
+    @Autowired
+    protected BranchQueryPort  branchQueryPort;
 
     protected static final String CAPITEC_BRANCH_API_RESPONSE = capitecApiBranchResponse();
     protected static final String EMPTY_BRANCH_RESPONSE = capitecApiBranchEmptyResponse();
@@ -51,6 +55,8 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
         );
         // Reset any previous stubs
         capitecApiWireMock.resetMappings();
+        wireMockGetHolidayByYearAndCountryCode(""+ LocalDate.now().getYear(), "ZA");
+
         // Reset circuit breaker state before each test
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("branchLocatorCircuitBreaker");
         cb.reset();
@@ -74,14 +80,11 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
     @AfterEach
     public void tearDown() {
         // Collect IDs before deletion to avoid modifying the collection while iterating.
-        List<String> branchIds = getAllBranchesQuery.execute(0,100)
+         branchQueryPort.findAllBranches(0,100)
                 .branches()
                 .stream()
                 .map(Branch::getBranchId)
-                .collect(Collectors.toList());
-
-        // Use the DeleteBranchUseCase to ensure cleanup is done via the Use Case boundary.
-        branchIds.forEach(deleteBranchUseCase::execute);
+                .forEach(deleteBranchUseCase::execute);
     }
 
     /**

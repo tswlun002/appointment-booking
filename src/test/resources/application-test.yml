@@ -33,9 +33,18 @@ default_roles:
 # Logging
 logging:
   level:
-    org:
-      testcontainers: TRACE
-    root: TRACE
+    root: INFO
+    capitec.branch.appointment: TRACE
+    org.springframework.security: INFO
+    org.hibernate.SQL: TRACE
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.keycloak: TRACE
+    org.springframework.kafka: ERROR
+    org.apache.kafka: ERROR
+    org.springframework.mail: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{traceId}] - %msg%n"
 
 # Kafka
 kafka:

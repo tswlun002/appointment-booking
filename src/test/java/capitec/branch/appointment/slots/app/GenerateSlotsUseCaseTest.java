@@ -42,7 +42,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
    @Test
     public void testCreateNext7DaySlots_GeneratesCorrectCountsPerDayType() {
 
-        wireMockGetHolidayByYearAndCountryCode("2025", "ZA");
+        wireMockGetHolidayByYearAndCountryCode(""+LocalDate.now().getYear(), "ZA");
 
        LocalDate date = LocalDate.now().plusDays(1);
 
@@ -56,7 +56,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
        Map<LocalDate, List<Slot>> weeklySlots = getNext7DaySlotsQuery.execute(branch.getBranchId(), LocalDate.now());
        
        assertThat(weeklySlots).as("Weekly slots map should not be empty").isNotEmpty();
-       assertThat(weeklySlots.size()).as("Should generate slots should exclude today, sunday and public holidays days").isEqualTo(7-count);
+       assertThat(weeklySlots.size()).as("Should generate slots should exclude today, sunday and public holidays days").isEqualTo(LocalDate.now().getDayOfWeek()==DayOfWeek.SUNDAY?7:6-count);
 
        // 0. Verify Slot fields
        List<Slot> list = weeklySlots.values()

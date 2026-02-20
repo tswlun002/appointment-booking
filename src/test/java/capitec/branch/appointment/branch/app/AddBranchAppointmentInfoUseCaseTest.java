@@ -1,5 +1,6 @@
 package capitec.branch.appointment.branch.app;
 
+import capitec.branch.appointment.branch.app.port.BranchQueryPort;
 import capitec.branch.appointment.branch.domain.Branch;
 import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
 import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
@@ -11,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,7 +22,7 @@ class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
     @Autowired
     private AddBranchUseCase addBranchUseCase;
     @Autowired
-    private GetBranchQuery getBranchByIdQuery;
+    private BranchQueryPort branchQueryPort1;
     @Autowired
     private AddBranchAppointmentInfoUseCase addBranchAppointmentInfoUseCase; // Use Case under test
 
@@ -50,7 +50,7 @@ class AddBranchAppointmentInfoUseCaseTest extends BranchTestBase {
         assertThat(isAdded).isTrue();
         
         // ASSERT 2: Verify the data was saved and updated on the Branch object
-        Branch branch = getBranchByIdQuery.execute(branchId);
+        Branch branch = branchQueryPort1.findByBranchId(branchId).get();
         assertThat(branch).as("Branch should exist after update").isNotNull();
         
         List<BranchAppointmentInfo> appointmentInfo = branch.getBranchAppointmentInfo();

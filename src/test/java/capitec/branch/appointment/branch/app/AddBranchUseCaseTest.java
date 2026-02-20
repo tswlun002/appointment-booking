@@ -46,5 +46,4 @@ class AddBranchUseCaseTest extends BranchTestBase {
         assertThat(branch1).isNotNull().isEqualTo(branch);
     }
     
-    // TODO: Add tests for validation failure (e.g., null BranchDTO, invalid times)
 }

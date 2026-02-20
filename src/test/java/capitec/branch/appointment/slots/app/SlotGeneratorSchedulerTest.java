@@ -20,7 +20,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
 
     @Autowired
     private SlotGeneratorScheduler slotGeneratorScheduler;
-
+    private final int  totalDays= LocalDate.now().getDayOfWeek()==DayOfWeek.SUNDAY?7:6;
 
     @Test
     @DisplayName("Should generate initial 7 days of slots when no slots exist")
@@ -46,7 +46,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
                 .sorted()
                 .toList();
 
-        assertThat(distinctDates).hasSize((int) (7 -count));
+        assertThat(distinctDates).hasSize((int) (totalDays -count));
 
     }
 
@@ -111,7 +111,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
             List<Slot> slots = slotQueryPort.findByBranchFromDate(b.getBranchId(), date);
             assertThat(slots).isNotEmpty();
             Map<LocalDate, List<Slot>> collect = slots.stream().collect(Collectors.groupingBy(Slot::getDay));
-            assertThat(collect).hasSize(7-count);
+            assertThat(collect).hasSize(totalDays-count);
         }
 
     }
@@ -143,7 +143,7 @@ class SlotGeneratorSchedulerTest extends SlotTestBase {
             List<Slot> slots = slotQueryPort.findByBranchFromDate(b.getBranchId(), LocalDate.now().plusDays(1));
             assertThat(slots).isNotEmpty();
             Map<LocalDate, List<Slot>> collect = slots.stream().collect(Collectors.groupingBy(Slot::getDay));
-            assertThat(collect).hasSize(7-count);
+            assertThat(collect).hasSize(totalDays-count);
 
         }
     }

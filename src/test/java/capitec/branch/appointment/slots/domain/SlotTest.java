@@ -369,22 +369,13 @@ class SlotTest {
     class Equality {
 
         @Test
-        void shouldBeEqualWhenSameId() {
-            Slot same = slot;
+        void shouldBeEqualWhenBusinessFieldsMatchRegardlessOfInstance() {
+            // Create a totally new object instance with the same values
+            Slot duplicate = new Slot(TOMORROW, START_TIME, END_TIME, MAX_CAPACITY, BRANCH_ID);
 
-            assertThat(slot).isEqualTo(same);
-        }
-
-        @Test
-        void shouldNotBeEqualWhenDifferentId() {
-            Slot other = new Slot(TOMORROW, START_TIME, END_TIME, MAX_CAPACITY, BRANCH_ID);
-
-            assertThat(slot).isNotEqualTo(other);
-        }
-
-        @Test
-        void shouldHaveSameHashCodeForSameSlot() {
-            assertThat(slot.hashCode()).isEqualTo(slot.hashCode());
+            // This ensures your Set<Slot> will correctly identify duplicates
+            assertThat(slot).isEqualTo(duplicate);
+            assertThat(slot.hashCode()).isEqualTo(duplicate.hashCode());
         }
     }
 
