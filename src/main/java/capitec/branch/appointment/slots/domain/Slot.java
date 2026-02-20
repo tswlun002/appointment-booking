@@ -266,7 +266,7 @@ public class Slot {
 
     @Override
     public int hashCode() {
-        return Objects.hash(day,startTime,branchId);
+        return Objects.hash(day,startTime,branchId,endTime);
     }
 
     @Override
