@@ -16,6 +16,7 @@ import org.springframework.validation.annotation.Validated;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.time.temporal.ChronoUnit;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
@@ -25,7 +26,10 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class EmailSendUseCase {
-
+    @Value("${otp.expire.datetime}")
+    private long expireDatetime;
+    @Value("${otp.expire.chron-units}")
+    private ChronoUnit chronUnits;
     private static final String USER_NOTIFICATION_TEMPLATE = "email/user-notification";
     private static final Map<Notification.UserEventType, String> EMAIL_SUBJECTS = new EnumMap<>(Notification.UserEventType.class);
 
@@ -95,6 +99,8 @@ public class EmailSendUseCase {
 
         if (otpCode != null) {
             context.setVariable("otpCode", otpCode);
+            context.setVariable("expireDatetime", expireDatetime);
+            context.setVariable("expireTimeUnits", chronUnits.name());
         }
 
         return templateEngine.process(USER_NOTIFICATION_TEMPLATE, context);
