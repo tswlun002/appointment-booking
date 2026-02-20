@@ -320,7 +320,7 @@
             <div class="otp-box">
                 <div>Your Verification Code</div>
                 <div class="otp-code" th:text="${otpCode}">000000</div>
-                <div class="otp-note">This code expires in 5 minutes</div>
+                <div class="otp-note" th:text="This code expires in ${otpCode} ${expireTimeUnits}">This code expires in 5 minutes</div>
             </div>
             <div class="warning-box">
                 <strong>Security Notice:</strong> Never share this code with anyone.
@@ -365,7 +365,7 @@
             <div class="otp-box">
                 <div>Password Reset Code</div>
                 <div class="otp-code" th:text="${otpCode}">000000</div>
-                <div class="otp-note">This code expires in 5 minutes</div>
+                <div class="otp-note" th:text="This code expires in ${otpCode} ${expireTimeUnits}">This code expires in 5 minutes</div>
             </div>
             <div class="warning-box">
                 <strong>Didn't request this?</strong> If you didn't request a password reset,
@@ -398,7 +398,7 @@
             <div class="otp-box">
                 <div>Account Deletion Code</div>
                 <div class="otp-code" th:text="${otpCode}">000000</div>
-                <div class="otp-note">This code expires in 5 minutes</div>
+                <div class="otp-note" th:text="This code expires in ${otpCode} ${expireTimeUnits}">This code expires in 5 minutes</div>
             </div>
             <div class="warning-box">
                 <strong>Warning:</strong> This action is permanent and cannot be undone.
