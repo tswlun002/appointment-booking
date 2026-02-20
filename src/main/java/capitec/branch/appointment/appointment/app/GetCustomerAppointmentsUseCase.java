@@ -28,9 +28,9 @@ public class GetCustomerAppointmentsUseCase {
     private final AppointmentQueryPort appointmentQueryPort;
     private final BranchInfoPort branchInfoPort;
 
-    public CustomerAppointmentsResult execute(@Valid GetCustomerAppointmentsQuery query) {
-        log.info("Fetching appointments for customer: {}, status filter: {}, offset: {}, limit: {}",
-                query.customerUsername(), query.status(), query.offset(), query.limit());
+    public CustomerAppointmentsResult execute(@Valid GetCustomerAppointmentsQuery query, String traceId) {
+        log.info("Fetching appointments for customer: {}, status filter: {}, offset: {}, limit: {}, traceId: {}",
+                query.customerUsername(), query.status(), query.offset(), query.limit(), traceId);
 
         try {
             AppointmentQueryResult queryResult = appointmentQueryPort.findByCustomerUsername(
@@ -40,8 +40,8 @@ public class GetCustomerAppointmentsUseCase {
                     query.limit()
             );
 
-            log.info("Found {} appointments for customer: {} (total: {})",
-                    queryResult.appointments().size(), query.customerUsername(), queryResult.totalCount());
+            log.info("Found {} appointments for customer: {} (total: {}), traceId:{}",
+                    queryResult.appointments().size(), query.customerUsername(), queryResult.totalCount(),traceId);
 
             List<AppointmentWithBranchDTO> enrichedAppointments = queryResult.appointments().stream()
                     .map(this::enrichWithBranchInfo)

@@ -133,13 +133,16 @@ public class CustomerUpdateAppointmentUseCase {
         }
 
         switch (action) {
-            case CustomerUpdateAppointmentAction.Reschedule ignored -> {
+            case CustomerUpdateAppointmentAction.Reschedule toReschedule -> {
                 log.info("Customer {} appointment  event.",action.getEventName());
                 appointmentEventService.publishEventReschedule(
                         appointment.getId(),
                         appointment.getReference(),
                         appointment.getCustomerUsername(),
                         previousState,
+                        toReschedule.newStartDateTime().toLocalDate(),
+                        toReschedule.newStartDateTime().toLocalTime(),
+                        toReschedule.newEndTime(),
                         AppointmentStatus.BOOKED,
                         appointment.getBranchId(),
                         EventTrigger.CUSTOMER,

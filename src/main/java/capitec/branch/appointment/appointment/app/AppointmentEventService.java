@@ -33,6 +33,7 @@ public interface AppointmentEventService {
                                          LocalDateTime occurredAt, Map<String, Object> otherData);
 
     void publishEventReschedule(UUID appointmentId, String reference, String customerUsername,
-                      AppointmentStatus previousState, AppointmentStatus appointmentStatus,
+                      AppointmentStatus previousState, LocalDate day,
+                                LocalTime startTime, LocalTime endTime, AppointmentStatus appointmentStatus,
                       String branchId, EventTrigger triggeredBy, LocalDateTime occurredAt);
 }

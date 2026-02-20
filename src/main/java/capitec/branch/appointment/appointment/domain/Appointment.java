@@ -201,7 +201,10 @@ public class Appointment {
             LOGGER.error("Consultant ID is not valid. {}", ValidatorMessages.USERNAME_MESSAGE);
             throw new IllegalArgumentException("Consultant ID is not valid");
         }
-        validateTimeInput(currentTime, "Current time");
+         if(currentTime.isAfter(dateTime.plusMinutes(GRACE_WINDOW_MINUTES))) {
+             LOGGER.error("Start time plus grace window passed. Current time: {}, start+grace period:{}" , currentTime, dateTime.plusMinutes(GRACE_WINDOW_MINUTES));
+             throw   new IllegalArgumentException("Cannot start service, start time plus grace period has passed");
+         }
 
         if (this.status != AppointmentStatus.CHECKED_IN) {
 
@@ -217,8 +220,7 @@ public class Appointment {
     }
 
     public void complete(String consultantNotes, LocalDateTime currentTime) {
-        validateTimeInput(currentTime, "Current time");
-
+       // validateTimeInput(currentTime, "Current time");
         if (consultantNotes == null || consultantNotes.isBlank()) {
             throw new IllegalArgumentException("Consultant notes cannot be null or blank");
         }
