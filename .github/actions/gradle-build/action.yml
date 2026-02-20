@@ -39,6 +39,14 @@ runs:
       shell: bash
       env:
         TZ: Africa/Johannesburg
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+          java-version: '21'
+          distribution: 'temurin' # 'temurin' is the standard open-source JDK
+          cache: 'gradle'
+
     - name: Cache Gradle dependencies
       uses: actions/cache@v4
       with:
