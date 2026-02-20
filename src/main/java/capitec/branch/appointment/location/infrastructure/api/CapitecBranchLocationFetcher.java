@@ -17,7 +17,9 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.http.MediaType;
+import org.springframework.retry.ExhaustedRetryException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.LocalDate;
@@ -114,10 +116,15 @@ public class CapitecBranchLocationFetcher implements BranchLocationFetcher, GetN
 
         try {
             return retrySupplier.get();
-        } catch (CallNotPermittedException e) {
-            log.error("Circuit breaker is open, request rejected without retry: {}", e.getMessage());
+        } catch (HttpServerErrorException.ServiceUnavailable e) {
+            log.error("Branch location service unavailable", e);
             throw new BranchLocationServiceException("Branch locator service is temporarily unavailable. Please try again later.", e);
-        } catch (Exception e) {
+        }
+        catch (CallNotPermittedException | ExhaustedRetryException e){
+            log.error("Circuit breaker is open, request rejected without retry: {}", e.getMessage());
+            throw new BranchLocationServiceException("System is busy. Please try again later.", e);
+        }
+        catch (Exception e) {
             log.error("Failed to fetch branches after retries: {}", e.getMessage(), e);
             throw new BranchLocationServiceException("Unable to fetch branches. Please try again.", e);
         }
