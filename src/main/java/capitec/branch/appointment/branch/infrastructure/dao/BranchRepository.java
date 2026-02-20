@@ -75,5 +75,11 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
     int addBranchOperationHoursOverride(@Param("branchId") String branchId, @Param("effectiveDate") LocalDate effectiveDate,
                                         @Param("openAt") LocalTime openAt, @Param("closeAt") LocalTime closeAt,
                                         @Param("closed") boolean closed, @Param("reason") String reason);
+    @Modifying
+    @Transactional
+    @Query("""
+            DELETE  FROM branch AS b WHERE  b.branch_id=:branchId
+           """)
+    int deletBranch(@Param("branchId") String branchId);
 
 }
