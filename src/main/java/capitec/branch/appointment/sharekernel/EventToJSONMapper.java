@@ -10,8 +10,9 @@ public class EventToJSONMapper {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        objectMapper.enable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
         return objectMapper;
     }
 }
+
