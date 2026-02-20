@@ -91,7 +91,7 @@ public class CustomerAppointmentController {
         AppointmentStatus statusFilter = status != null ? AppointmentStatus.valueOf(status) : null;
         GetCustomerAppointmentsQuery query = new GetCustomerAppointmentsQuery(customerUsername, statusFilter, offset, limit);
 
-        CustomerAppointmentsResult result = getCustomerAppointmentsUseCase.execute(query);
+        CustomerAppointmentsResult result = getCustomerAppointmentsUseCase.execute(query, traceId);
 
         List<AppointmentResponse> responses = result.appointments().stream()
                 .map(this::toResponse)
