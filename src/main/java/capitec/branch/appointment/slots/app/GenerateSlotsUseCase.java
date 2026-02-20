@@ -8,6 +8,7 @@ import capitec.branch.appointment.slots.domain.SlotService;
 import capitec.branch.appointment.utils.UseCase;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.validation.annotation.Validated;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -86,7 +87,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class GenerateSlotsUseCase {
     private final static String COUNTRY= "South Africa";
-    private final static int SLOTS_DISTRIBUTION_FACTOR = 2;
+    @Value("${slot.duration.factor}")
+    private   int SLOTS_DISTRIBUTION_FACTOR;
     private final GetActiveBranchesForSlotGenerationPort activeBranchesForSlotGenerationPort;
     private final SlotService slotStorage;
     private static final int ROLLING_WINDOW_DAYS = 7;
@@ -98,28 +100,43 @@ public class GenerateSlotsUseCase {
      *
      */
     public void createNext7DaySlots(LocalDate fromDate, int nextDays) {
+        createNext7DaySlots(Collections.emptySet(),fromDate, nextDays);
+    }
+    /**
+     * Command to generate and save time slots for the next given days, by default 7 days.
+     * @param  fromDate default to the next day. The first day of slots that will be generated
+     * @param nextDays default 7 days. The number of days of slots that will be generated starting from fromDate
+     * @param branches  branches to generate slots for. Branches must exist in the system. If not provide, generate for
+     *                  branches registered in the system
+     *
+     */
+    public void createNext7DaySlots(Set<String> branches,LocalDate fromDate, int nextDays) {
+       try {
+           LocalDate date = fromDate == null ? LocalDate.now().plusDays(1) : fromDate;
 
-        LocalDate date = fromDate == null ? LocalDate.now().plusDays(1) : fromDate;
+           Collection<BranchOperationTimesDetails> activeBranches = branches.isEmpty()? activeBranchesForSlotGenerationPort.execute(COUNTRY, date)
+           :activeBranchesForSlotGenerationPort.execute(branches,COUNTRY, date);
 
-        Collection<BranchOperationTimesDetails> activeBranches = activeBranchesForSlotGenerationPort.execute(COUNTRY, date);
-
-        int rolling_window = nextDays == 0 ? ROLLING_WINDOW_DAYS : nextDays;
+           int rolling_window = nextDays == 0 ? ROLLING_WINDOW_DAYS : nextDays;
 
 
-        List<Slot> allSlots  = new ArrayList<>();
-        for (var branch : activeBranches) {
-            Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch,date, rolling_window );
-            if(!dayOfWeekListMap.isEmpty()) {
-                List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
-                allSlots.addAll(list);
-            }
+           List<Slot> allSlots = new ArrayList<>();
+           for (var branch : activeBranches) {
+               Map<LocalDate, List<Slot>> dayOfWeekListMap = generateTimeSlotsForRange(branch, date, rolling_window);
+               if (!dayOfWeekListMap.isEmpty()) {
+                   List<Slot> list = dayOfWeekListMap.values().stream().flatMap(Collection::stream).toList();
+                   allSlots.addAll(list);
+               }
 
-        }
-        if(allSlots.isEmpty()) {
-            log.warn("Failed to generate slots, current date:{}", LocalDateTime.now());
-            //throw new RuntimeException("Failed to generate slots, current date:" + LocalDateTime.now());
-        }
-        else slotStorage.save(allSlots);
+           }
+           if (allSlots.isEmpty()) {
+               log.warn("Failed to generate slots, current date:{}", LocalDateTime.now());
+               //throw new RuntimeException("Failed to generate slots, current date:" + LocalDateTime.now());
+           } else slotStorage.save(allSlots);
+       }catch (Exception e) {
+           log.error("Failed to generate slots, current date:{}", fromDate);
+           throw e;
+       }
 
 
     }
@@ -153,7 +170,7 @@ public class GenerateSlotsUseCase {
 
 
         for (int numDays = 0; numDays < days; numDays++) {
-            
+            log.debug("Creating slot for date {}", day.plusDays(numDays));
             int slotGenerated = 0;
 
             // Check if OperationTimes exist for this day
@@ -171,6 +188,8 @@ public class GenerateSlotsUseCase {
                 continue;
             }
 
+            log.debug("Operation hours: {} ", operationTimesDetails);
+            log.debug("Branch appointment info : {} ", appointmentInfoDetails);
 
             int availableCapacity = calculateAvailableCapacity(appointmentInfoDetails, operationTimesDetails);
             Duration slotDuration = appointmentInfoDetails.slotDuration();
@@ -179,26 +198,38 @@ public class GenerateSlotsUseCase {
             
             List<Slot> slots = new ArrayList<>();
 
+            LocalDateTime openDateTime = day.atTime(openTime);
+            LocalDateTime closeDateTime = day.atTime(closingTime);
             // Generate slots until the open time plus the slot duration exceeds closing time
-            while (openTime.isBefore(closingTime) && openTime.plus(slotDuration).isBefore(closingTime.plusSeconds(1))) {
+            while (true) {
+
+                if (!(openDateTime.isBefore(closeDateTime) && openDateTime.plus(slotDuration).isBefore(closeDateTime.plusSeconds(1)))) {
+                    break;
+                }
 
                 if (slotGenerated < availableCapacity) {
 
-                    LocalTime slotClosingTime = openTime.plus(slotDuration);
+                    var slotClosingTime = openDateTime.plus(slotDuration);
                     
-                    Slot slot = new Slot(day, openTime, slotClosingTime, appointmentInfoDetails.maxBookingCapacity(),branch.branchId());
+                    Slot slot = new Slot(day, openDateTime.toLocalTime(), slotClosingTime.toLocalTime(), appointmentInfoDetails.maxBookingCapacity(),branch.branchId());
                     slots.add(slot);
                     slotGenerated++;
                 }
+                else {
+                    log.debug("Capacity reached for {}, breaking loop to save time", day);
+                    break;
+                }
                 
                 // Move to the next slot time, respecting the distribution factor
-                openTime = openTime.plusMinutes(slotDuration.toMinutes() * SLOTS_DISTRIBUTION_FACTOR);
+                long minutesToAdd = slotDuration.toMinutes() * SLOTS_DISTRIBUTION_FACTOR;
+                // FORCE the increment to be at least 1 minute to prevent infinite loops
+                openDateTime = openDateTime.plusMinutes(Math.max(10, minutesToAdd));
             }
 
             weeklySlots.put(day, slots);
             day = day.plusDays(1);
         }
-
+       log.debug("Generated slots:{}", weeklySlots);
         return weeklySlots;
     }
 

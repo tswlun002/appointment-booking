@@ -43,6 +43,7 @@ public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGener
     private final AsyncTaskExecutor taskExecutor;
     private final GetDateOfNextDaysQuery getDateOfNextDaysQuery;
 
+
     public BranchOperationTimeAdapter(SearchBranchesByAreaUseCase searchBranchesByAreaUseCase, GetBranchQuery getBranchQuery,
                                       @Qualifier("applicationTaskExecutor") AsyncTaskExecutor taskExecutor,
                                       GetDateOfNextDaysQuery getDateOfNextDaysQuery) {
@@ -51,26 +52,34 @@ public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGener
         this.taskExecutor = taskExecutor;
         this.getDateOfNextDaysQuery = getDateOfNextDaysQuery;
 
+
     }
+
 
     @Override
     public Collection<BranchOperationTimesDetails> execute(String country, LocalDate fromDate) {
-        return getBranchesAggregated(country,fromDate, Duration.ofSeconds(5), Duration.ofSeconds(10));
+         Supplier<List<Branch>> dbFetch = () -> getBranchQuery.execute(0, 1000)
+                .branches()
+                .stream()
+                .toList();
+        return getBranchesAggregated(dbFetch,country,fromDate, Duration.ofSeconds(10), Duration.ofSeconds(10));
+    }
+
+    @Override
+    public Collection<BranchOperationTimesDetails> execute(Set<String> branches,String country, LocalDate date) {
+        // 1. Define Suppliers
+
+        Supplier<List<Branch>> dbFetch = ()->branches.stream().map(getBranchQuery::execute).toList();
+        return getBranchesAggregated(dbFetch,country,date, Duration.ofSeconds(5), Duration.ofSeconds(5));
+
     }
 
     /**
      * Aggregates branches. If any source fails, the exception is thrown to the caller.
      */
-    public Collection<BranchOperationTimesDetails> getBranchesAggregated(String country, LocalDate fromDate, Duration timeoutDb, Duration timeoutApi) {
+    public Collection<BranchOperationTimesDetails> getBranchesAggregated(Supplier<List<Branch>> dbFetch , String country, LocalDate fromDate, Duration timeoutDb, Duration timeoutApi) {
         log.info("Starting aggregation for {}. Fail-fast mode enabled.", country);
         Instant start = Instant.now();
-
-        // 1. Define Suppliers
-        Supplier<List<Branch>> dbFetch = () -> getBranchQuery.execute(0, 1000)
-                .branches()
-                .stream()
-                //.map(this::mapDbToDto)
-                .toList();
 
         Supplier<List<NearbyBranchDTO>> apiFetch = () -> {
             SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery(country);
@@ -104,6 +113,8 @@ public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGener
         // 1. Index DB results by ID for O(1) fast lookup
         Map<String, Branch> dbBrainchIdMap = dbResult.stream()
                 .collect(Collectors.toMap(Branch::getBranchId, b -> b));
+
+        log.debug("Fetching branches:{}", dbBrainchIdMap);
 
         Map<String, NearbyBranchDTO> apiBranchIdMap = apiResult.stream()
                 .collect(Collectors.toMap(NearbyBranchDTO::branchId, b -> b));

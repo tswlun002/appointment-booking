@@ -11,6 +11,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Scheduled component for automated daily slot generation.
@@ -108,21 +111,42 @@ public class SlotGeneratorScheduler {
     }
 
     public void executeWithRetry() {
+        executeWithRetry(Collections.emptySet(),null,null);
+    }
+
+    public void executeWithRetry(Set<String> branches, LocalDate fromDate,Integer rollingWindowDays) {
+
         slotGenerationRetryTemplate.execute(context -> {
             log.info("Attempt {} of slot generation", context.getRetryCount() + 1);
 
             transactionTemplate.executeWithoutResult(status -> {
-                LocalDate today = LocalDate.now();
-                var latestDate = getLastestGeneratedSlotDate.execute(today);
+                try {
+                    LocalDate today =  LocalDate.now();
+                    LocalDate startDate;
+                    int windowDays;
+                    if(fromDate == null) {
+                        var latestDate = getLastestGeneratedSlotDate.execute(today);
+                         windowDays = latestDate.isPresent() ? dailyRollingWindowDays : initRollingWindowDays;
 
-                LocalDate startDate = latestDate
-                        .map(date -> date.plusDays(1))
-                        .orElse(today.plusDays(1));
+                        startDate = latestDate
+                                .map(date -> date.plusDays(1))
+                                .orElse(today.plusDays(1));
 
-                int windowDays = latestDate.isPresent() ? dailyRollingWindowDays : initRollingWindowDays;
+                    }
+                    else{
 
-                log.info("Generating slots from {} for {} days", startDate, windowDays);
-                generateSlotsUseCase.createNext7DaySlots(startDate, windowDays);
+                        startDate = fromDate;
+                        windowDays = rollingWindowDays;
+                    }
+
+
+                    log.info("Generating slots from {} for {} days", startDate, windowDays);
+                    generateSlotsUseCase.createNext7DaySlots(branches,startDate, windowDays);
+
+                }catch (Exception e) {
+                    log.error("Failed to generate slot from day\n",e );
+                    throw e;
+                }
             });
 
             return null;

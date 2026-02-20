@@ -259,12 +259,14 @@ public class Slot {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof Slot slot)) return false;
-        return Objects.equals(id, slot.id);
+        return  Objects.equals(day, slot.day) && Objects.equals(startTime, slot.startTime)
+                && Objects.equals(endTime, slot.endTime)
+                && Objects.equals(branchId, slot.branchId) ;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(id);
+        return Objects.hash(day,startTime,branchId);
     }
 
     @Override
