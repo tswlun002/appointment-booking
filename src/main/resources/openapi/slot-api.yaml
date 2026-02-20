@@ -243,6 +243,12 @@ paths:
         Manually triggers the slot generation process.
         This is typically used when the scheduled job fails or needs to be run on demand.
       operationId: triggerSlotGeneration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateSlotRequestBody"
       parameters:
         - $ref: '#/components/parameters/TraceId'
       responses:
@@ -394,7 +400,31 @@ components:
         - BLOCKED
         - EXPIRED
       example: AVAILABLE
+    GenerateSlotRequestBody:
+      type: object
+      description: Request body for generating slot by admin
+      required:
+        - fromDate
+        - rollingWindowDays
+      properties:
+        branches:
+          type: array
+          description: Set of branches to generate slots for
+          items:
+            $ref: "#/components/schemas/branches"
+        fromDate:
+          type: string
+          format: date
+          description:  Date to start generating slot from
+        rollingWindowDays:
+          type: integer
+          minimum: 1
+          description: Number of day from given date the slot must be generated
 
+
+    branches:
+      type: string
+      description: branch ids
     ErrorResponse:
       type: object
       description: Standard error response
