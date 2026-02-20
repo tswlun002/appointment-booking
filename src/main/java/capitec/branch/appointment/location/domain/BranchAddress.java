@@ -18,14 +18,11 @@ public record BranchAddress(
     }
 
     public String getFullAddress() {
-        if (StringUtils.isNotBlank(addressLine1)) {
+        if (StringUtils.isNotBlank(addressLine2)) {
             return String.format("%s, %s, %s, %s", addressLine1, addressLine2, city, province);
         }
-        else if (StringUtils.isNotBlank(addressLine1)) {
-            return String.format("%s, %s, %s", addressLine1, city, province);
-        }
         else{
-            return String.format("%s, %s", city, province);
+            return String.format("%s, %s, %s", addressLine1, city, province);
         }
     }
 
