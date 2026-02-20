@@ -11,10 +11,16 @@ import java.util.Optional;
 public interface BranchQueryPort {
 
     Optional<Branch> findByBranchId(String branchId);
+    Optional<Branch> findByBranchWithLatestDataById(String branchId);
 
     /**
      * Find all branches with pagination.
      * Returns both branches and total count in single query.
      */
-    BranchQueryResult findAll(int offset, int limit);
+    BranchQueryResult findAllActiveBranches(int offset, int limit);/**
+     * Find all branches with pagination.
+     * Returns both branches and total count in single query.
+     */
+    BranchQueryResult findAllBranches(int offset, int limit);
+
 }

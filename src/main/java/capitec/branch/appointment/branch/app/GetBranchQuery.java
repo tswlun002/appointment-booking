@@ -19,7 +19,7 @@ public class GetBranchQuery {
 
     public Branch execute(String branchId) {
         
-        return branchQueryPort.findByBranchId(branchId).orElseThrow(() -> {
+        return branchQueryPort.findByBranchWithLatestDataById(branchId).orElseThrow(() -> {
             log.warn("Unable to find branch with id {}", branchId);
             return new ResponseStatusException(HttpStatus.NOT_FOUND, "Branch not found");
         });
@@ -28,7 +28,7 @@ public class GetBranchQuery {
     public BranchQueryResult execute(int offset, int limit) {
         try {
             log.debug("Retrieving all branches, offset: {}, limit: {}", offset, limit);
-            BranchQueryResult all = branchQueryPort.findAll(offset, limit);
+            BranchQueryResult all = branchQueryPort.findAllActiveBranches(offset, limit);
             log.debug("Retrieved all branches: {}", all);
             return all;
         } catch (Exception e) {
@@ -36,4 +36,5 @@ public class GetBranchQuery {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error during branch retrieval");
         }
     }
+
 }

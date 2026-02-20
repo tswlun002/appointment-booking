@@ -33,7 +33,7 @@ public class BranchConfigCache {
             List<Branch> batch;
 
             do {
-                BranchQueryResult result = branchQueryPort.findAll(offset, batchSize);
+                BranchQueryResult result = branchQueryPort.findAllActiveBranches(offset, batchSize);
                 batch = result.branches();
                 batch.forEach(branch -> cache.put(branch.getBranchId(), branch));
                 offset += batchSize;

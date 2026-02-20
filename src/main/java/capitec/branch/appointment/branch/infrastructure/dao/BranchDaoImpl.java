@@ -80,10 +80,9 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
     }
 
     // ==================== BranchQueryPort Implementation ====================
-
     @Override
     @Cacheable(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId", unless = "#result == null")
-    public Optional<Branch> findByBranchId(String branchId) {
+    public Optional<Branch> findByBranchWithLatestDataById(String branchId) {
         String fetchBranch = """
                         SELECT 
                            u.id,
@@ -129,6 +128,24 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
         }
         return branch;
     }
+    @Override
+    @Cacheable(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId", unless = "#result == null")
+    public Optional<Branch> findByBranchId(String branchId) {
+
+        Optional<Branch> branch;
+        try {
+
+            Optional<BranchEntity> branchById =branchRepository.getByBranchId(branchId);
+
+            branch = branchById.map(BranchMapper::toDomain);
+
+        } catch (Exception e) {
+
+            log.error("Unable to get branch:{}",branchId, e);
+            throw e;
+        }
+        return branch;
+    }
 
     @Override
     @CacheEvict(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId",condition = "#result == true")
@@ -147,12 +164,12 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
     }
 
     @Override
-    public BranchQueryResult findAll(int offset, int limit) {
+    public BranchQueryResult findAllActiveBranches(int offset, int limit) {
 
         try {
 
 
-           var  branchEntities =  getAll(offset, limit);
+           var  branchEntities =  activeBranch(offset, limit);
             log.info("Found {} branches", branchEntities);
 
             // Extract total count from first entity (all entities have same count due to window function)
@@ -179,7 +196,25 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
             throw e;
         }
     }
-    private  Collection<BranchEntity>  getAll(int offset, int limit) {
+
+    @Override
+    public BranchQueryResult findAllBranches(int offset, int limit) {
+        Collection<BranchEntity> branchEntities = branchRepository.getAllBranch(offset, limit);
+
+        // Extract total count from first entity (all entities have same count due to window function)
+        int totalCount = branchEntities.stream()
+                .findFirst()
+                .map(BranchEntity::totalCount)
+                .map(Long::intValue)
+                .orElse(0);
+
+        List<Branch> branches = branchEntities.stream()
+                .map(BranchMapper::toDomain)
+                .toList();
+        return BranchQueryResult.of(branches, totalCount);
+    }
+
+    private  Collection<BranchEntity> activeBranch(int offset, int limit) {
         String fetchAllQuery = """
                         SELECT 
                            u.id,
@@ -235,7 +270,7 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
         int limit = 100;
         Collection<Branch> batch;
         do {
-            batch = getAll(offset, limit)
+            batch = activeBranch(offset, limit)
                     .stream().map(BranchMapper::toDomain).toList();
 
             batch.forEach(branch -> cache.put(branch.getBranchId(), branch));
