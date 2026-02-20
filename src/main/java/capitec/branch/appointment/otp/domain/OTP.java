@@ -131,10 +131,11 @@ public class OTP {
         }
 
         log.debug("Renewing an OTP that is at expired state, previous state OTP: {}", this);
-        this.expiresDate = LocalDateTime.now().plus(duration, this.getExpireTimeUnits());
+        LocalDateTime now = LocalDateTime.now();
+        this.creationDate = now;
+        this.expiresDate = now.plus(duration, this.getExpireTimeUnits());
         this.code = SecurePassword.generatePassword(CODE_FIELD_LENGTH);
         this.status = OTPStatus.RENEWED;
-        this.creationDate = LocalDateTime.now();
         this.version = 0;
     }
 

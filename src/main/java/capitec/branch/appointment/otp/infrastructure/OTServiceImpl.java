@@ -38,7 +38,7 @@ public class OTServiceImpl implements OTPService {
 
             int affectedRows = otpRepository.revokeAndInsertNewOtp(newValue.code(), newValue.creationDate(), newValue.expiresDate(),
                     newValue.purpose(), newValue.status(), newValue.verificationAttempts(), newValue.username(),
-                    LocalDateTime.now(), newValue.version());
+                   newValue.creationDate(), newValue.version());
             if(affectedRows==1) {
                 log.debug("User had active otp and is revoked for this otp, otp{}, username:{}",newValue.code(),newValue.username());
             }
