@@ -47,7 +47,7 @@ public class EventConsumerForEmail {
 
         var metadata = consumerRecord.value();
         String traceId = metadata.traceId();
-        log.info("Received recover otp type event: {}", traceId);
+        log.info("Received recover otp type event, traceId: {}", traceId);
 
         String originalTopic = getOriginalTopic.apply(metadata);
 
@@ -69,7 +69,7 @@ public class EventConsumerForEmail {
         var metadata = consumerRecord.value();
 
         String traceId = metadata.traceId();
-        log.info("Received confirmation type event: {}", traceId);
+        log.info("Received confirmation type event, traceId: {}", traceId);
 
         eventPublisher.publishEvent(eventMapperToEmail.eventToConfirmationEmail(metadata.value(), metadata.topic(), traceId));
 
@@ -81,7 +81,7 @@ public class EventConsumerForEmail {
 
         var metadata = consumerRecord.value();
         String traceId = metadata.traceId();
-        log.info("Received recover confirmation type event: {}", traceId);
+        log.info("Received recover confirmation type event, traceId: {}", traceId);
         String originalTopic = getOriginalTopic.apply(metadata);
         ConfirmationEmail event = eventMapperToEmail.eventToConfirmationEmail(metadata.value(), originalTopic, traceId);
         eventPublisher.publishEvent(event);
@@ -95,25 +95,36 @@ public class EventConsumerForEmail {
     },
             groupId = "booked-appointment-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void bookedAppointmentEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord)  {
+        try {
+            var metadata = consumerRecord.value();
 
-        var metadata = consumerRecord.value();
+            String traceId = metadata.traceId();
+            log.info("Received booking event, traceId:{}", traceId);
+            AppointmentBookedEmail event = eventMapperToEmail.appointmentBookedEmail(metadata.value(), metadata.topic(), traceId);
+            eventPublisher.publishEvent(event);
+        }catch (Exception e) {
+            log.error("Error occurred while booking appointment event", e);
+            throw  e;
+        }
 
-        String traceId = metadata.traceId();
-        log.info("Received confirmation type event: {}", traceId);
-        AppointmentBookedEmail event = eventMapperToEmail.appointmentBookedEmail(metadata.value(), metadata.topic(), traceId);
-        eventPublisher.publishEvent(event);
+
 
     }
     @KafkaListener(topicPattern = "#{T(capitec.branch.appointment.event.app.Topics).bookedAppointmentPattern()}",
             groupId = "booked-appointment-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void recoveryBookedAppointmentEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord) {
 
-        var metadata = consumerRecord.value();
-        String traceId = metadata.traceId();
-        log.info("Received recover confirmation type event: {}", traceId);
-        String originalTopic = getOriginalTopic.apply(metadata);
-        AppointmentBookedEmail event = eventMapperToEmail.appointmentBookedEmail(metadata.value(), originalTopic, traceId);
-        eventPublisher.publishEvent(event);
+        try {
+            var metadata = consumerRecord.value();
+            String traceId = metadata.traceId();
+            log.info("Received recover booking  event, traceId: {}", traceId);
+            String originalTopic = getOriginalTopic.apply(metadata);
+            AppointmentBookedEmail event = eventMapperToEmail.appointmentBookedEmail(metadata.value(), originalTopic, traceId);
+            eventPublisher.publishEvent(event);
+        } catch (Exception e) {
+            log.error("Error occurred while recover booking appointment event", e);
+            throw  e;
+        }
 
     }
 
@@ -124,11 +135,17 @@ public class EventConsumerForEmail {
             groupId = "appointment-updates-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void appointmentUpdatesEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord)  {
 
-        var metadata = consumerRecord.value();
+        try {
+            var metadata = consumerRecord.value();
 
-        String traceId = metadata.traceId();
-        log.info("Received confirmation type event: {}", traceId);
-        eventPublisher.publishEvent(eventMapperToEmail.appointmentStatusUpdatesEmail(metadata.value(), metadata.topic(), traceId));
+            String traceId = metadata.traceId();
+            log.info("Received appointment update event, traceId: {}", traceId);
+            eventPublisher.publishEvent(eventMapperToEmail.appointmentStatusUpdatesEmail(metadata.value(), metadata.topic(), traceId));
+        } catch (Exception e) {
+
+            log.error("Error occurred while appointment update event", e);
+            throw  e;
+        }
 
 
     }
@@ -136,11 +153,16 @@ public class EventConsumerForEmail {
             groupId = "appointment-updates-events",autoStartup = "${kafka.listen.consumer.auto.start:true}")
     public void recoveryAppointmentUpdatesEvents(ConsumerRecord<String, EventValue<String,AppointmentMetadata>> consumerRecord) {
 
-        var metadata = consumerRecord.value();
-        String traceId = metadata.traceId();
-        log.info("Received recover confirmation type event: {}", traceId);
-        String originalTopic = getOriginalTopic.apply(metadata);
-        eventPublisher.publishEvent(eventMapperToEmail.appointmentStatusUpdatesEmail(metadata.value(), originalTopic, traceId));
+        try {
+            var metadata = consumerRecord.value();
+            String traceId = metadata.traceId();
+            log.info("Received recover appointment update event, traceId: {}", traceId);
+            String originalTopic = getOriginalTopic.apply(metadata);
+            eventPublisher.publishEvent(eventMapperToEmail.appointmentStatusUpdatesEmail(metadata.value(), originalTopic, traceId));
+        } catch (Exception e) {
+            log.error("Error occurred while recover appointment update event", e);
+            throw  e;
+        }
 
     }
 

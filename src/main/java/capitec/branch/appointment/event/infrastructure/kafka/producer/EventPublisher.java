@@ -220,6 +220,9 @@ public class EventPublisher implements OTPEventProducerServicePort, UserEventLis
         String topic = Topics.APPOINTMENT_RESCHEDULED;
         validateTopic(topic, traceId);
         Map<String, Object> map = Map.of(
+                "day", event.day(),
+                "startTime", event.startTime(),
+                "endTime", event.endTime(),
                 "fromState", event.previousState(),
                 "toState", event.appointmentStatus(),
                 "triggeredBy", event.triggeredBy()
