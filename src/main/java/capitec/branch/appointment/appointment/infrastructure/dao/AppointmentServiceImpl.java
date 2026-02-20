@@ -100,7 +100,7 @@ public class AppointmentServiceImpl implements AppointmentService, AppointmentQu
         if(appointmentId == null) {
             return Optional.empty();
         }
-        return appointmentRepository.findById(appointmentId)
+        return appointmentRepository.getUserActiveAppointment(appointmentId)
                 .map(appointmentMapper::toDomain);
 
     }

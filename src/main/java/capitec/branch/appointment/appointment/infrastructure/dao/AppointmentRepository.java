@@ -68,13 +68,44 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
             assigned_consultant_id,
             service_notes,
             previous_slot_id,
-            reschedule_count
+            reschedule_count,
+            1 AS total_appointments_count
         FROM
         appointment
         WHERE  branch_id =:branchId AND customer_username=:customerUsername AND status IN('BOOKED', 'CHECKED_IN','IN_PROGRESS') AND day=:day 
     """)
     Optional<AppointmentEntity> getUserActiveAppointment(@Param("branchId")String branchId, @Param("day")LocalDate day,
                                                          @Param("customerUsername") String customerUsername);
+    @Query("""
+                SELECT
+            id,
+            slot_id,
+            branch_id,
+            customer_username,
+            service_type,
+            status,
+            reference,
+            date_time,
+            version,
+            created_at,
+            updated_at,
+            checked_in_at,
+            in_progress_at,
+            completed_at,
+            terminated_at,
+            terminated_by,
+            termination_reason,
+            termination_notes,
+            assigned_consultant_id,
+            service_notes,
+            previous_slot_id,
+            reschedule_count,
+            1 AS total_appointments_count
+        FROM
+        appointment
+        WHERE  id = :appointmentId
+    """)
+    Optional<AppointmentEntity> getUserActiveAppointment(@Param("appointmentId")UUID appointmentId);
 
 
     @Query("""
@@ -100,7 +131,8 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
             a.assigned_consultant_id,
             a.service_notes,
             a.previous_slot_id,
-            a.reschedule_count
+            a.reschedule_count,
+            COUNT(*) OVER () AS total_appointments_count
             FROM appointment AS a INNER JOIN  slot AS s ON s.id = a.slot_id
                 AND a.status IN ('BOOKED', 'CHECKED_IN')
                 AND ( s.day + s.end_time) < NOW()

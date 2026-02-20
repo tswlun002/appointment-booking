@@ -59,48 +59,9 @@ record AppointmentEntity(
         int rescheduleCount,
 
 
-        @Transient
+        @ReadOnlyProperty
         Long totalAppointmentsCount
 ) {
-    @PersistenceCreator
-      AppointmentEntity(
-            UUID id,
-            UUID slotId,
-            String branchId,
-            String customerUsername,
-            String serviceType,
-            String status,
-            String reference,
-            LocalDateTime dateTime,
-            int version,
-
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt,
-            LocalDateTime checkedInAt,
-            LocalDateTime inProgressAt,
-            LocalDateTime completedAt,
-            LocalDateTime terminatedAt,
-
-            // Audit Trail
-            String terminatedBy,
-            String terminationReason,
-            String terminationNotes,
-
-            // Service Execution
-            String assignedConsultantId,
-            String serviceNotes,
-
-            // Rescheduling Support
-            UUID previousSlotId,
-            int rescheduleCount
-    ){
-       this(id,slotId,branchId,customerUsername,serviceType,status,reference,dateTime,version,
-               createdAt,updatedAt,checkedInAt,inProgressAt,completedAt,terminatedAt,
-               terminatedBy,terminationReason,terminationNotes,assignedConsultantId,
-               serviceNotes,previousSlotId,rescheduleCount, 0L);
-
-    }
-
     public AppointmentEntity withVersion(int version) {
         return  new AppointmentEntity(this.id,this.slotId,this.branchId,this.customerUsername,this.serviceType,this.status,reference,
                 this.dateTime,version, this.createdAt,this.updatedAt,this.checkedInAt,this.inProgressAt,this.completedAt,
