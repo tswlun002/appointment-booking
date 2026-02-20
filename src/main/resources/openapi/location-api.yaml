@@ -38,6 +38,25 @@ paths:
             minLength: 2
             maxLength: 100
           example: "Rondebosch"
+        - name: offset
+          in: query
+          required: false
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 50
         - $ref: '#/components/parameters/TraceId'
       responses:
         '200':
@@ -120,6 +139,25 @@ paths:
             minimum: 1
             maximum: 500
           example: 25
+        - name: offset
+          in: query
+          required: false
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          example: 50
         - $ref: '#/components/parameters/TraceId'
       responses:
         '200':
