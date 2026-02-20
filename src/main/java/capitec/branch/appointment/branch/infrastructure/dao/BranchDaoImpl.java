@@ -21,9 +21,12 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -39,12 +42,16 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
     private final CacheManager cacheManager;
     public static final String CACHE_NAME = "branches";
     public static final String CACHE_MANAGER_NAME = "branchCacheManager";
+    private final JdbcClient jdbcClient;
+
 
     public BranchDaoImpl( BranchRepository branchRepository, BranchMapper branchMapper,
-                          @Qualifier(value = CACHE_MANAGER_NAME) CacheManager cacheManager) {
+                          @Qualifier(value = CACHE_MANAGER_NAME) CacheManager cacheManager,
+                          JdbcClient jdbcClient) {
         this.branchRepository = branchRepository;
         this.branchMapper = branchMapper;
         this.cacheManager = cacheManager;
+        this.jdbcClient = jdbcClient;
     }
 
     @Override
@@ -77,11 +84,42 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
     @Override
     @Cacheable(value = CACHE_NAME,cacheManager = CACHE_MANAGER_NAME, key = "#branchId", unless = "#result == null")
     public Optional<Branch> findByBranchId(String branchId) {
-
+        String fetchBranch = """
+                        SELECT 
+                           u.id,
+                           u.branch_id,
+                           u.branch_name,
+                           u.created_at,
+                           u.last_modified_date,
+                           -- Add BranchAppointmentInfo columns
+                           bai.day,
+                           bai.slot_duration,
+                           bai.utilization_factor,
+                           bai.staff_count,
+                           bai.max_booking_capacity,
+                           -- Add OperationHoursOverride columns
+                           oh.effective_date,
+                           oh.open_at,
+                           oh.close_at,
+                           oh.closed,
+                           oh.reason,
+                           u.created_at as oh_created_at, -- Alias to avoid collision with u.created_at
+                           u.last_modified_date as oh_modified_at,
+                           1 AS total_count
+                      FROM  branch AS u
+                      INNER JOIN branch_appointment_info AS bai ON u.id = bai.branch_id
+                      LEFT JOIN operation_hours_override AS oh ON u.id = oh.branch_id AND oh.effective_date >= CURRENT_DATE
+                      WHERE u.branch_id = :branchId
+                    """;
         Optional<Branch> branch;
         try {
 
-            Optional<BranchEntity> branchById = branchRepository.getByBranchId(branchId);
+            Optional<BranchEntity> branchById =
+                    jdbcClient.sql(fetchBranch)
+                            .param("branchId", branchId,Types.VARCHAR)
+                            .query(new BranchResultSetExtractor())
+                            .stream().findFirst();
+
             branch = branchById.map(BranchMapper::toDomain);
 
         } catch (Exception e) {
@@ -111,26 +149,79 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
     @Override
     public BranchQueryResult findAll(int offset, int limit) {
 
-        Collection<BranchEntity> branchEntities = branchRepository.getAllBranch(offset, limit);
+        try {
 
-        // Extract total count from first entity (all entities have same count due to window function)
-        int totalCount = branchEntities.stream()
-                .findFirst()
-                .map(BranchEntity::totalCount)
-                .map(Long::intValue)
-                .orElse(0);
 
-        List<Branch> branches = branchEntities.stream()
-                .map(BranchMapper::toDomain)
-                .toList();
+           var  branchEntities =  getAll(offset, limit);
+            log.info("Found {} branches", branchEntities);
 
-        Cache cache = cacheManager.getCache(CACHE_NAME);
-        if (cache != null) {
-            branches.forEach(branch -> cache.putIfAbsent(branch.getBranchId(), branch));
+            // Extract total count from first entity (all entities have same count due to window function)
+            int totalCount = branchEntities.stream()
+                    .findFirst()
+                    .map(BranchEntity::totalCount)
+                    .map(Long::intValue)
+                    .orElse(0);
+
+            List<Branch> branches = branchEntities.stream()
+                    .map(BranchMapper::toDomain)
+                    .toList();
+
+            Cache cache = cacheManager.getCache(CACHE_NAME);
+            if (cache != null) {
+                branches.forEach(branch -> cache.putIfAbsent(branch.getBranchId(), branch));
+            }
+
+            return BranchQueryResult.of(branches, totalCount);
+
+        } catch (Exception e) {
+
+            log.error("Unable to fetch branches", e);
+            throw e;
         }
-
-        return BranchQueryResult.of(branches, totalCount);
     }
+    private  Collection<BranchEntity>  getAll(int offset, int limit) {
+        String fetchAllQuery = """
+                        SELECT 
+                           u.id,
+                           u.branch_id,
+                           u.branch_name,
+                           u.created_at,
+                           u.last_modified_date,
+                           -- Add BranchAppointmentInfo columns
+                           bai.day,
+                           bai.slot_duration,
+                           bai.utilization_factor,
+                           bai.staff_count,
+                           bai.max_booking_capacity,
+                           -- Add OperationHoursOverride columns
+                           oh.effective_date,
+                           oh.open_at,
+                           oh.close_at,
+                           oh.closed,
+                           oh.reason,
+                           u.created_at as oh_created_at, -- Alias to avoid collision with u.created_at
+                           u.last_modified_date as oh_modified_at,
+                           u.total_count
+                      FROM (
+                          SELECT *, COUNT(*) OVER () AS total_count
+                          FROM branch
+                          ORDER BY id ASC
+                          OFFSET :offset LIMIT :limit
+                      ) AS u
+                      INNER JOIN branch_appointment_info AS bai ON u.id = bai.branch_id
+                      LEFT JOIN operation_hours_override AS oh ON u.id = oh.branch_id AND oh.effective_date >= :today
+                      ORDER BY u.id ASC;
+                    """;
+
+        return jdbcClient.sql(fetchAllQuery)
+                .param("offset",offset, Types.INTEGER)
+                .param("limit",limit,Types.INTEGER)
+                .param("today",LocalDate.now())
+                .query(new BranchResultSetExtractor())
+                .stream().toList();
+    }
+
+
 
     @EventListener(ApplicationReadyEvent.class)
     @Async
@@ -144,7 +235,7 @@ public class BranchDaoImpl implements BranchService, BranchQueryPort, BranchAppo
         int limit = 100;
         Collection<Branch> batch;
         do {
-            batch = branchRepository.getAllBranch(offset, limit)
+            batch = getAll(offset, limit)
                     .stream().map(BranchMapper::toDomain).toList();
 
             batch.forEach(branch -> cache.put(branch.getBranchId(), branch));

@@ -27,20 +27,7 @@ import java.util.Map;
         @LastModifiedDate
         @Column("last_modified_date")
         LocalDateTime updatedAt,
-        @Transient
+        @ReadOnlyProperty
         Long totalCount
         ) {
-
-    @PersistenceCreator
-    BranchEntity(
-            Long id,
-            String branchId,
-            String branchName,
-            Map<String, BranchAppointmentInfoEntity> branchAppointmentInfo,
-            Map<LocalDate, OperationHoursOverrideEntity> operationHoursOverride,
-            LocalDateTime createdAt,
-            LocalDateTime updatedAt
-    ) {
-        this(id, branchId, branchName, branchAppointmentInfo, operationHoursOverride, createdAt, updatedAt, 0L);
-    }
 }

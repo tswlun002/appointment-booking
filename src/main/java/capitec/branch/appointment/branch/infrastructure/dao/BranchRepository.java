@@ -11,8 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Collection;
-import java.util.Optional;
 
 @Repository
 interface BranchRepository extends CrudRepository<BranchEntity, Long> {
@@ -78,37 +76,4 @@ interface BranchRepository extends CrudRepository<BranchEntity, Long> {
                                         @Param("openAt") LocalTime openAt, @Param("closeAt") LocalTime closeAt,
                                         @Param("closed") boolean closed, @Param("reason") String reason);
 
-
-    @Query(value = """
-                        SELECT 
-                            u.id,
-                            u.branch_id,
-                            u.branch_name,
-                            u.created_at,
-                            u.last_modified_date
-                            FROM branch AS u
-                       WHERE u.branch_id=:branchId 
-            """)
-    Optional<BranchEntity> getByBranchId(@Param("branchId") String branchId);
-
-    @Modifying
-    @Transactional
-    @Query("""
-            DELETE  FROM branch AS b WHERE  b.branch_id=:branchId
-           """)
-    int deletBranch(@Param("branchId") String branchId);
-
-    @Query("""
-            SELECT 
-                u.id,
-                u.branch_id,
-                u.branch_name,
-                u.created_at,
-                u.last_modified_date,
-                COUNT(*) OVER () AS total_count
-                FROM branch AS u
-                ORDER BY id ASC
-                OFFSET :offset LIMIT :limit
-            """)
-    Collection<BranchEntity> getAllBranch(@Param("offset") int offset,@Param("limit") int limit);
 }

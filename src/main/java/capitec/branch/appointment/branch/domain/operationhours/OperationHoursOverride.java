@@ -20,7 +20,9 @@ public record OperationHoursOverride (
         Assert.isTrue(openAt.isBefore(closeAt), "Open time must be before closing time");
         Assert.isTrue(!closed || reason != null, "Closed operation hours must have a reason");
         Assert.hasText(reason, "Closed operation hours must have a reason");
-        Assert.isTrue(effectiveDate.isEqual(LocalDate.now()) || effectiveDate.isAfter(LocalDate.now()), "Effective date must not be in the past");
+        if(effectiveDate !=null){
+            Assert.isTrue( effectiveDate.isEqual(LocalDate.now()) || effectiveDate.isAfter(LocalDate.now()), "Effective date must not be in the past");
+        }
     }
     public boolean isExpired() {
         return effectiveDate.isBefore(LocalDate.now());

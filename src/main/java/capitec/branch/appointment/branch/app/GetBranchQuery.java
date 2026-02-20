@@ -28,7 +28,9 @@ public class GetBranchQuery {
     public BranchQueryResult execute(int offset, int limit) {
         try {
             log.debug("Retrieving all branches, offset: {}, limit: {}", offset, limit);
-            return branchQueryPort.findAll(offset, limit);
+            BranchQueryResult all = branchQueryPort.findAll(offset, limit);
+            log.debug("Retrieved all branches: {}", all);
+            return all;
         } catch (Exception e) {
             log.error("Unable to retrieve all branches", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error during branch retrieval");

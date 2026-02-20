@@ -102,6 +102,7 @@ interface BranchMapper {
         }
         return map.values()
                 .stream()
+
                 .map(operationHoursOverrideEntity -> new OperationHoursOverride(
                         operationHoursOverrideEntity.effectiveDate(),
                         operationHoursOverrideEntity.openAt(),
