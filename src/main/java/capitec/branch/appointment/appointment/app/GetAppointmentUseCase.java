@@ -1,5 +1,6 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.dto.GetAppointmentByIdQuery;
 import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.utils.UseCase;
@@ -17,7 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 @UseCase
 @Validated
 @RequiredArgsConstructor
-public class GetAppointmentByIdUseCase {
+public class GetAppointmentUseCase {
 
     private final AppointmentQueryPort appointmentQueryPort;
 

@@ -1,4 +1,4 @@
-package capitec.branch.appointment.appointment.app;
+package capitec.branch.appointment.appointment.app.dto;
 
 import jakarta.validation.constraints.NotNull;
 

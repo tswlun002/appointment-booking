@@ -1,6 +1,8 @@
 package capitec.branch.appointment.appointment.infrastructure.controller;
 
 import capitec.branch.appointment.appointment.app.*;
+import capitec.branch.appointment.appointment.app.dto.GetAppointmentByIdQuery;
+import capitec.branch.appointment.appointment.app.dto.GetCustomerAppointmentsQuery;
 import capitec.branch.appointment.appointment.domain.Appointment;
 import capitec.branch.appointment.appointment.domain.AppointmentStatus;
 import capitec.branch.appointment.appointment.domain.AttendingAppointmentStateTransitionAction;
@@ -31,7 +33,7 @@ public class CustomerAppointmentController {
     private final BookAppointmentUseCase bookAppointmentUseCase;
     private final CustomerUpdateAppointmentUseCase customerUpdateAppointmentUseCase;
     private final AttendAppointmentUseCase attendAppointmentUseCase;
-    private final GetAppointmentByIdUseCase getAppointmentByIdUseCase;
+    private final GetAppointmentUseCase getAppointmentUseCase;
     private final GetCustomerAppointmentsUseCase getCustomerAppointmentsUseCase;
 
     /**
@@ -120,7 +122,7 @@ public class CustomerAppointmentController {
         log.info("Getting appointment by ID: {}, traceId: {}", appointmentId, traceId);
 
         GetAppointmentByIdQuery query = new GetAppointmentByIdQuery(appointmentId);
-        Appointment appointment = getAppointmentByIdUseCase.execute(query);
+        Appointment appointment = getAppointmentUseCase.execute(query);
 
         return ResponseEntity.ok(toResponse(appointment));
     }
@@ -198,7 +200,7 @@ public class CustomerAppointmentController {
     ) {
         log.info("Check-in for appointment: {}, traceId: {}", appointmentId, traceId);
 
-        Appointment appointmentData = getAppointmentByIdUseCase.execute(new GetAppointmentByIdQuery(appointmentId));
+        Appointment appointmentData = getAppointmentUseCase.execute(new GetAppointmentByIdQuery(appointmentId));
 
         var action = new AttendingAppointmentStateTransitionAction.CheckIn(
                 appointmentData.getBranchId(),

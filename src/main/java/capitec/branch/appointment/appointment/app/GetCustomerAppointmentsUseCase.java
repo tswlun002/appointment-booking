@@ -1,5 +1,6 @@
 package capitec.branch.appointment.appointment.app;
 
+import capitec.branch.appointment.appointment.app.dto.GetCustomerAppointmentsQuery;
 import capitec.branch.appointment.appointment.app.port.AppointmentQueryPort;
 import capitec.branch.appointment.appointment.app.port.AppointmentQueryResult;
 import capitec.branch.appointment.appointment.app.port.BranchInfoPort;
