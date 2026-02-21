@@ -48,6 +48,9 @@ public class AppointmentBookingApplicationTests {
             .withUrlParam("loggerLevel", "TRACE")
             .withExposedPorts(5432)
             .withNetworkAliases(SQL_NETWORK_ALIAS)
+            .withCreateContainerCmdModifier(cmd -> cmd
+                    .withMemory(384 * 1024 * 1024L)
+            )
             .withNetwork(NETWORK);
 
     protected static GenericContainer<?> keycloakContainer;
@@ -97,6 +100,7 @@ public class AppointmentBookingApplicationTests {
                                 .withAliases("keycloak_test")
                                 .withName("keycloak_test")
                                 .withNetworkDisabled(false)
+                                .withMemory(384 * 1024 * 1024L)
                 )
                 .withExposedPorts(8080)
                 .withNetworkAliases("keycloak_test")
@@ -144,6 +148,7 @@ public class AppointmentBookingApplicationTests {
                         cmd.withHostName(BROKER_SERVICE_NAME)
                                 .withAliases(BROKER_SERVICE_NAME)
                                 .withName(BROKER_SERVICE_NAME)
+                                .withMemory(512 * 1024 * 1024L)
 
                 )
                 .withKraft()
@@ -153,6 +158,8 @@ public class AppointmentBookingApplicationTests {
 
     public  static GenericContainer<?> wiremockContainer = new GenericContainer<>(
             DockerImageName.parse("wiremock/wiremock:latest"))
+            .withCreateContainerCmdModifier(cmd -> cmd
+                    .withMemory(256 * 1024 * 1024L))
             .withExposedPorts(8080); // WireMock's default port
 
 

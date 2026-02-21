@@ -128,6 +128,13 @@ tasks.withType<Test> {
         showCauses = true
         showStackTraces = true
     }
+    maxParallelForks = Runtime.runtime.availableProcessors().intdiv(2) ?: 1
+
+    // For CI with limited resources
+    if (System.getenv("CI")) {
+        maxParallelForks = 1  // Serial execution in CI
+        maxHeapSize = "1g"
+    }
 }
 
 
