@@ -69,7 +69,7 @@ runs:
 
     - name: Test with Gradle
       id: test
-      run: ./gradlew clean test
+      run: ./gradlew clean test   --no-daemon --max-workers=1
       shell: bash
 
     - name: Build with Gradle

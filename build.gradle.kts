@@ -122,11 +122,12 @@ tasks.named("test") {
 tasks.withType<Test> {
     useJUnitPlatform()
     testLogging {
-        events("failed")
+        events("passed", "skipped", "failed", "standardOut", "standardError")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
         showExceptions = true
         showCauses = true
         showStackTraces = true
+        showStandardStreams = true  // Show println() and log output
     }
     maxParallelForks = Runtime.getRuntime().availableProcessors() / 2
 
