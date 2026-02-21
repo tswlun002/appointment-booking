@@ -67,10 +67,15 @@ runs:
       run: chmod +x ./gradlew
       shell: bash
 
+    - name: Test with Gradle
+      id: test
+      run: ./gradlew clean test --info
+      shell: bash
+
     - name: Build with Gradle
       id: build
       run: |
-        ./gradlew clean build --console=plain --no-daemon  -DexcludedTags=kafka
+        ./gradlew clean build  -x test --console=plain --no-daemon  -DexcludedTags=kafka
         ARTIFACT_PATH=$(pwd)/build/libs/${ARTIFACT_ID}-${VERSION}.jar
         echo "ARTIFACT_PATH=${ARTIFACT_PATH}" >> "$GITHUB_OUTPUT"
         echo "ARTIFACT_PATH=${ARTIFACT_PATH}"
