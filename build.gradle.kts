@@ -122,13 +122,11 @@ tasks.named("test") {
 tasks.withType<Test> {
     useJUnitPlatform()
     testLogging {
-        // Show only failed tests in the console
-        events "failed"
-        // Show the full stack trace for failures
-        exceptionFormat "full"
-        showExceptions true
-        showCauses true
-        showStackTraces true
+        events("failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
     }
 }
 
