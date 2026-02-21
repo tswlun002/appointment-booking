@@ -129,12 +129,12 @@ tasks.withType<Test> {
         showStackTraces = true
         showStandardStreams = true  // Show println() and log output
     }
-    maxParallelForks = Runtime.getRuntime().availableProcessors() / 2
+   /* maxParallelForks = Runtime.getRuntime().availableProcessors() / 2
 
     if (System.getenv("CI") != null) {
         maxParallelForks = 1
         maxHeapSize = "1g"
-    }
+    }*/
 }
 
 
