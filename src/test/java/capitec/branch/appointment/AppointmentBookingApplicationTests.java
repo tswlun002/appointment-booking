@@ -51,7 +51,8 @@ public class AppointmentBookingApplicationTests {
             /*.withCreateContainerCmdModifier(cmd -> cmd
                   //  .withMemory(384 * 1024 * 1024L)
             )*/
-            .withNetwork(NETWORK);
+            .withNetwork(NETWORK)
+            .waitingFor(Wait.forListeningPort().withStartupTimeout(Duration.ofMinutes(2)));
 
     protected static GenericContainer<?> keycloakContainer;
 
@@ -75,6 +76,8 @@ public class AppointmentBookingApplicationTests {
         keycloakEnv.put("KEYCLOAK_IMPORT", "/opt/keycloak/data/import/realm.json");
         keycloakEnv.put("JAVA_OPTS", "-Dkeycloak.profile.feature.token_exchange=enabled -Dkeycloak.profile.feature.admin_fine_grained_authz=enabled");
         keycloakEnv.put("KC_FEATURES", "token-exchange");
+        keycloakEnv.put("KC_HEALTH_ENABLED", "true");
+        keycloakEnv.put("KC_METRICS_ENABLED", "true");
 
 
 
@@ -102,13 +105,13 @@ public class AppointmentBookingApplicationTests {
                                 .withNetworkDisabled(false)
                                 .withMemory(1024 * 1024 * 1024L)
                 )
-                .withExposedPorts(8080)
+                .withExposedPorts(8080, 9000)
                 .withNetworkAliases("keycloak_test")
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCommand("start-dev --import-realm --verbose ")
-                .waitingFor(Wait.forHttp("/health/ready").forPort(8080).withStartupTimeout(Duration.ofMinutes(5)));
+                .waitingFor(Wait.forHttp("/health/ready").forPort(9000).withStartupTimeout(Duration.ofMinutes(5)));
 
 
     }
