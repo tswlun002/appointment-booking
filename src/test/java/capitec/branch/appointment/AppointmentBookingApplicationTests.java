@@ -173,7 +173,7 @@ public class AppointmentBookingApplicationTests {
 
             //KEYCLOAK
             keycloakContainer.start();
-            await().atMost(Duration.ofMinutes(1)).until(() -> keycloakContainer.isRunning() /*&& kafkaContainer1.isRunning() && kafkaContainer2.isRunning()*/);
+            await().atMost(Duration.ofMinutes(2)).until(() -> keycloakContainer.isRunning() /*&& kafkaContainer1.isRunning() && kafkaContainer2.isRunning()*/);
             URL = String.format("http://localhost:%s/", keycloakContainer.getMappedPort(8080));
             RESTCLIENT = RestClient.create(URL);
             registry.add("keycloak.urls.auth", () -> URL);
