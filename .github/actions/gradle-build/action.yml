@@ -67,6 +67,20 @@ runs:
       run: chmod +x ./gradlew
       shell: bash
 
+    - name: Cache Docker images
+      uses: ScribeMD/docker-cache@0.5.0
+      with:
+        key: docker-${{ runner.os }}-${{ hashFiles('**/AppointmentBookingApplicationTests.java') }}
+
+    - name: Pull Docker images for tests
+      run: |
+        docker pull postgres:17 &
+        docker pull quay.io/keycloak/keycloak:26.1.2 &
+        docker pull confluentinc/cp-kafka:7.7.6 &
+        docker pull wiremock/wiremock:latest &
+        wait
+      shell: bash
+
     - name: Test with Gradle
       id: test
       run: ./gradlew clean test   --no-daemon --max-workers=1

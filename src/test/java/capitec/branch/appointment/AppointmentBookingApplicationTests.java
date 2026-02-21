@@ -100,14 +100,15 @@ public class AppointmentBookingApplicationTests {
                                 .withAliases("keycloak_test")
                                 .withName("keycloak_test")
                                 .withNetworkDisabled(false)
-                                .withMemory(756 * 1024 * 1024L)
+                                .withMemory(1024 * 1024 * 1024L)
                 )
                 .withExposedPorts(8080)
                 .withNetworkAliases("keycloak_test")
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                .withCommand("start-dev --import-realm --verbose ");
+                .withCommand("start-dev --import-realm --verbose ")
+                .waitingFor(Wait.forHttp("/health/ready").forPort(8080).withStartupTimeout(Duration.ofMinutes(5)));
 
 
     }
