@@ -3,10 +3,11 @@ name: Build an application
 inputs:
   ARTIFACT_ID:
     required: true
-    description: ''
+    description: 'The artifact ID for the build'
   MODULE_PATH:
     required: false
     default: .
+    description: 'Path to the module to build'
 
 outputs:
   VERSION:
@@ -44,7 +45,7 @@ runs:
       uses: actions/setup-java@v4
       with:
           java-version: '21'
-          distribution: 'temurin' # 'temurin' is the standard open-source JDK
+          distribution: 'temurin'
           cache: 'gradle'
 
     - name: Cache Gradle dependencies
@@ -67,19 +68,6 @@ runs:
       run: chmod +x ./gradlew
       shell: bash
 
-    - name: Cache Docker images
-      uses: ScribeMD/docker-cache@0.5.0
-      with:
-        key: docker-${{ runner.os }}-${{ hashFiles('**/AppointmentBookingApplicationTests.java') }}
-
-    - name: Pull Docker images for tests
-      run: |
-        docker pull postgres:17 &
-        docker pull quay.io/keycloak/keycloak:26.1.2 &
-        docker pull confluentinc/cp-kafka:7.7.6 &
-        docker pull wiremock/wiremock:latest &
-        wait
-      shell: bash
 
     - name: Test with Gradle
       id: test

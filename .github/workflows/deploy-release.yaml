@@ -59,8 +59,47 @@ jobs:
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           fi
 
-  build-app:
+  # Cache and pull Docker images on host runner
+  cache-docker-images:
     needs: check-changes
+    if: needs.check-changes.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Docker images
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+        with:
+          key: docker-layer-cache-${{ runner.os }}-{hash}
+          restore-keys: |
+            docker-layer-cache-${{ runner.os }}-
+
+      - name: Pull Docker images for tests
+        run: |
+          docker pull postgres:17 &
+          docker pull quay.io/keycloak/keycloak:26.1.2 &
+          docker pull confluentinc/cp-kafka:7.7.6 &
+          docker pull wiremock/wiremock:latest &
+          wait
+
+      - name: Save Docker images to tar
+        run: |
+          mkdir -p /tmp/docker-images
+          docker save postgres:17 -o /tmp/docker-images/postgres.tar
+          docker save quay.io/keycloak/keycloak:26.1.2 -o /tmp/docker-images/keycloak.tar
+          docker save confluentinc/cp-kafka:7.7.6 -o /tmp/docker-images/kafka.tar
+          docker save wiremock/wiremock:latest -o /tmp/docker-images/wiremock.tar
+
+      - name: Upload Docker images artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images
+          retention-days: 1
+
+  build-app:
+    needs:
+      - check-changes
+      - cache-docker-images
     if: needs.check-changes.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     container:
@@ -96,6 +135,19 @@ jobs:
             exit 1
           fi
           echo " $current_branch is up to date with origin/main"
+
+      - name: Download Docker images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images
+
+      - name: Load Docker images
+        run: |
+          docker load -i /tmp/docker-images/postgres.tar
+          docker load -i /tmp/docker-images/keycloak.tar
+          docker load -i /tmp/docker-images/kafka.tar
+          docker load -i /tmp/docker-images/wiremock.tar
 
       - name: Build with Gradle
         id: build
