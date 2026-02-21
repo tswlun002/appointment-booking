@@ -94,7 +94,7 @@ public class AppointmentBookingApplicationTests {
         log.info("SPI JAR PATH: {}", valiadteCredJarPath);
         log.info("SPI JAR PATH: {}", jarPathUsernameGenerator);
 
-        keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.1.2")
+        keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.0.4")
                 .withEnv(keycloakEnv)
                 .dependsOn(SQLContainer)
                 .withNetwork(NETWORK)
@@ -110,7 +110,7 @@ public class AppointmentBookingApplicationTests {
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                .withCommand("start-dev --import-realm --verbose ")
+                .withCommand("start-dev", "--import-realm")
                 .waitingFor(Wait.forHttp("/health/ready").forPort(9000).withStartupTimeout(Duration.ofMinutes(5)));
 
 

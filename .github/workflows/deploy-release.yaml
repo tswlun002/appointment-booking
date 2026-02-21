@@ -76,18 +76,20 @@ jobs:
       - name: Pull Docker images for tests
         run: |
           docker pull postgres:17 &
-          docker pull quay.io/keycloak/keycloak:26.1.2 &
+          docker pull quay.io/keycloak/keycloak:26.0.4 &
           docker pull confluentinc/cp-kafka:7.7.6 &
           docker pull wiremock/wiremock:latest &
+          docker pull alpine:3.17 &
           wait
 
       - name: Save Docker images to tar
         run: |
           mkdir -p /tmp/docker-images
           docker save postgres:17 -o /tmp/docker-images/postgres.tar
-          docker save quay.io/keycloak/keycloak:26.1.2 -o /tmp/docker-images/keycloak.tar
+          docker save quay.io/keycloak/keycloak:26.0.4 -o /tmp/docker-images/keycloak.tar
           docker save confluentinc/cp-kafka:7.7.6 -o /tmp/docker-images/kafka.tar
           docker save wiremock/wiremock:latest -o /tmp/docker-images/wiremock.tar
+          docker save alpine:3.17 -o /tmp/docker-images/alpine.tar
 
       - name: Upload Docker images artifact
         uses: actions/upload-artifact@v4
@@ -143,6 +145,7 @@ jobs:
           docker load -i /tmp/docker-images/keycloak.tar
           docker load -i /tmp/docker-images/kafka.tar
           docker load -i /tmp/docker-images/wiremock.tar
+          docker load -i /tmp/docker-images/alpine.tar
 
       - name: Build with Gradle
         id: build
