@@ -108,9 +108,9 @@ public class AppointmentBookingApplicationTests {
                 .withNetworkAliases("keycloak_test")
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
                 // SPI JARs - adding generate-username-module first
-                //.withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                .withCommand("start-dev", "--import-realm", "--verbose")
+                .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
+               // .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
+                .withCommand("start-dev --import-realm --verbose")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
                 .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(5)));
 
