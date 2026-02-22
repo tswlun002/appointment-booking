@@ -193,6 +193,21 @@ public class AppointmentBookingApplicationTests {
             registry.add("default_roles.users", () -> "app_user,app_client,app_guest");
             registry.add("default_roles.admin", () -> "app_admin");
 
+            // Keycloak configuration from realm.json
+            registry.add("KEYCLOAK_REALM", () -> "appointment-booking-DEV");
+            registry.add("KEYCLOAK_DOMAIN", () -> URL);
+            registry.add("KEYCLOAK_ADMIN_CLIENT_ID", () -> "appointment-booking");
+            registry.add("KEYCLOAK_ADMIN_CLIENT_SECRETE", () -> "37B9EoUIVcDGxJexxDBuVismiDy53uMd");
+            registry.add("KEYCLOAK_ADMIN_SCOPE", () -> "openid");
+            registry.add("KEYCLOAK_ADMIN_GRANT_TYPE", () -> "client_credentials");
+            registry.add("KEYCLOAK_CLIENT_TYPE", () -> "confidential");
+            registry.add("KEYCLOAK_AUTH_URL", () -> URL);
+            registry.add("KEYCLOAK_USER_AUTH_TYPE", () -> "password");
+            registry.add("KEYCLOAK_PASSWORD", () -> PASSWORD);
+            registry.add("KEYCLOAK_USERNAME", () -> USERNAME);
+            registry.add("DEFAULT_USERS_ROLES", () -> "app_user,app_client,app_guest");
+            registry.add("DEFAULT_ADMIN_ROLES", () -> "app_admin");
+
             // KAFKA
             kafkaContainer.start();
             await().atMost(Duration.ofMinutes(2)).until(() -> kafkaContainer.isRunning()/* && kafkaContainer1.isRunning() && kafkaContainer2.isRunning()*/);
@@ -210,13 +225,26 @@ public class AppointmentBookingApplicationTests {
             registry.add("kafka.common-config.topic-names", () -> "email-verified-event,registration-event,password-reset-request-event,deleted-user-account-event,deleted-user-account-request-event,complete-registration-event," +
                     "appointment-rescheduled,appointment-booked,appointment-canceled,attended-appointment,password-updated-event");
             registry.add("kafka.common-config.replicas", () -> 1);
+            registry.add("kafka.listen.consumer.auto.start", () -> false);
+            registry.add("kafka.listen.produce.auto.start", () -> false);
 
             //Security
-            var issuer = URL+"realms/AppointmentSystemTest";
+            var issuer = URL+"realms/appointment-booking-DEV";
             registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", () -> issuer+"/protocol/openid-connect/certs");
             registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> issuer);
+            registry.add("AUTH_SERVER_TOKEN_URL", () -> issuer+"/protocol/openid-connect/certs");
+            registry.add("ISSUER_URI", () -> issuer);
             registry.add("allowed_origins.urls",()->"*");
             registry.add("allowed_origins.cache_period",()->"30");
+
+            // Mail configuration (mock values for testing)
+            registry.add("MAIL_HOST", () -> "smtp.test.local");
+            registry.add("MAIL_USERNAME", () -> "test@test.local");
+            registry.add("MAIL_PASSWORD", () -> "testpassword123");
+            registry.add("mail.host", () -> "smtp.test.local");
+            registry.add("mail.username", () -> "test@test.local");
+            registry.add("mail.password", () -> "testpassword123");
+
             // Short OTP expiration for faster tests
             registry.add("otp.expire.datetime", () -> 5);
             registry.add("otp.expire.chron-units", () -> "SECONDS");
