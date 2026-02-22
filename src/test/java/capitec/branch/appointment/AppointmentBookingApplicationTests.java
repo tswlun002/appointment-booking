@@ -81,14 +81,10 @@ public class AppointmentBookingApplicationTests {
 
 
 
-        Path valiadteCredJarPath = Paths.get(System.getProperty("user.dir"))
-                .getParent()
-                .resolve("appointment-booking/validate-credential-module/build/libs/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar");
+        var valiadteCredJarPath = ("validate-credential-module/build/libs/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar");
 
 
-        Path jarPathUsernameGenerator = Paths.get(System.getProperty("user.dir"))
-                .getParent()
-                .resolve("appointment-booking/generate-username-ui-register-module/build/libs/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar");
+        var jarPathUsernameGenerator = ("generate-username-ui-register-module/build/libs/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar");
 
         log.info("SPI JAR PATH: {}", valiadteCredJarPath);
         log.info("SPI JAR PATH: {}", jarPathUsernameGenerator);
@@ -109,10 +105,10 @@ public class AppointmentBookingApplicationTests {
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
                 // SPI JARs - adding generate-username-module first
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-               // .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
+                .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCommand("start-dev --import-realm --verbose")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
-                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(5)));
+                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(2)));
 
 
     }
