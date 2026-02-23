@@ -200,8 +200,8 @@ jobs:
           VERSION: ${{ needs.build-app.outputs.VERSION }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
-          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/appointment-booking
-          PUSH_LATEST: "true"
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+          PUSH_LATEST: "false"
 
   # Note: deploy job removed - build-docker now pushes directly to Docker Hub
 
