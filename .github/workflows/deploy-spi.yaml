@@ -1,0 +1,133 @@
+name: Build & Deploy Keycloak SPI Modules 🔑
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'generate-username-ui-register-module/**'
+      - 'validate-credential-module/**'
+
+concurrency:
+  group: spi-deployment-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      generate-username: ${{ steps.changes.outputs.generate-username }}
+      validate-credential: ${{ steps.changes.outputs.validate-credential }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed modules
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger - building all modules"
+            echo "generate-username=true" >> $GITHUB_OUTPUT
+            echo "validate-credential=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          
+          if echo "$CHANGED_FILES" | grep -q "^generate-username-ui-register-module/"; then
+            echo "generate-username=true" >> $GITHUB_OUTPUT
+          else
+            echo "generate-username=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "^validate-credential-module/"; then
+            echo "validate-credential=true" >> $GITHUB_OUTPUT
+          else
+            echo "validate-credential=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-validate-credential:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.validate-credential == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      ARTIFACT_NAME: ${{ steps.build.outputs.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build validate-credential-module
+        id: build
+        uses: ./.github/actions/build-spi-module
+        with:
+          MODULE_PATH: validate-credential-module
+          MODULE_NAME: validate-credential-module
+          JAVA_VERSION: '21'
+          RETENTION_DAYS: '1'
+
+  build-generate-username:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.generate-username == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      ARTIFACT_NAME: ${{ steps.build.outputs.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build generate-username-module
+        id: build
+        uses: ./.github/actions/build-spi-module
+        with:
+          MODULE_PATH: generate-username-ui-register-module
+          MODULE_NAME: generate-username-module
+          JAVA_VERSION: '21'
+          RETENTION_DAYS: '1'
+
+  update-validate-credential-configmap:
+    needs:
+      - detect-changes
+      - build-validate-credential
+    if: needs.detect-changes.outputs.validate-credential == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update ConfigMap
+        uses: ./.github/actions/update-keycloak-spi
+        with:
+          ORGANIZATION: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+          MODULE_NAME: validate-credential
+          JAR_ARTIFACT_NAME: ${{ needs.build-validate-credential.outputs.ARTIFACT_NAME }}
+          VERSION: ${{ github.sha }}
+          GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
+          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+
+  update-generate-username-configmap:
+    needs:
+      - detect-changes
+      - build-generate-username
+    if: needs.detect-changes.outputs.generate-username == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update ConfigMap
+        uses: ./.github/actions/update-keycloak-spi
+        with:
+          ORGANIZATION: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+          MODULE_NAME: generate-username
+          JAR_ARTIFACT_NAME: ${{ needs.build-generate-username.outputs.ARTIFACT_NAME }}
+          VERSION: ${{ github.sha }}
+          GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
+          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+

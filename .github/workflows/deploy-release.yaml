@@ -1,4 +1,4 @@
-name: Java CI/CD With Gradle 🛠️🔨🌩️🔥🔥😂😭
+name: Java CI/CD With Gradle 🛠️🔨🌩️
 on:
   workflow_dispatch: #Manual kickoff
   push:
@@ -98,7 +98,7 @@ jobs:
           path: /tmp/docker-images
           retention-days: 1
 
-  # Build SPI modules with JDK 21 (required for Keycloak compatibility)
+  # Build SPI modules with JDK 21 (required for tests and Keycloak compatibility)
   build-spi-modules:
     needs: check-changes
     if: needs.check-changes.outputs.should_deploy == 'true'
@@ -229,6 +229,8 @@ jobs:
 
   release-notes:
     name: Create Release Notes
+    permissions:
+      contents: write
     needs:
       - build-app
       - build-docker
