@@ -98,7 +98,7 @@ public class AppointmentBookingApplicationTests {
                                 .withAliases("keycloak_test")
                                 .withName("keycloak_test")
                                 .withNetworkDisabled(false)
-                                .withMemory(1024 * 1024 * 1024L)
+                                //.withMemory(1024 * 1024 * 1024L)
                 )
                 .withExposedPorts(8080, 9000)
                 .withNetworkAliases("keycloak_test")
