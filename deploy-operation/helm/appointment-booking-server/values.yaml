@@ -3,9 +3,8 @@ replicaCount: 1
 image:
   pullPolicy: IfNotPresent
   # Repository and Tag MANAGED BY DEVOPS REPO, MANUAL EDITING MIGHT CAUSE ERRORS!!!!!!!!!!
-  repository: appointment-booking-server # This sets the pull policy for images.
-  tag: "latest"
-
+  repository: tswlun002/appointment-booking-server # This sets the pull policy for images.
+  tag: "2026.02.23.16.04-95e51b5"
 # This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
 # This is to override the chart name.
@@ -54,17 +53,16 @@ ingress:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   hosts:
-      - host: ""
-        paths:
-          - path: /api
-            pathType: Prefix
-            backend:
-              service:
-                name: appointment-booking-server
-                port:
-                  number: 8083
+    - host: ""
+      paths:
+        - path: /api
+          pathType: Prefix
+          backend:
+            service:
+              name: appointment-booking-server
+              port:
+                number: 8083
   tls: []
-
 # Allowed pod to call end-points of this service
 networkPolicy:
   allowedPods:
@@ -116,7 +114,6 @@ baseEnv:
     value: DEBUG
   - name: KEYCLOAK_LOGGING_LEVEL
     value: ERROR
-
   # ---- Database env ---------
   - name: DATABASE_URL
     value: ""
@@ -130,7 +127,6 @@ baseEnv:
     value: ""
   - name: DATABASE_HOST
     value: ""
-
   # ---- Security & Auth Server env ---------
   # Use internal k8s service URL for keycloak: http://keycloak.<namespace>.svc.cluster.local:8080
   # Example: http://keycloak.default.svc.cluster.local:8080/realms/<realm>/protocol/openid-connect/token
@@ -143,7 +139,6 @@ baseEnv:
     value: ""
   - name: CORS_CERTS_CACHE_PERIOD
     value: "30"
-
   # ---- Keycloak env ---------
   # Use internal k8s service URL: http://keycloak.<namespace>.svc.cluster.local:8080
   - name: KEYCLOAK_REALM
@@ -170,7 +165,6 @@ baseEnv:
     value: ""
   - name: KEYCLOAK_PASSWORD
     value: ""
-
   # ---- OTP & Business Logic env ---------
   - name: OTP_EXPIRE_DATETIME_IN_MINUTES
     value: "5"
@@ -181,28 +175,20 @@ baseEnv:
   - name: SLOT_GENERATION_ROLLING_WINDOW_DAYS_DAILY
     value: "1"
   - name: SLOT_SCHEDULAR_CRON
-    value:  "0 5 * * * *"
+    value: "0 5 * * * *"
   - name: APPOINTMENT_NO_SHOW_CRON
     value: "0 */10 * * * *"
   - name: APPOINTMENT_TO_MARK_NO_SHOW_SINCE
     value: "30"
-
   # ---- Kafka env ---------
   - name: KAFKA_REPLICAS
     value: "2"
   - name: BROKER_BOOTSTRAP_SERVERS
     value: ""
   - name: EVENT_TOPICS
-    value: "registration-event,email-verified-event,
-            retryable-letter,dead-letter,complete-registration-event,
-            deleted-user-account-request-event,deleted-user-account-event,
-            password-reset-request-event,password-updated-event,
-            appointment-rescheduled,appointment-canceled,
-            attended-appointment,appointment-booked
-            "
+    value: "registration-event,email-verified-event, retryable-letter,dead-letter,complete-registration-event, deleted-user-account-request-event,deleted-user-account-event, password-reset-request-event,password-updated-event, appointment-rescheduled,appointment-canceled, attended-appointment,appointment-booked "
   - name: TRUSTED_PACKAGES_SUBDIRECTORIES
     value: ""
-
   # ---- Email env ---------
   - name: MAIL_HOST
     value: ""
@@ -214,7 +200,6 @@ baseEnv:
     value: ""
   - name: MAIL_PASSWORD
     value: ""
-
   # ---- External Clients env ---------
   - name: CLIENT_DOMAIN_BASE_URL
     value: ""
@@ -228,11 +213,11 @@ active: true
 rbac:
   create: true
   resources:
-#    - "configmaps"
+    #    - "configmaps"
     - "pods"
     - "services"
     - "endpoints"
-#    - "secrets"
+    #    - "secrets"
   verbs:
     - "get"
     - "list"
