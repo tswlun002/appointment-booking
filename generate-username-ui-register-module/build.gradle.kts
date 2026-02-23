@@ -53,15 +53,19 @@ tasks.jar {
     archiveBaseName.set("generate-username-module")
     archiveVersion.set("APPOINTMENT-BOOKING-UNSET-VERSION")
 
-    // Include compiled classes
+    // Simple JAR - Keycloak provides all dependencies at runtime
+    // Fat JAR can cause Quarkus loading issues with NullPointerException in OpenContainerPathTree.getRoots
     from(sourceSets.main.get().output)
 
-    // Include dependencies (fat JAR) - exclude Keycloak
-    from({
-        configurations.runtimeClasspath.get()
-            .filter { !it.name.startsWith("keycloak") }
-            .map { if (it.isDirectory) it else zipTree(it) }
-    })
+    // Ensure META-INF/services is included for SPI registration
+    from(sourceSets.main.get().resources)
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+            "Implementation-Title" to project.name,
+            "Implementation-Version" to project.version
+        )
+    }
 }

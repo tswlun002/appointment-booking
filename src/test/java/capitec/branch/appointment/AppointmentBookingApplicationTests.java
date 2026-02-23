@@ -103,10 +103,9 @@ public class AppointmentBookingApplicationTests {
                 .withExposedPorts(8080, 9000)
                 .withNetworkAliases("keycloak_test")
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
-                // SPI JARs - temporarily disabled to debug Keycloak startup
-                // TODO: Re-enable once we confirm Keycloak starts without them
-                //.withFileSystemBind(valiadteCredJarPath, "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar", BindMode.READ_ONLY)
-                //.withFileSystemBind(jarPathUsernameGenerator, "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar", BindMode.READ_ONLY)
+                // SPI JARs - using simple JARs (not fat JARs) to avoid Quarkus loading issues
+                .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
+                .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCommand("start-dev --import-realm --verbose")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
                 .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(2)));

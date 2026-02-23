@@ -16,7 +16,8 @@
   "registrationAllowed": true,
   "duplicateEmailsAllowed": false,
   "eventsListeners": [
-    "jboss-logging"
+    "jboss-logging",
+    "custom-username-generator-listener"
   ],
   "enabledEventTypes": [
     "REGISTER",
