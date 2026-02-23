@@ -56,23 +56,12 @@ tasks.jar {
     // Include compiled classes
     from(sourceSets.main.get().output)
 
-    // Include dependencies (fat JAR) - exclude Keycloak and conflicting classes
+    // Include dependencies (fat JAR) - exclude Keycloak
     from({
         configurations.runtimeClasspath.get()
             .filter { !it.name.startsWith("keycloak") }
             .map { if (it.isDirectory) it else zipTree(it) }
-    }) {
-        // Exclude classes that conflict with Keycloak/Quarkus runtime
-        exclude("META-INF/MANIFEST.MF")
-        exclude("META-INF/*.SF")
-        exclude("META-INF/*.DSA")
-        exclude("META-INF/*.RSA")
-        exclude("META-INF/INDEX.LIST")
-        exclude("META-INF/DEPENDENCIES")
-        exclude("META-INF/LICENSE*")
-        exclude("META-INF/NOTICE*")
-        exclude("module-info.class")
-    }
+    })
 
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }

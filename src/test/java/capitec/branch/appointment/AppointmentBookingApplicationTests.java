@@ -103,12 +103,14 @@ public class AppointmentBookingApplicationTests {
                 .withExposedPorts(8080, 9000)
                 .withNetworkAliases("keycloak_test")
                 .withClasspathResourceMapping("realm.json", "/opt/keycloak/data/import/realm.json", BindMode.READ_WRITE)
-                // SPI JARs - using simple JARs (not fat JARs) to avoid Quarkus loading issues
+                // SPI JARs
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                .withCommand("start-dev --import-realm --verbose")
+                // Use build + start-dev to properly initialize providers before starting
+                // This avoids the re-augmentation issue mentioned in Keycloak issue #35742
+                .withCommand("/bin/bash", "-c", "/opt/keycloak/bin/kc.sh build && /opt/keycloak/bin/kc.sh start-dev --import-realm")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
-                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(2)));
+                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(5)));
 
 
     }

@@ -84,6 +84,7 @@ runs:
 
     - name: Verify SPI JARs
       run: |
+        set +o pipefail  # Don't fail on broken pipe from head command
         echo "SPI JARs downloaded:"
         echo "=== validate-credential-module ==="
         ls -la validate-credential-module/build/libs/ || echo "validate-credential-module JARs not found"
@@ -100,13 +101,14 @@ runs:
               echo "  ✓ JAR is valid"
               # List contents to verify structure
               echo "  Contents:"
-              unzip -l "$jar" | grep -E "(META-INF/services|\.class)" | head -10
+              unzip -l "$jar" 2>/dev/null | grep -E "(META-INF/services|\.class)" | head -10 || true
             else
               echo "  ✗ JAR is CORRUPTED!"
               exit 1
             fi
           fi
         done
+        echo "=== All JARs verified ==="
       shell: bash
 
     - name: Test with Gradle
