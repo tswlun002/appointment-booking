@@ -87,11 +87,13 @@ runs:
       id: docker_build
       run: |
         echo "Building Docker image..."
-        docker build --build-arg JAR_FILE="${{ inputs.ARTIFACT_ID }}-${{ inputs.VERSION }}.jar" \
-          --iidfile=image-sha.txt \
-          -t "${{ steps.variables.outputs.IMAGE_NAME }}" \
-          "${{ inputs.MODULE_PATH }}" --no-cache
+        docker buildx create --name mybuilder --use
         
+        docker buildx build --platform linux/amd64,linux/arm64 \
+         --no-cache  --build-arg JAR_FILE="${{ inputs.ARTIFACT_ID }}-${{ inputs.VERSION }}.jar" \
+          --iidfile=image-sha.txt \
+          -t ${{ steps.variables.outputs.IMAGE_NAME }} --push "${{ inputs.MODULE_PATH }}" \
+          
         IMAGE_DIGEST=$(cat image-sha.txt)
         echo "IMAGE_DIGEST=${IMAGE_DIGEST}" >> "$GITHUB_OUTPUT"
         echo "Built image: ${{ steps.variables.outputs.IMAGE_NAME }}"
