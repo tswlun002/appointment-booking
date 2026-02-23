@@ -1,5 +1,5 @@
 name: "Update Keycloak SPI ConfigMap"
-description: "Creates Keycloak SPI ConfigMap with JAR, applies to cluster, then removes JAR from git"
+description: "Patches Keycloak SPI ConfigMap with latest JAR (base64 encoded)"
 
 inputs:
   ORGANIZATION:
@@ -26,14 +26,11 @@ inputs:
   APP_GITHUB_USERNAME:
     description: "Git commit username"
     required: true
-  KUBECONFIG:
-    description: "Kubeconfig for applying ConfigMap (base64 encoded)"
-    required: false
-    default: ""
-  NAMESPACE:
-    description: "Kubernetes namespace for ConfigMap"
-    required: false
-    default: "capitec"
+
+outputs:
+  CONFIGMAP_FILE:
+    description: "Path to updated ConfigMap file"
+    value: ${{ steps.config.outputs.CONFIGMAP_FILE }}
 
 runs:
   using: "composite"
@@ -41,24 +38,15 @@ runs:
     - name: Print Inputs
       run: |
         echo "======================"
-        echo "ORGANIZATION=${{ inputs.ORGANIZATION }}"
-        echo "REPOSITORY=${{ inputs.REPOSITORY }}"
         echo "MODULE_NAME=${{ inputs.MODULE_NAME }}"
         echo "JAR_ARTIFACT_NAME=${{ inputs.JAR_ARTIFACT_NAME }}"
         echo "VERSION=${{ inputs.VERSION }}"
-        echo "NAMESPACE=${{ inputs.NAMESPACE }}"
         echo "======================"
       shell: bash
 
     - name: Clone repository
       run: |
         git clone https://${{ inputs.GIT_REPO_ACCESS_TOKEN }}@github.com/${{ inputs.ORGANIZATION }}/${{ inputs.REPOSITORY }}.git
-        if [ -d "${{ inputs.REPOSITORY }}" ]; then
-          echo "Cloned ${{ inputs.REPOSITORY }} repository successfully."
-        else
-          echo "Error: Couldn't clone ${{ inputs.REPOSITORY }} repository."
-          exit 1
-        fi
       shell: bash
 
     - name: Download JAR artifact
@@ -72,131 +60,56 @@ runs:
       with:
         yq-version: v4.29.2
 
-    - name: Determine ConfigMap file and SPI name
+    - name: Determine ConfigMap file
       id: config
       run: |
         if [ "${{ inputs.MODULE_NAME }}" == "generate-username" ]; then
           echo "CONFIGMAP_FILE=deploy-operation/helm/generate-username-spi-configmaps.yaml" >> $GITHUB_OUTPUT
-          echo "SPI_NAME=generate-username-ui-register" >> $GITHUB_OUTPUT
+          echo "JAR_KEY=generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar" >> $GITHUB_OUTPUT
         elif [ "${{ inputs.MODULE_NAME }}" == "validate-credential" ]; then
           echo "CONFIGMAP_FILE=deploy-operation/helm/validate-credentials-spi-configmaps.yaml" >> $GITHUB_OUTPUT
-          echo "SPI_NAME=validate-credential" >> $GITHUB_OUTPUT
+          echo "JAR_KEY=validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar" >> $GITHUB_OUTPUT
         else
           echo "Error: Unknown module ${{ inputs.MODULE_NAME }}"
           exit 1
         fi
       shell: bash
 
-    - name: Create ConfigMap with JAR content
+    - name: Patch ConfigMap with JAR base64
       run: |
         cd ${{ inputs.REPOSITORY }}
         
         CONFIGMAP_FILE="${{ steps.config.outputs.CONFIGMAP_FILE }}"
-        SPI_NAME="${{ steps.config.outputs.SPI_NAME }}"
-        
-        # Get JAR file
+        JAR_KEY="${{ steps.config.outputs.JAR_KEY }}"
         JAR_FILE=$(ls ../jar-artifact/*.jar | head -1)
-        JAR_FILENAME=$(basename "$JAR_FILE")
         
-        echo "JAR file: ${JAR_FILENAME}"
-        echo "ConfigMap file: ${CONFIGMAP_FILE}"
+        echo "JAR file: $(basename $JAR_FILE)"
+        echo "ConfigMap: ${CONFIGMAP_FILE}"
+        echo "JAR key: ${JAR_KEY}"
         
-        # Base64 encode the JAR
+        # Base64 encode and patch binaryData in one step
         JAR_BASE64=$(base64 -w 0 "$JAR_FILE")
         
-        # Create or update ConfigMap YAML with JAR content
-        cat > "${CONFIGMAP_FILE}" << EOF
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: ${SPI_NAME}-spi
-          namespace: ${{ inputs.NAMESPACE }}
-          labels:
-            app: keycloak
-            spi: ${SPI_NAME}
-        data:
-          version: "${{ inputs.VERSION }}"
-          jar-filename: "${JAR_FILENAME}"
-        binaryData:
-          ${JAR_FILENAME}: ${JAR_BASE64}
-        EOF
+        # Patch the binaryData field with new JAR content
+        yq -i ".binaryData.\"${JAR_KEY}\" = \"${JAR_BASE64}\"" "${CONFIGMAP_FILE}"
         
-        echo "ConfigMap created with JAR content"
-        echo "File size: $(wc -c < ${CONFIGMAP_FILE}) bytes"
+        # Update version in data section
+        yq -i ".data.version = \"${{ inputs.VERSION }}\"" "${CONFIGMAP_FILE}"
+        
+        echo "ConfigMap patched successfully"
       shell: bash
 
-    - name: Apply ConfigMap to Kubernetes (if KUBECONFIG provided)
-      if: inputs.KUBECONFIG != ''
-      run: |
-        cd ${{ inputs.REPOSITORY }}
-        
-        # Setup kubeconfig
-        echo "${{ inputs.KUBECONFIG }}" | base64 -d > /tmp/kubeconfig
-        export KUBECONFIG=/tmp/kubeconfig
-        
-        CONFIGMAP_FILE="${{ steps.config.outputs.CONFIGMAP_FILE }}"
-        
-        echo "Applying ConfigMap to Kubernetes..."
-        kubectl apply -f "${CONFIGMAP_FILE}"
-        
-        echo "ConfigMap applied successfully!"
-        kubectl get configmap -n ${{ inputs.NAMESPACE }} | grep spi
-        
-        # Cleanup kubeconfig
-        rm -f /tmp/kubeconfig
-      shell: bash
-
-    - name: Remove JAR content from ConfigMap file (keep metadata only)
-      run: |
-        cd ${{ inputs.REPOSITORY }}
-        
-        CONFIGMAP_FILE="${{ steps.config.outputs.CONFIGMAP_FILE }}"
-        SPI_NAME="${{ steps.config.outputs.SPI_NAME }}"
-        JAR_FILE=$(ls ../jar-artifact/*.jar | head -1)
-        JAR_FILENAME=$(basename "$JAR_FILE")
-        
-        # Create a placeholder ConfigMap without the actual JAR binary
-        cat > "${CONFIGMAP_FILE}" << EOF
-        # Keycloak SPI ConfigMap
-        # JAR is applied to cluster but not stored in git (too large)
-        # Last updated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-        # Version: ${{ inputs.VERSION }}
-        apiVersion: v1
-        kind: ConfigMap
-        metadata:
-          name: ${SPI_NAME}-spi
-          namespace: ${{ inputs.NAMESPACE }}
-          labels:
-            app: keycloak
-            spi: ${SPI_NAME}
-        data:
-          version: "${{ inputs.VERSION }}"
-          jar-filename: "${JAR_FILENAME}"
-          # Note: binaryData with JAR content is applied directly to cluster
-          # and not stored in git to avoid large file commits
-        EOF
-        
-        echo "ConfigMap file cleaned - JAR content removed"
-        echo "=============================================================================="
-        cat "${CONFIGMAP_FILE}"
-        echo "=============================================================================="
-      shell: bash
-
-    - name: Commit and Push changes
+    - name: Commit and Push
       run: |
         cd ${{ inputs.REPOSITORY }}
         if [[ `git status --porcelain --untracked-files=no` ]]; then
           git config user.email "${{ inputs.APP_GITHUB_EMAIL }}"
           git config user.name "${{ inputs.APP_GITHUB_USERNAME }}"
           git add .
-          git commit -m "Update ${{ inputs.MODULE_NAME }} SPI to version ${{ inputs.VERSION }}
-
-        - JAR applied to cluster
-        - ConfigMap metadata updated (JAR not in git)"
+          git commit -m "Update ${{ inputs.MODULE_NAME }} SPI to ${{ inputs.VERSION }}"
           git push
-          echo "Successfully pushed Keycloak SPI update"
+          echo "Pushed SPI update"
         else
-          echo "Warning! No changes detected"
+          echo "No changes detected"
         fi
       shell: bash
-
