@@ -656,15 +656,15 @@ service:
 ingress:
   ## @param ingress.enabled Enable ingress record generation for Keycloak
   ##
-  enabled: false
+  enabled: true
   ## @param ingress.ingressClassName IngressClass that will be be used to implement the Ingress (Kubernetes 1.18+)
   ## This is supported in Kubernetes 1.18+ and required if you have more than one IngressClass marked as the default for your cluster .
   ## ref: https://kubernetes.io/blog/2020/04/02/improvements-to-the-ingress-api-in-kubernetes-1.18/
   ##
-  ingressClassName: ""
+  ingressClassName: "nginx"
   ## @param ingress.pathType Ingress path type
   ##
-  pathType: ImplementationSpecific
+  pathType: Prefix
   ## @param ingress.apiVersion Force Ingress API version (automatically detected if not set)
   ##
   apiVersion: ""
@@ -696,7 +696,9 @@ ingress:
   ##   kubernetes.io/ingress.class: nginx
   ##   cert-manager.io/cluster-issuer: cluster-issuer-name
   ##
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
   ## @param ingress.labels Additional labels for the Ingress resource.
   ## e.g:
   ## labels:
@@ -892,7 +894,7 @@ networkPolicy:
   ## on. When true, server will accept connections from any source
   ## (with the correct destination port).
   ##
-  allowExternal: true
+  allowExternal: false
   ## @param networkPolicy.allowExternalEgress Allow the pod to access any range of port and all destinations.
   ##
   allowExternalEgress: true
@@ -900,21 +902,20 @@ networkPolicy:
   ##
   kubeAPIServerPorts: [443, 6443, 8443]
   ## @param networkPolicy.extraIngress [array] Add extra ingress rules to the NetworkPolicy
-  ## e.g:
-  ## extraIngress:
-  ##   - ports:
-  ##       - port: 1234
-  ##     from:
-  ##       - podSelector:
-  ##           - matchLabels:
-  ##               - role: frontend
-  ##       - podSelector:
-  ##           - matchExpressions:
-  ##               - key: role
-  ##                 operator: In
-  ##                 values:
-  ##                   - frontend
-  extraIngress: []
+  ## Allow only appointment-booking-server and ingress-nginx to access Keycloak
+  extraIngress:
+    - ports:
+        - port: 8080
+        - port: 8443
+      from:
+        # Allow appointment-booking-server
+        - podSelector:
+            matchLabels:
+              app: appointment-booking-server
+        # Allow ingress-nginx controller
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
   ## @param networkPolicy.extraEgress [array] Add extra ingress rules to the NetworkPolicy
   ## e.g:
   ## extraEgress:

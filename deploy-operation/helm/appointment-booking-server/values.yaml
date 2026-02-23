@@ -132,8 +132,11 @@ baseEnv:
     value: ""
 
   # ---- Security & Auth Server env ---------
+  # Use internal k8s service URL for keycloak: http://keycloak.<namespace>.svc.cluster.local:8080
+  # Example: http://keycloak.default.svc.cluster.local:8080/realms/<realm>/protocol/openid-connect/token
   - name: AUTH_SERVER_TOKEN_URL
     value: ""
+  # Example: http://keycloak.default.svc.cluster.local:8080/realms/<realm>
   - name: ISSUER_URI
     value: ""
   - name: CORS_ALLOWED_ORIGIN
@@ -142,8 +145,10 @@ baseEnv:
     value: "30"
 
   # ---- Keycloak env ---------
+  # Use internal k8s service URL: http://keycloak.<namespace>.svc.cluster.local:8080
   - name: KEYCLOAK_REALM
     value: ""
+  # Example: http://keycloak.default.svc.cluster.local:8080
   - name: KEYCLOAK_DOMAIN
     value: ""
   - name: KEYCLOAK_ADMIN_CLIENT_ID
@@ -156,6 +161,7 @@ baseEnv:
     value: "client_credentials"
   - name: KEYCLOAK_CLIENT_TYPE
     value: "authenticationClientId"
+  # Example: http://keycloak.default.svc.cluster.local:8080
   - name: KEYCLOAK_AUTH_URL
     value: ""
   - name: KEYCLOAK_USER_AUTH_TYPE
