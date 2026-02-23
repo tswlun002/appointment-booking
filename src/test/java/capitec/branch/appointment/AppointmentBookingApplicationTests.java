@@ -109,8 +109,7 @@ public class AppointmentBookingApplicationTests {
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 // Run build first to avoid re-augmentation issues (Keycloak issue #35742)
                 .withCommand("start-dev --import-realm --verbose ")
-                .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
-                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(2)));
+                .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()));
 
 
     }
