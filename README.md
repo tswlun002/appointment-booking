@@ -11,6 +11,8 @@ A comprehensive branch appointment scheduling system that enables Capitec Bank c
 - [API Documentation](#api-documentation)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
+- [Keycloak Setup](docs/keycloak-setup.md)
+- [User Flows](#user-flows)
 - [Deployment](#deployment)
   - [Future Enhancements](#future-enhancements)
 - [Testing](#testing)
@@ -804,6 +806,19 @@ echo "Keycloak Admin Password: $KEYCLOAK_ADMIN_PASSWORD"
 # Realm: appointment-booking-DEV (create this in Keycloak UI)
 ```
 
+> **📖 Keycloak Configuration Guide**
+> 
+> After Keycloak is running, you need to configure realms, clients, roles, and mappers.
+> See the detailed setup guide: **[Keycloak Setup Guide](docs/keycloak-setup.md)**
+> 
+> Quick checklist:
+> - [ ] Create realm `appointment-booking`
+> - [ ] Create client with authentication enabled
+> - [ ] Configure token exchange
+> - [ ] Create roles: `app_user`, `app_staff`, `app_admin`
+> - [ ] Configure role mapper for token claims
+> - [ ] Set `app_user` as default role
+
 ---
 
 ##### Step 4: Install Apache Kafka
@@ -1159,6 +1174,72 @@ helm upgrade --install appointment-booking capitec/appointment-booking \
   --namespace appointment-booking \
   --set image.tag=1.0.0
 ```
+
+### Keycloak Ingress & Network Policy
+
+Keycloak is configured with ingress and network policy for secure access:
+
+#### Ingress Configuration
+- **Enabled**: Yes
+- **Ingress Class**: nginx
+- **Path Type**: Prefix
+- **Hostname**: `keycloak.local` (configurable)
+
+#### Network Policy
+Only the following pods can access Keycloak:
+- **appointment-booking-server**: Internal service communication
+- **ingress-nginx**: External access via ingress controller
+
+This ensures Keycloak is not directly accessible from other pods in the cluster.
+
+#### Server Connection to Keycloak
+
+The appointment-booking-server connects to Keycloak using the internal Kubernetes service URL:
+
+```yaml
+# In appointment-booking-server values.yaml
+baseEnv:
+  - name: KEYCLOAK_DOMAIN
+    value: "http://keycloak.<namespace>.svc.cluster.local:8080"
+  - name: AUTH_SERVER_TOKEN_URL
+    value: "http://keycloak.<namespace>.svc.cluster.local:8080/realms/<realm>/protocol/openid-connect/token"
+  - name: ISSUER_URI
+    value: "http://keycloak.<namespace>.svc.cluster.local:8080/realms/<realm>"
+  - name: KEYCLOAK_AUTH_URL
+    value: "http://keycloak.<namespace>.svc.cluster.local:8080"
+```
+
+Replace `<namespace>` with your deployment namespace (e.g., `default`, `appointment-booking`) and `<realm>` with your Keycloak realm name.
+
+## 👥 User Flows
+
+The system supports three user profiles with distinct workflows:
+
+### Customer (app_user)
+- Browse available appointment slots
+- Book appointments for banking services
+- View, reschedule, or cancel their appointments
+- Check-in upon arrival at the branch
+
+### Staff/Consultant (app_staff)
+- View branch appointment queue
+- Check-in customers
+- Start serving appointments
+- Mark appointments as complete
+- Cancel appointments with reason
+
+### Branch Manager/Admin (app_admin)
+- All staff capabilities
+- Manage branch information and hours
+- Add/remove staff members
+- Configure branch capacity and services
+- Override branch hours for holidays
+
+> **📖 Complete User Flow Documentation**
+> 
+> For detailed step-by-step flows with API examples, see: **[Keycloak Setup & User Flows](docs/keycloak-setup.md#part-2-user-flows--api-usage)**
+
+---
 
 ## 🧪 Testing
 
