@@ -636,10 +636,10 @@ Images are published to Docker Hub:
 
 ```bash
 # Pull the latest image
-docker pull capitec/appointment-booking:latest
+docker pull tswlun002/appointment-booking-server:<tag>
 
 # Or pull a specific version
-docker pull capitec/appointment-booking:1.0.0
+Helm values under deploy-operation, has latest image always
 ```
 
 ### Local Development Options
