@@ -107,7 +107,7 @@ public class AppointmentBookingApplicationTests {
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 // Use default Keycloak entrypoint with start-dev command
-                .withCommand("start-dev", "--import-realm")
+                .withCommand("start-dev", "--import-realm", "--verbose")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()));
 
 
