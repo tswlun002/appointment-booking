@@ -56,12 +56,16 @@ if [[ -d "${helm_directory}" ]]; then
     echo "Image tag: ${image_tag}"
     echo "Image repository: ${image_repository}"
     echo "yq version: $(yq --version)"
+    echo "Current directory: $(pwd)"
+    echo "Full path to values file: $(pwd)/${values_file}"
     yq -i '.active = true' ${values_file}
     yq -i ".image.tag = \"${image_tag}\"" ${values_file}
     yq -i ".image.repository = \"${image_repository}\"" ${values_file}
     echo "Updated values of ${values_file}"
     echo "=============================================================================="
     cat "${values_file}"
+    echo "Git status after yq update:"
+    git status
   else
     echo "Warning: ${values_file} DOES NOT EXIST!!!"
   fi
