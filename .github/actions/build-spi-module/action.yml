@@ -97,6 +97,29 @@ runs:
         echo "JAR files in build/libs:"
         ls -la ${{ inputs.MODULE_PATH }}/build/libs/ || echo "No JAR files found"
 
+    - name: Verify JAR before upload
+      shell: bash
+      run: |
+        echo "=== Verifying JAR integrity before upload ==="
+        for jar in ${{ inputs.MODULE_PATH }}/build/libs/*.jar; do
+          if [ -f "$jar" ]; then
+            echo "Checking: $jar"
+            echo "  Size: $(stat -c%s "$jar") bytes"
+            # Verify JAR is valid zip
+            if unzip -t "$jar" > /dev/null 2>&1; then
+              echo "  ✓ JAR is valid"
+              # List key contents
+              echo "  META-INF/services:"
+              unzip -l "$jar" | grep "META-INF/services" || echo "    (none)"
+              echo "  Classes:"
+              unzip -l "$jar" | grep "\.class" | wc -l | xargs echo "    count:"
+            else
+              echo "  ✗ JAR is INVALID!"
+              exit 1
+            fi
+          fi
+        done
+
     - name: Upload JAR artifact
       uses: actions/upload-artifact@v4
       with:
@@ -104,4 +127,5 @@ runs:
         path: ${{ inputs.MODULE_PATH }}/build/libs/
         retention-days: ${{ inputs.RETENTION_DAYS }}
         if-no-files-found: error
+        compression-level: 0  # No compression to avoid JAR corruption
 

@@ -89,6 +89,24 @@ runs:
         ls -la validate-credential-module/build/libs/ || echo "validate-credential-module JARs not found"
         echo "=== generate-username-ui-register-module ==="
         ls -la generate-username-ui-register-module/build/libs/ || echo "generate-username-ui-register-module JARs not found"
+        
+        echo ""
+        echo "=== Verifying JAR integrity ==="
+        for jar in validate-credential-module/build/libs/*.jar generate-username-ui-register-module/build/libs/*.jar; do
+          if [ -f "$jar" ]; then
+            echo "Checking: $jar"
+            # Verify JAR is valid zip
+            if unzip -t "$jar" > /dev/null 2>&1; then
+              echo "  ✓ JAR is valid"
+              # List contents to verify structure
+              echo "  Contents:"
+              unzip -l "$jar" | grep -E "(META-INF/services|\.class)" | head -10
+            else
+              echo "  ✗ JAR is CORRUPTED!"
+              exit 1
+            fi
+          fi
+        done
       shell: bash
 
     - name: Test with Gradle
