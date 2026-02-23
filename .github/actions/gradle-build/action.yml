@@ -143,12 +143,6 @@ runs:
         grep -hR "failure message" build/test-results/test/*.xml > test-failures.txt || echo "No failures found" > test-failures.txt
       shell: bash
 
-    - name: Upload Text Report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-failures-text
-        path: test-failures.txt
     - name: Upload Artifact
       id: upload
       uses: actions/upload-artifact@v4
