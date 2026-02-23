@@ -99,7 +99,6 @@ public class AppointmentBookingApplicationTests {
                                 .withName("keycloak_test")
                                 .withNetworkDisabled(false)
                                 .withMemory(1024 * 1024 * 1024L)
-                                .withEntrypoint("/bin/bash", "-c")
                 )
                 .withExposedPorts(8080, 9000)
                 .withNetworkAliases("keycloak_test")
@@ -107,8 +106,8 @@ public class AppointmentBookingApplicationTests {
                 // SPI JARs
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                // Run build first to avoid re-augmentation issues (Keycloak issue #35742)
-                .withCommand("start-dev --import-realm --verbose ")
+                // Use default Keycloak entrypoint with start-dev command
+                .withCommand("start-dev", "--import-realm")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()));
 
 
