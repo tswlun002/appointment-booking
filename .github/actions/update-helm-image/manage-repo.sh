@@ -21,8 +21,8 @@ echo "    environment=${environment}"
 echo "    image=${image}            "
 echo "=========================="
 
-# Go to project
-cd "${repository}/" || { echo "Error: Repository ${repository} not found."; exit 1; }
+# Go to project deployment operation directory
+cd "${repository}/deploy-operation" || { echo "Error: Repository ${repository} not found."; exit 1; }
 
 # In Helm
 helm_directory="helm"
