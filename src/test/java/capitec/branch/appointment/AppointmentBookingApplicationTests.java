@@ -89,7 +89,7 @@ public class AppointmentBookingApplicationTests {
         log.info("SPI JAR PATH: {}", valiadteCredJarPath);
         log.info("SPI JAR PATH: {}", jarPathUsernameGenerator);
 
-        keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.0.4")
+        keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.1.2")
                 .withEnv(keycloakEnv)
                 .dependsOn(SQLContainer)
                 .withNetwork(NETWORK)
@@ -99,6 +99,7 @@ public class AppointmentBookingApplicationTests {
                                 .withName("keycloak_test")
                                 .withNetworkDisabled(false)
                                 .withMemory(1024 * 1024 * 1024L)
+                                .withEntrypoint("/bin/bash", "-c")
                 )
                 .withExposedPorts(8080, 9000)
                 .withNetworkAliases("keycloak_test")
@@ -106,12 +107,10 @@ public class AppointmentBookingApplicationTests {
                 // SPI JARs
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                // Override entrypoint to run build first, then start-dev
-                // This avoids the re-augmentation issue mentioned in Keycloak issue #35742
-                .withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("/bin/bash", "-c"))
-                .withCommand("/opt/keycloak/bin/kc.sh build && /opt/keycloak/bin/kc.sh start-dev --import-realm")
+                // Run build first to avoid re-augmentation issues (Keycloak issue #35742)
+                .withCommand("start-dev --import-realm --verbose ")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
-                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(5)));
+                .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(2)));
 
 
     }
