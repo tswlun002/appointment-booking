@@ -22,7 +22,7 @@ echo "    image=${image}            "
 echo "=========================="
 
 # Go to project deployment operation directory
-cd "$./deploy-operation" || { echo "Error: In repository ./deploy-operation not found."; exit 1; }
+cd "./deploy-operation" || { echo "Error: In repository ./deploy-operation not found."; exit 1; }
 
 # In Helm
 helm_directory="helm"
