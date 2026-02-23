@@ -89,7 +89,7 @@ public class AppointmentBookingApplicationTests {
         log.info("SPI JAR PATH: {}", valiadteCredJarPath);
         log.info("SPI JAR PATH: {}", jarPathUsernameGenerator);
 
-        keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.1.2")
+        keycloakContainer = new GenericContainer<>("quay.io/keycloak/keycloak:26.2.0")
                 .withEnv(keycloakEnv)
                 .dependsOn(SQLContainer)
                 .withNetwork(NETWORK)

@@ -76,7 +76,7 @@ jobs:
       - name: Pull Docker images for tests
         run: |
           docker pull postgres:17 &
-          docker pull quay.io/keycloak/keycloak:26.0.4 &
+          docker pull quay.io/keycloak/keycloak:26.2.0 &
           docker pull confluentinc/cp-kafka:7.7.6 &
           docker pull wiremock/wiremock:latest &
           docker pull alpine:3.17 &
@@ -86,7 +86,7 @@ jobs:
         run: |
           mkdir -p /tmp/docker-images
           docker save postgres:17 -o /tmp/docker-images/postgres.tar
-          docker save quay.io/keycloak/keycloak:26.0.4 -o /tmp/docker-images/keycloak.tar
+          docker save quay.io/keycloak/keycloak:26.2.0 -o /tmp/docker-images/keycloak.tar
           docker save confluentinc/cp-kafka:7.7.6 -o /tmp/docker-images/kafka.tar
           docker save wiremock/wiremock:latest -o /tmp/docker-images/wiremock.tar
           docker save alpine:3.17 -o /tmp/docker-images/alpine.tar
