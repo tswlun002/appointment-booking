@@ -106,9 +106,10 @@ public class AppointmentBookingApplicationTests {
                 // SPI JARs
                 .withCopyFileToContainer(MountableFile.forHostPath(valiadteCredJarPath), "/opt/keycloak/providers/validate-credential-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
                 .withCopyFileToContainer(MountableFile.forHostPath(jarPathUsernameGenerator), "/opt/keycloak/providers/generate-username-module-APPOINTMENT-BOOKING-UNSET-VERSION.jar")
-                // Use build + start-dev to properly initialize providers before starting
+                // Override entrypoint to run build first, then start-dev
                 // This avoids the re-augmentation issue mentioned in Keycloak issue #35742
-                .withCommand("/bin/bash", "-c", "/opt/keycloak/bin/kc.sh build && /opt/keycloak/bin/kc.sh start-dev --import-realm")
+                .withCreateContainerCmdModifier(cmd -> cmd.withEntrypoint("/bin/bash", "-c"))
+                .withCommand("/opt/keycloak/bin/kc.sh build && /opt/keycloak/bin/kc.sh start-dev --import-realm")
                 .withLogConsumer(outputFrame -> log.info("KEYCLOAK: {}", outputFrame.getUtf8String()))
                 .waitingFor(Wait.forLogMessage(".*Keycloak.*started.*", 1).withStartupTimeout(Duration.ofMinutes(5)));
 
