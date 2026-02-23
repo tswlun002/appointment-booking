@@ -88,6 +88,8 @@ jobs:
           RETENTION_DAYS: '1'
 
   update-validate-credential-configmap:
+    permissions:
+      contents: write
     needs:
       - detect-changes
       - build-validate-credential
@@ -106,10 +108,12 @@ jobs:
           JAR_ARTIFACT_NAME: ${{ needs.build-validate-credential.outputs.ARTIFACT_NAME }}
           VERSION: ${{ github.sha }}
           GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
-          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
-          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+          APP_GITHUB_EMAIL: ${{ secrets.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ secrets.APP_GITHUB_USERNAME }}
 
   update-generate-username-configmap:
+    permissions:
+      contents: write
     needs:
       - detect-changes
       - build-generate-username
@@ -128,6 +132,6 @@ jobs:
           JAR_ARTIFACT_NAME: ${{ needs.build-generate-username.outputs.ARTIFACT_NAME }}
           VERSION: ${{ github.sha }}
           GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
-          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
-          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+          APP_GITHUB_EMAIL: ${{ secrets.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ secrets.APP_GITHUB_USERNAME }}
 

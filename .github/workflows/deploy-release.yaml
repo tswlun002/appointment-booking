@@ -207,6 +207,8 @@ jobs:
 
   update-helm:
     name: Update Helm Chart
+    permissions:
+      contents: write
     needs:
       - build-app
       - build-docker
@@ -224,8 +226,8 @@ jobs:
           ENVIRONMENT: ${{ vars.ENVIRONMENT || 'dev' }}
           IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
           GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
-          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
-          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+          APP_GITHUB_EMAIL: ${{ secrets.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ secrets.APP_GITHUB_USERNAME }}
 
   release-notes:
     name: Create Release Notes
