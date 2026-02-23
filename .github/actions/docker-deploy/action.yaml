@@ -1,46 +1,28 @@
 name: Deploy Docker Image to Docker Hub
 
 description: |
-  Pulls a Docker image from source registry and pushes it to Docker Hub.
-  Used for deploying application images to Docker Hub for production use.
+  Retags an existing Docker Hub image with a new tag.
+  Only needed when promoting images (e.g., adding 'prod' tag).
+  Note: docker-build already pushes the image with version and latest tags.
 
 inputs:
-  SOURCE_IMAGE:
-    description: "Full source image name including registry and tag (e.g., ecr.aws/repo:v1.0.0)"
-    required: true
-  SOURCE_REGISTRY:
-    description: "Source registry URL"
-    required: true
-  SOURCE_REGISTRY_USERNAME:
-    description: "Source registry username/access key"
-    required: true
-  SOURCE_REGISTRY_PASSWORD:
-    description: "Source registry password/secret key"
-    required: true
   DOCKERHUB_USERNAME:
     description: "Docker Hub username"
     required: true
-  DOCKERHUB_TOKEN:
-    description: "Docker Hub access token"
+  DOCKERHUB_PASSWORD:
+    description: "Docker Hub password or access token"
     required: true
-  DOCKERHUB_REPOSITORY:
-    description: "Docker Hub repository name (e.g., username/repo)"
+  IMAGE_NAME:
+    description: "Full source image name with tag (e.g., username/repo:version) - from build-docker output"
     required: true
-  VERSION:
-    description: "Image version tag"
+  TARGET_TAG:
+    description: "Target tag for the image (e.g., 'prod', 'staging')"
     required: true
-  PUSH_LATEST:
-    description: "Also push with 'latest' tag"
-    required: false
-    default: "true"
 
 outputs:
   DOCKERHUB_IMAGE:
-    description: "Full Docker Hub image name with tag"
+    description: "Full Docker Hub image name with new tag"
     value: ${{ steps.push.outputs.DOCKERHUB_IMAGE }}
-  DOCKERHUB_IMAGE_LATEST:
-    description: "Docker Hub image with latest tag"
-    value: ${{ steps.push.outputs.DOCKERHUB_IMAGE_LATEST }}
 
 runs:
   using: "composite"
@@ -48,58 +30,36 @@ runs:
     - name: Print Inputs
       run: |
         echo "======================"
-        echo "SOURCE_IMAGE=${{ inputs.SOURCE_IMAGE }}"
-        echo "DOCKERHUB_REPOSITORY=${{ inputs.DOCKERHUB_REPOSITORY }}"
-        echo "VERSION=${{ inputs.VERSION }}"
-        echo "PUSH_LATEST=${{ inputs.PUSH_LATEST }}"
+        echo "IMAGE_NAME=${{ inputs.IMAGE_NAME }}"
+        echo "TARGET_TAG=${{ inputs.TARGET_TAG }}"
         echo "======================"
-      shell: bash
-
-    - name: Login to Source Registry
-      run: |
-        echo "Logging in to source registry..."
-        echo "${{ inputs.SOURCE_REGISTRY_PASSWORD }}" | docker login "${{ inputs.SOURCE_REGISTRY }}" -u "${{ inputs.SOURCE_REGISTRY_USERNAME }}" --password-stdin
       shell: bash
 
     - name: Login to Docker Hub
       run: |
-        echo "Logging in to Docker Hub..."
-        echo "${{ inputs.DOCKERHUB_TOKEN }}" | docker login -u "${{ inputs.DOCKERHUB_USERNAME }}" --password-stdin
+        echo "${{ inputs.DOCKERHUB_PASSWORD }}" | docker login -u "${{ inputs.DOCKERHUB_USERNAME }}" --password-stdin
       shell: bash
 
-    - name: Pull Source Image
-      run: |
-        echo "Pulling source image: ${{ inputs.SOURCE_IMAGE }}"
-        docker pull "${{ inputs.SOURCE_IMAGE }}"
-      shell: bash
-
-    - name: Tag and Push to Docker Hub
+    - name: Pull, Retag and Push
       id: push
       run: |
-        DOCKERHUB_IMAGE="${{ inputs.DOCKERHUB_REPOSITORY }}:${{ inputs.VERSION }}"
-        DOCKERHUB_IMAGE_LATEST="${{ inputs.DOCKERHUB_REPOSITORY }}:latest"
+        SOURCE_IMAGE="${{ inputs.IMAGE_NAME }}"
+        REPO="${SOURCE_IMAGE%:*}"
+        DOCKERHUB_IMAGE="${REPO}:${{ inputs.TARGET_TAG }}"
         
-        echo "Tagging image as: ${DOCKERHUB_IMAGE}"
-        docker tag "${{ inputs.SOURCE_IMAGE }}" "${DOCKERHUB_IMAGE}"
+        echo "Pulling: ${SOURCE_IMAGE}"
+        docker pull "${SOURCE_IMAGE}"
         
-        echo "Pushing to Docker Hub: ${DOCKERHUB_IMAGE}"
+        echo "Retagging as: ${DOCKERHUB_IMAGE}"
+        docker tag "${SOURCE_IMAGE}" "${DOCKERHUB_IMAGE}"
+        
+        echo "Pushing: ${DOCKERHUB_IMAGE}"
         docker push "${DOCKERHUB_IMAGE}"
         
-        if [ "${{ inputs.PUSH_LATEST }}" == "true" ]; then
-          echo "Tagging and pushing latest: ${DOCKERHUB_IMAGE_LATEST}"
-          docker tag "${{ inputs.SOURCE_IMAGE }}" "${DOCKERHUB_IMAGE_LATEST}"
-          docker push "${DOCKERHUB_IMAGE_LATEST}"
-          echo "DOCKERHUB_IMAGE_LATEST=${DOCKERHUB_IMAGE_LATEST}" >> "$GITHUB_OUTPUT"
-        fi
-        
         echo "DOCKERHUB_IMAGE=${DOCKERHUB_IMAGE}" >> "$GITHUB_OUTPUT"
-        echo "Successfully pushed to Docker Hub!"
       shell: bash
 
-    - name: Logout from registries
+    - name: Logout
       if: always()
-      run: |
-        docker logout "${{ inputs.SOURCE_REGISTRY }}" || true
-        docker logout || true
+      run: docker logout || true
       shell: bash
-

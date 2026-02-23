@@ -192,51 +192,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Upload image to registry
+      - name: Build and Push to Docker Hub
         id: upload
         uses: ./.github/actions/docker-build
         with:
           ARTIFACT_ID: "appointment-booking"
-          ARTIFACT_PATH: ${{ needs.build-app.outputs.ARTIFACT_PATH }}
-          MODULE: "appointment-booking"
-          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY }}
           VERSION: ${{ needs.build-app.outputs.VERSION }}
-          IMAGE_REGISTRY: ${{ vars.IMAGE_REGISTRY }}
-          REGISTRY_ACCESS_ID: ${{ secrets.IMAGE_ACCESS_KEY }}
-          REGISTRY_ACCESS_SECRET: ${{ secrets.IMAGE_SECRET_KEY }}
-          REGISTRY_REGION: ${{ vars.IMAGE_SERVER_REGION }}
-
-  deploy:
-    name: Deploy to Docker Hub
-    needs:
-      - build-app
-      - build-docker
-    runs-on: ubuntu-latest
-    outputs:
-      DOCKERHUB_IMAGE: ${{ steps.deploy.outputs.DOCKERHUB_IMAGE }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to Docker Hub
-        id: deploy
-        uses: ./.github/actions/docker-deploy
-        with:
-          SOURCE_IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
-          SOURCE_REGISTRY: ${{ vars.IMAGE_REGISTRY }}
-          SOURCE_REGISTRY_USERNAME: ${{ secrets.IMAGE_ACCESS_KEY }}
-          SOURCE_REGISTRY_PASSWORD: ${{ secrets.IMAGE_SECRET_KEY }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
-          VERSION: ${{ needs.build-app.outputs.VERSION }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_USERNAME }}/appointment-booking
           PUSH_LATEST: "true"
+
+  # Note: deploy job removed - build-docker now pushes directly to Docker Hub
 
   update-helm:
     name: Update Helm Chart
     needs:
       - build-app
-      - deploy
+      - build-docker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -249,7 +222,7 @@ jobs:
           REPOSITORY: ${{ github.event.repository.name }}
           MODULE: "appointment-booking-server"
           ENVIRONMENT: ${{ vars.ENVIRONMENT || 'dev' }}
-          IMAGE: ${{ needs.deploy.outputs.DOCKERHUB_IMAGE }}
+          IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
           GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
           APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
           APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
@@ -259,7 +232,6 @@ jobs:
     needs:
       - build-app
       - build-docker
-      - deploy
       - update-helm
     runs-on: ubuntu-latest
     steps:
@@ -271,11 +243,9 @@ jobs:
           BODY=$(gh release view $VERSION --json body --jq '.body')
           echo "$BODY" >> release-notes.md
           echo "" >> release-notes.md
-          echo "**Docker Image (Source)**: ${IMAGE}" >> release-notes.md
-          echo "**Docker Hub Image**: ${DOCKERHUB_IMAGE}" >> release-notes.md
+          echo "**Docker Hub Image**: ${IMAGE}" >> release-notes.md
           gh release edit $VERSION --notes-file release-notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.build-app.outputs.VERSION }}
           IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
-          DOCKERHUB_IMAGE: ${{ needs.deploy.outputs.DOCKERHUB_IMAGE }}
