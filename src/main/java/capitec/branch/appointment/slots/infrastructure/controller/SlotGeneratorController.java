@@ -1,0 +1,51 @@
+package capitec.branch.appointment.slots.infrastructure.controller;
+
+import capitec.branch.appointment.slots.app.SlotGeneratorScheduler;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+
+/**
+ * REST Controller for admin slot generation operations.
+ * Provides endpoints to manually trigger slot generation.
+ */
+@RestController
+@RequestMapping("/api/v1/slots")
+@RequiredArgsConstructor
+@Slf4j
+
+@Validated
+public class SlotGeneratorController {
+
+    private final SlotGeneratorScheduler slotGeneratorScheduler;
+
+    /**
+     * Manually trigger slot generation.
+     *
+     * @param traceId unique trace identifier for request tracking
+     * @return success message
+     */
+    @PostMapping("/generate")
+    @PreAuthorize("hasAnyRole('app_admin')")
+    public ResponseEntity<String> triggerSlotGeneration(
+            @RequestBody @Valid GenerateSlotRequestBody generateSlotRequestBody,
+            @RequestHeader("Trace-Id") String traceId
+    ) {
+        log.info("Manual slot generation triggered by admin for {}, traceId: {}",generateSlotRequestBody, traceId);
+        try {
+            slotGeneratorScheduler.executeWithRetry(generateSlotRequestBody.branches(), generateSlotRequestBody.fromDate(),generateSlotRequestBody.rollingWindowDays());
+            log.info("Slot generation completed successfully, traceId: {}", traceId);
+            return ResponseEntity.ok("Slot generation completed successfully");
+        } catch (Exception e) {
+            log.error("Manual slot generation failed, traceId: {}", traceId, e);
+            return ResponseEntity.internalServerError()
+                    .body("Slot generation failed");
+        }
+    }
+}

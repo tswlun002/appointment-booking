@@ -1,0 +1,245 @@
+package capitec.branch.appointment.slots.infrastructure.adapter;
+
+import capitec.branch.appointment.branch.app.GetBranchQuery;
+import capitec.branch.appointment.branch.domain.Branch;
+import capitec.branch.appointment.branch.domain.appointmentinfo.BranchAppointmentInfo;
+import capitec.branch.appointment.branch.domain.appointmentinfo.DayType;
+import capitec.branch.appointment.branch.domain.operationhours.OperationHoursOverride;
+import capitec.branch.appointment.location.app.NearbyBranchDTO;
+import capitec.branch.appointment.location.app.SearchBranchesByAreaQuery;
+import capitec.branch.appointment.location.app.SearchBranchesByAreaUseCase;
+import capitec.branch.appointment.slots.app.port.AppointmentInfoDetails;
+import capitec.branch.appointment.slots.app.port.BranchOperationTimesDetails;
+import capitec.branch.appointment.slots.app.port.GetActiveBranchesForSlotGenerationPort;
+import capitec.branch.appointment.slots.app.port.OperationTimesDetails;
+import java.time.LocalDate;
+import capitec.branch.appointment.sharekernel.day.app.GetDateOfNextDaysQuery;
+import capitec.branch.appointment.sharekernel.day.domain.Day;
+import jakarta.validation.constraints.NotNull;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.stereotype.Service;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
+import java.util.Collection;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Collections;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+
+@Service
+@Slf4j
+public class BranchOperationTimeAdapter implements GetActiveBranchesForSlotGenerationPort {
+
+    private final SearchBranchesByAreaUseCase searchBranchesByAreaUseCase;
+    private final GetBranchQuery getBranchQuery;
+    private final AsyncTaskExecutor taskExecutor;
+    private final GetDateOfNextDaysQuery getDateOfNextDaysQuery;
+
+
+    public BranchOperationTimeAdapter(SearchBranchesByAreaUseCase searchBranchesByAreaUseCase, GetBranchQuery getBranchQuery,
+                                      @Qualifier("applicationTaskExecutor") AsyncTaskExecutor taskExecutor,
+                                      GetDateOfNextDaysQuery getDateOfNextDaysQuery) {
+        this.searchBranchesByAreaUseCase = searchBranchesByAreaUseCase;
+        this.getBranchQuery = getBranchQuery;
+        this.taskExecutor = taskExecutor;
+        this.getDateOfNextDaysQuery = getDateOfNextDaysQuery;
+
+
+    }
+
+
+    @Override
+    public Collection<BranchOperationTimesDetails> execute(String country, LocalDate fromDate) {
+         Supplier<List<Branch>> dbFetch = () -> getBranchQuery.execute(0, 1000)
+                .branches()
+                .stream()
+                .toList();
+        return getBranchesAggregated(dbFetch,country,fromDate, Duration.ofSeconds(10), Duration.ofSeconds(10));
+    }
+
+    @Override
+    public Collection<BranchOperationTimesDetails> execute(Set<String> branches,String country, LocalDate date) {
+        // 1. Define Suppliers
+
+        Supplier<List<Branch>> dbFetch = ()->branches.stream().map(getBranchQuery::execute).toList();
+        return getBranchesAggregated(dbFetch,country,date, Duration.ofSeconds(5), Duration.ofSeconds(5));
+
+    }
+
+    /**
+     * Aggregates branches. If any source fails, the exception is thrown to the caller.
+     */
+    public Collection<BranchOperationTimesDetails> getBranchesAggregated(Supplier<List<Branch>> dbFetch , String country, LocalDate fromDate, Duration timeoutDb, Duration timeoutApi) {
+        log.info("Starting aggregation for {}. Fail-fast mode enabled.", country);
+        Instant start = Instant.now();
+
+        Supplier<List<NearbyBranchDTO>> apiFetch = () -> {
+            SearchBranchesByAreaQuery query = new SearchBranchesByAreaQuery(country);
+            return searchBranchesByAreaUseCase.execute(query)
+                    .stream()
+                    .toList();
+        };
+
+        // 2. Fork Tasks (Using Virtual Threads via taskExecutor)
+        var dbFuture = CompletableFuture.supplyAsync(dbFetch, taskExecutor)
+                .orTimeout(timeoutDb.toMillis(), TimeUnit.MILLISECONDS);
+
+        var apiFuture = CompletableFuture.supplyAsync(apiFetch, taskExecutor)
+                .orTimeout(timeoutApi.toMillis(), TimeUnit.MILLISECONDS);
+
+        // 3. Join and Merge
+        // Note: .join() will throw CompletionException if either task fails or times out.
+        Collection<BranchOperationTimesDetails> results = CompletableFuture.allOf(dbFuture, apiFuture)
+                .thenApply(_ -> mergeAndDeduplicate(fromDate,dbFuture.join(), apiFuture.join()))
+                .join();
+
+        log.info("Aggregated {} branches in {}ms", results.size(), Duration.between(start, Instant.now()).toMillis());
+        return results;
+    }
+
+    private Collection<BranchOperationTimesDetails> mergeAndDeduplicate(
+            LocalDate fromDate,
+            List<Branch> dbResult,
+            List<NearbyBranchDTO> apiResult) {
+
+        // 1. Index DB results by ID for O(1) fast lookup
+        Map<String, Branch> dbBrainchIdMap = dbResult.stream()
+                .collect(Collectors.toMap(Branch::getBranchId, b -> b));
+
+        log.debug("Fetching branches:{}", dbBrainchIdMap);
+
+        Map<String, NearbyBranchDTO> apiBranchIdMap = apiResult.stream()
+                .collect(Collectors.toMap(NearbyBranchDTO::branchId, b -> b));
+
+
+
+        // 2. We only care about branches that exist in BOTH (Registered in our system)
+        // and we use the API data as the foundational structure.
+        return apiBranchIdMap.keySet().stream()
+                .filter(dbBrainchIdMap::containsKey)
+                .map(branchId -> mapToBranchOperationTimesDto(fromDate,branchId,dbBrainchIdMap,apiBranchIdMap))
+                .toList();
+    }
+
+    private BranchOperationTimesDetails mapToBranchOperationTimesDto(
+            LocalDate fromDate ,String branchId,
+      Map<String, Branch> dbBrainchIdMap,
+      Map<String, NearbyBranchDTO> apiBranchIdMap     ){
+
+        Branch dbBranch = dbBrainchIdMap.get(branchId);
+        NearbyBranchDTO apiBranch = apiBranchIdMap.get(branchId);
+
+        Map<@NotNull DayType, BranchAppointmentInfo> branchInfoPartitionByDayType = dbBranch.getBranchAppointmentInfo().stream().collect(Collectors.toMap(BranchAppointmentInfo::day, b -> b));
+
+        Map<LocalDate, AppointmentInfoDetails> finalAppointmentMap  = mapToAppointmentInfo(branchId,branchInfoPartitionByDayType);
+
+
+        Map<LocalDate, OperationTimesDetails> finalOperationMap = new HashMap<>();
+
+        // 1. Always take Appointment Info from DB
+        var operationHoursOverride = dbBranch.getOperationHoursOverride();
+
+        // Get override time of the future dates
+        // Index the override by their effective date
+
+        Map<LocalDate,OperationHoursOverride> mapOverrideOperationTime = operationHoursOverride != null? operationHoursOverride.stream()
+                .filter(override -> fromDate.isBefore(override.effectiveDate()) ||
+                        fromDate.isEqual(override.effectiveDate())
+                )
+                .collect(Collectors.toMap(OperationHoursOverride::effectiveDate, override -> override))
+                : Collections.emptyMap();
+
+        var apiOperationTimesDtoMap = apiBranch.operationTimes();
+
+        if(apiOperationTimesDtoMap != null) {
+
+            // Loop through days provided by the Locator API
+            for (var operationTimeFromApiKey : apiOperationTimesDtoMap.keySet()) {
+
+                // 2. Operation Times: Prioritize DB Override, fallback to API
+                var overrideOfTheDay = mapOverrideOperationTime.get(operationTimeFromApiKey);
+                if (overrideOfTheDay != null) {
+
+                    var timesDto = new OperationTimesDetails(overrideOfTheDay.openAt(),
+                            overrideOfTheDay.closeAt(), overrideOfTheDay.closed());
+                    finalOperationMap.put(operationTimeFromApiKey, timesDto);
+
+                } else {
+                    // fallback to API operation times
+                    var operationTimesDto = apiOperationTimesDtoMap.get(operationTimeFromApiKey);
+                    var timesDto = new OperationTimesDetails(operationTimesDto.openAt(),operationTimesDto.closeAt(),
+                            operationTimesDto.closed());
+
+                    finalOperationMap.put(operationTimeFromApiKey, timesDto);
+                }
+            }
+        }
+        else {
+            log.warn("No operation time for branch {} found", branchId);
+        }
+
+        return new BranchOperationTimesDetails(branchId, finalOperationMap, finalAppointmentMap);
+    }
+
+    private Map<LocalDate, AppointmentInfoDetails> mapToAppointmentInfo( String branchId, Map<@NotNull DayType, BranchAppointmentInfo> branchInfoPartitionByDayType ){
+        LocalDate now = LocalDate.now();
+        Set<Day> nextSevenDays = getDateOfNextDaysQuery.execute(now, now.plusDays(6));
+
+        Map<LocalDate, AppointmentInfoDetails>  finalAppointmentMap= new HashMap<>();
+
+        for (Day day : nextSevenDays) {
+
+            if(day.isHoliday()){
+
+                var appointmentInfo = branchInfoPartitionByDayType.get(DayType.PUBLIC_HOLIDAY);
+                if(appointmentInfo==null){
+                    log.info("Branch {} has no appointment information for day:{}", branchId, day);                }
+                else {
+                    AppointmentInfoDetails value = this.mapToAppointmentInfo(appointmentInfo);
+                    finalAppointmentMap.put(day.getDate(), value);
+                }
+
+            }
+            else {
+
+                String upperCase = day.getDate().getDayOfWeek().name().toUpperCase();
+                DayType key = switch (upperCase){
+                    case  "MONDAY" ,"TUESDAY", "WEDNESDAY","THURSDAY",
+                          "FRIDAY", "SATURDAY","SUNDAY"-> DayType.valueOf(upperCase);
+                    default -> null;
+                };
+                if(key==null){
+
+                    log.warn("The day:{} is not one the DayType system has.",day);
+                    continue;
+                }
+
+                var appointmentInfo = branchInfoPartitionByDayType.get(key);
+                if(appointmentInfo == null){
+                    log.info("Branch {} has no appointment information for day:{}", branchId, day);
+                }
+                else {
+                    AppointmentInfoDetails value = this.mapToAppointmentInfo(appointmentInfo);
+                    finalAppointmentMap.put(day.getDate(), value);
+                }
+            }
+        }
+        return finalAppointmentMap;
+    }
+
+    private AppointmentInfoDetails mapToAppointmentInfo(BranchAppointmentInfo info) {
+        return new AppointmentInfoDetails(
+                info.slotDuration(),info.staffCount(),info.utilizationFactor(),
+                info.maxBookingCapacity()
+        );
+    }
+
+}

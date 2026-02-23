@@ -1,0 +1,462 @@
+openapi: 3.1.0
+info:
+  title: Slot API
+  description: |
+    API for managing and querying appointment slots at Capitec branches.
+    Supports viewing available slots and triggering slot generation.
+    All endpoints are admin-only operations.
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/slots
+    description: Slot Service Base Path (v1)
+
+tags:
+  - name: Slot Queries
+    description: Slot query operations
+  - name: Slot Management
+    description: Slot management operations
+
+paths:
+  /{slotId}:
+    get:
+      tags:
+        - Slot Queries
+      summary: Get slot by ID
+      description: |
+        Retrieves detailed information about a specific slot.
+      operationId: getSlot
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          description: Unique slot identifier
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved slot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '404':
+          description: Slot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{slotId}/block:
+    patch:
+      tags:
+        - Slot Management
+      summary: Block a slot
+      description: |
+        Blocks a slot to prevent any new bookings.
+        Used by admin to manually block slots for maintenance or other reasons.
+      operationId: blockSlot
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          description: Unique slot identifier
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Slot blocked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '404':
+          description: Slot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Slot cannot be blocked (invalid status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{slotId}/release:
+    patch:
+      tags:
+        - Slot Management
+      summary: Release a blocked slot
+      description: |
+        Releases a previously blocked slot to allow bookings again.
+        Used by admin to unblock slots after maintenance is complete.
+      operationId: releaseSlot
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          description: Unique slot identifier
+          schema:
+            type: string
+            format: uuid
+            example: "550e8400-e29b-41d4-a716-446655440000"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Slot released successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '404':
+          description: Slot not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Slot cannot be released (invalid status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}/daily:
+    get:
+      tags:
+        - Slot Queries
+      summary: Get daily slots for a branch
+      description: |
+        Retrieves all slots for a branch on a specific date.
+      operationId: getDailySlots
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - name: date
+          in: query
+          required: true
+          description: Date to query slots (ISO format)
+          schema:
+            type: string
+            format: date
+            example: "2026-01-28"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved daily slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailySlotsResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}/week:
+    get:
+      tags:
+        - Slot Queries
+      summary: Get weekly slots for a branch
+      description: |
+        Retrieves slots for the next 7 days for a branch, optionally filtered by status.
+        Results are grouped by date.
+      operationId: getWeeklySlots
+      parameters:
+        - $ref: '#/components/parameters/BranchId'
+        - name: fromDate
+          in: query
+          required: false
+          description: Start date (defaults to today)
+          schema:
+            type: string
+            format: date
+            example: "2026-01-28"
+        - name: status
+          in: query
+          required: false
+          description: Filter by slot status
+          schema:
+            $ref: '#/components/schemas/SlotStatus'
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved weekly slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotsResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /generate:
+    post:
+      tags:
+        - Slot Management
+      summary: Trigger slot generation
+      description: |
+        Manually triggers the slot generation process.
+        This is typically used when the scheduled job fails or needs to be run on demand.
+      operationId: triggerSlotGeneration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateSlotRequestBody"
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Slot generation completed successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Slot generation completed successfully"
+        '500':
+          description: Slot generation failed
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Slot generation failed: Internal error"
+
+components:
+  parameters:
+    BranchId:
+      name: branchId
+      in: path
+      required: true
+      description: Branch identifier
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 50
+      example: "470010"
+
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    SlotResponse:
+      type: object
+      description: Slot information
+      required:
+        - id
+        - day
+        - startTime
+        - endTime
+        - maxBookingCapacity
+        - bookingCount
+        - branchId
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique slot identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        day:
+          type: string
+          format: date
+          description: Date of the slot
+          example: "2026-01-28"
+        startTime:
+          type: string
+          format: time
+          description: Start time of the slot
+          example: "10:00:00"
+        endTime:
+          type: string
+          format: time
+          description: End time of the slot
+          example: "10:30:00"
+        maxBookingCapacity:
+          type: integer
+          minimum: 1
+          description: Maximum number of bookings allowed
+          example: 2
+        bookingCount:
+          type: integer
+          minimum: 0
+          description: Current number of bookings
+          example: 1
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+
+    DailySlotsResponse:
+      type: object
+      description: Response containing slots for a specific day
+      required:
+        - branchId
+        - date
+        - slots
+        - totalCount
+      properties:
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        date:
+          type: string
+          format: date
+          description: Date for which slots are returned
+          example: "2026-01-28"
+        slots:
+          type: array
+          description: List of slots for the day
+          items:
+            $ref: '#/components/schemas/SlotResponse'
+        totalCount:
+          type: integer
+          description: Total number of slots
+          example: 16
+
+    SlotsResponse:
+      type: object
+      description: Response containing slots grouped by day
+      required:
+        - slotsByDay
+        - totalCount
+      properties:
+        slotsByDay:
+          type: object
+          description: Map of dates to slots
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/SlotResponse'
+          example:
+            "2026-01-28": []
+            "2026-01-29": []
+        totalCount:
+          type: integer
+          description: Total number of slots across all days
+          example: 112
+
+    SlotStatus:
+      type: string
+      description: Current status of the slot
+      enum:
+        - AVAILABLE
+        - FULLY_BOOKED
+        - BLOCKED
+        - EXPIRED
+      example: AVAILABLE
+    GenerateSlotRequestBody:
+      type: object
+      description: Request body for generating slot by admin
+      required:
+        - fromDate
+        - rollingWindowDays
+      properties:
+        branches:
+          type: array
+          description: Set of branches to generate slots for
+          items:
+            $ref: "#/components/schemas/branches"
+        fromDate:
+          type: string
+          format: date
+          description:  Date to start generating slot from
+        rollingWindowDays:
+          type: integer
+          minimum: 1
+          description: Number of day from given date the slot must be generated
+
+
+    branches:
+      type: string
+      description: branch ids
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-28T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 404
+        error:
+          type: string
+          description: HTTP error type
+          example: "Not Found"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Slot not found"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/slots/550e8400-e29b-41d4-a716-446655440000"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"

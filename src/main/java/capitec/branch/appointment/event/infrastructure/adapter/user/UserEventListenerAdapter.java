@@ -1,0 +1,91 @@
+package capitec.branch.appointment.event.infrastructure.adapter.user;
+
+import capitec.branch.appointment.event.app.port.OTPEventProducerServicePort;
+import capitec.branch.appointment.event.app.port.OTPPort;
+import capitec.branch.appointment.event.app.port.UserEventListenerPort;
+import capitec.branch.appointment.user.app.event.*;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class UserEventListenerAdapter {
+
+    private final UserEventListenerPort userEventListenerPort;
+    private  final OTPEventProducerServicePort otpCreationService;
+
+    private final OTPPort otpPort;
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, classes = UserVerifiedEvent.class)
+    @Async
+    public void onUserVerified(@Valid UserVerifiedEvent event) {
+        log.info("Received user verified event, traceId: {}", event.traceId());
+
+        userEventListenerPort.handleUserVerifiedEvent(event.username(), event.email(),event.fullName(),event.otp(), event.traceId());
+    }
+
+    @EventListener(DeleteUserEvent.class)
+    public void onDeleteUser(@Valid DeleteUserEvent event) {
+        log.info("Received delete user event, traceId: {}", event.traceId());
+        otpPort.deleteOTP(event.username(), event.traceId());
+        userEventListenerPort.handleDeleteUserEvent(event.username(), event.email(),event.fullname(),event.OTP(), event.traceId());
+    }
+
+    @EventListener(PasswordUpdatedEvent.class)
+    public void onPasswordUpdated(@Valid PasswordUpdatedEvent event) {
+        log.info("Received password updated event, traceId: {}", event.traceId());
+        userEventListenerPort.handlePasswordUpdatedEvent(event.username(), event.email(),event.fullname(),event.otp(), event.traceId());
+    }
+    @EventListener(UserCreatedEvent.class)
+    public void onUserCreated(@Valid UserCreatedEvent event) {
+        log.info("Received user registration event, traceId: {}", event.traceId());
+        var otp = otpPort.generateOTP(event.username(), event.traceId(),"EMAIL_VERIFICATION");
+        otpCreationService.sendRegistrationEvent(event.username(), event.email(), event.fullname(), otp, event.traceId())
+                .whenComplete((resp, throwable) -> {
+                    if (throwable != null) {
+                        log.error("Failed to send registration event, traceId: {}", event.traceId(), throwable);
+                    }
+                    else log.info("Sending registration event, state:{} traceId: {}",resp, event.traceId());
+                });
+
+
+    }
+
+    @EventListener(PasswordResetRequestEvent.class)
+    public void onPasswordResetRequest(@Valid PasswordResetRequestEvent event) {
+        log.info("Received password reset request event, traceId: {}", event.traceId());
+        var otp = otpPort.generateOTP(event.username(), event.email(), "PASSWORD_RESET");
+        otpCreationService.sendPasswordResetRequestEvent(event.username(), event.email(), event.fullname(), otp, event.traceId())
+                .whenComplete((resp, throwable) -> {
+                    if (throwable != null) {
+                        log.error("Failed to send reset request event, traceId: {}", event.traceId(), throwable);
+                    }
+                    else{
+                        log.info("Sending reset request event, state:{} traceId: {} ", resp, event.traceId());
+                    }
+                });
+    }
+
+    @EventListener(DeleteUserRequestEvent.class)
+    public void onDeleteUserRequest(@Valid DeleteUserRequestEvent event) {
+        log.info("Received delete user request event, traceId: {}", event.traceId());
+        var otp = otpPort.generateOTP(event.username(), event.email(), "ACCOUNT_DELETION");
+        otpCreationService.deleteUserRequestEvent(event.username(), event.email(), event.fullname(), otp, event.traceId())
+        .whenComplete((resp, throwable) -> {
+            if (throwable != null) {
+                log.error("Failed to delete user request event, traceId: {}", event.traceId(), throwable);
+            }
+            else{
+                log.info("Sending delete user request event, state:{} traceId: {} ",  resp, event.traceId());
+            }
+        });
+    }
+
+}

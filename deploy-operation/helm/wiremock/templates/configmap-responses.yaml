@@ -1,0 +1,32 @@
+{{- if (or .Values.responsesAsConfigmap .Values.responsesFromConfigmap) -}}
+{{- $files := .Files }}
+{{- $root := . }}
+
+{{/* Get all unique subdirectories in __files/ */}}
+{{- $subdirs := dict }}
+{{- range $path, $_ := $files.Glob "__files/**/*.json" }}
+  {{- $relativePath := trimPrefix "__files/" $path }}
+  {{- if contains "/" $relativePath }}
+    {{- $subdir := dir $relativePath | trimPrefix "__files/" }}
+    {{- $_ := set $subdirs $subdir true }}
+  {{- end }}
+{{- end }}
+
+{{/* Create a ConfigMap for each subdirectory */}}
+{{- range $subdir, $_ := $subdirs }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wiremock.fullname" $root }}-responses-{{ $subdir }}
+  labels:
+    {{- include "wiremock.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: responses
+    wiremock.response.type: {{ $subdir }}
+data:
+  {{- range $path, $_ := $files.Glob (printf "__files/%s/*.json" $subdir) }}
+  {{- $filename := base $path }}
+  {{ $filename }}: {{ $files.Get $path | quote }}
+  {{- end }}
+{{- end }}
+{{- end -}}

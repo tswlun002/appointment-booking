@@ -1,0 +1,24 @@
+apiVersion: v2
+appVersion: 3.10.0
+description: A Helm chart for WireMock deployment on Kubernetes
+home: https://wiremock.org
+icon: https://wiremock.org/images/logos/wiremock/logo_square.svg
+keywords:
+- wiremock
+- api
+- openapi
+- api-testing
+- rest-api
+- api-mocking
+maintainers:
+- name: gitkent
+  url: https://github.com/gitkent
+- name: oleg-nenashev
+  url: https://github.com/oleg-nenashev
+name: wiremock
+sources:
+- https://github.com/wiremock/helm-charts
+- https://github.com/wiremock/wiremock-docker
+- https://github.com/wiremock/wiremock
+type: application
+version: 1.9.1

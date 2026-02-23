@@ -1,0 +1,185 @@
+
+spring:
+  application:
+    name: appointment-booking
+  main:
+    allow-bean-definition-overriding: true
+  threads:
+    virtual:
+      enabled: true
+  # DATABASE CONFIG
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  data:
+    jdbc:
+      dialect: postgresql
+  liquibase:
+    enabled: true
+    change-log: classpath:db/migrations/changelog-master.xml
+  jackson:
+    parser:
+      allow-unquoted-field-names: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${AUTH_SERVER_TOKEN_URL}
+          issuer-uri: ${ISSUER_URI}
+
+# CORS branchConfigs
+allowed_origins:
+  urls: ${CORS_ALLOWED_ORIGIN:*}
+  cache_period: ${CORS_CERTS_CACHE_PERIOD:30}
+
+# KEYCLOAK CONFIG
+keycloak:
+  realm: ${KEYCLOAK_REALM}
+  domain: ${KEYCLOAK_DOMAIN}
+  adminClientId: ${KEYCLOAK_ADMIN_CLIENT_ID}
+  adminClientSecret: ${KEYCLOAK_ADMIN_CLIENT_SECRETE}
+  scope: ${KEYCLOAK_ADMIN_SCOPE}
+  grant_type: ${KEYCLOAK_ADMIN_GRANT_TYPE}
+  client: ${KEYCLOAK_CLIENT_TYPE}
+  urls:
+    auth: ${KEYCLOAK_AUTH_URL}
+  user_auth_type: ${KEYCLOAK_USER_AUTH_TYPE}
+  password: ${KEYCLOAK_PASSWORD}
+  username: ${KEYCLOAK_USERNAME}
+
+# OTP CONFIG
+otp:
+  expire:
+    datetime: ${OTP_EXPIRE_DATETIME_IN_MINUTES:5}
+    chron-units: ${OTP_EXPIRE_CHRON_UNITS:MINUTES}
+  number:
+    verification:
+      attempts: ${OTP_NUMBER_VERIFICATION_ATTEMPTS:3}
+# Kafka
+kafka:
+  replica: ${KAFKA_REPLICAS:3}
+  listen:
+    produce:
+      auto:
+        start: false
+    consumer:
+      auto:
+        start: true
+  error:
+    persistence:
+      enabled: true
+  common-config:
+    bootstrap-servers: ${BROKER_BOOTSTRAP_SERVERS}
+    topic-names: ${EVENT_TOPICS}
+  consumer-config:
+    group-id: users-service-otp
+    retryableExceptions:
+      - org.apache.kafka.common.errors.TimeoutException
+      - org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException
+      - org.apache.kafka.common.errors.NotEnoughReplicasException
+      - java.sql.SQLException
+      - java.sql.SQLTimeoutException
+      - java.sql.SQLClientInfoException
+      - jakarta.ws.rs.InternalServerErrorException
+      - capitec.branch.appointment.exeption.MailSenderException
+      - org.eclipse.angus.mail.util.MailConnectException
+      - org.eclipse.angus.mail.util.MailConnectException
+      - org.apache.kafka.common.errors.TimeoutException
+      - org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException
+      - org.apache.kafka.common.errors.NotEnoughReplicasException
+      - jakarta.mail.MessagingException
+    event-publisher-default-impl:
+      enabled: true
+
+# Email
+mail:
+  host: ${MAIL_HOST}
+  protocol: ${MAIL_PROTOCOL:smtp}
+  port: ${MAIL_PORT:465}
+  username: ${MAIL_USERNAME}
+  password: ${MAIL_PASSWORD}
+# CLIENT-DOMAIN
+client-domain:
+  baseurl: ${CLIENT_DOMAIN_BASE_URL:http://localhost:8083}
+
+
+# END POINT MANAGEMENT
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+  endpoint:
+    shutdown:
+      enabled: true
+  info:
+    env:
+      enabled: true
+server:
+  port: 8083
+cookie:
+  samesite: ${COOKIE_SAMESITE_TYPE:STRICT}
+
+holidays-client:
+  baseurl: ${HOLIDAYS_CLIENT_API:https://dateOfSlots.nager.at}
+
+slot:
+  rolling-window-days:
+    init-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_INIT:7}
+    daily-value: ${SLOT_GENERATION_ROLLING_WINDOW_DAYS_DAILY:1}
+  cron: ${SLOT_SCHEDULAR_CRON:0 30 0 * * *}
+  generation-errors:
+    retryables: []
+  duration:
+    factor: ${SLOT_DURATION_FACTOR:2}
+appointment:
+  unattended:
+    cron: ${APPOINTMENT_NO_SHOW_CRON:0 5 6-19 * * *}
+    since:
+      in:
+        days: ${APPOINTMENT_TO_MARK_NO_SHOW_SINCE:3}
+
+capitec:
+  branch-locator-api:
+    url: ${CAPITEC_BRANCH_LOCATOR_API:https://www.capitecbank.co.za/api}
+  # Resilience configuration - defaults are in BranchLocationResilienceProperties.java
+  # Uncomment and set values below to override defaults
+  # branch-locator:
+  #   resilience:
+  #     circuit-breaker:
+  #       failure-rate-threshold: 65
+  #       minimum-number-of-calls: 5
+  #       wait-duration-in-open-state: 30s
+  #       permitted-number-of-calls-in-half-open-state: 3
+  #       sliding-window-size: 10
+  #     retry:
+  #       max-attempts: 3
+  #       initial-interval: 300ms
+  #       multiplier: 2.0
+  #       randomization-factor: 0.3
+
+# LOGGING
+logging:
+  level:
+    root: ${ROOT_LOG_LEVEL:WARN}
+    capitec.branch.appointment: ${APP_LOG_LEVEL:INFO}
+    org.springframework.security: ${KEYCLOAK_LOGGING_LEVEL:INFO}
+    org.hibernate.SQL: ${SQL_LOG_LEVEL:WARN}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${SQL_LOG_LEVEL:WARN}
+    org.keycloak: ${KEYCLOAK_LOGGING_LEVEL:INFO}
+    org.springframework.kafka: ${KAFKA_LOGGING_LEVEL:INFO}
+    org.apache.kafka: ${KAFKA_LOGGING_LEVEL:INFO}
+    org.springframework.mail: ${MAIL_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{traceId}] - %msg%n"
+# RATE LIMITING
+rate-limit:
+  otp-resend:
+    max-attempts: ${OTP_RESEND_MAX_ATTEMPTS:5}
+    window-minutes: ${OTP_RESEND_WINDOW_MINUTES:60}
+    cooldown-seconds: ${OTP_RESEND_COOLDOWN_SECONDS:60}
+

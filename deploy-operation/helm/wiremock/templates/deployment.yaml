@@ -1,0 +1,221 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wiremock.fullname" . }}
+  labels:
+    {{- include "wiremock.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.revisionHistoryLimit | int }}
+  selector:
+    matchLabels:
+      {{- include "wiremock.selectorLabels" . | nindent 6 }}
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  template:
+    metadata:
+      {{- with (include "wiremock.podAnnotations" .) }}
+      annotations:
+        {{- . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "wiremock.podLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "wiremock.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.args }}
+          args:
+          {{- range .Values.args }}
+            - {{ . | quote }}
+          {{- end }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.service.internalPort }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /__admin/health
+              port: {{ .Values.service.internalPort }}
+              scheme: {{ .Values.scheme }}
+          readinessProbe:
+            httpGet:
+              path: /__admin/health
+              port: {{ .Values.service.internalPort }}
+              scheme: {{ .Values.scheme }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if (or .Values.mappingsAsConfigmap .Values.mappingsFromConfigmap .Values.persistence.mappings.enabled) }}
+            - mountPath: /home/wiremock/storage/mappings
+              name: mappings-data
+            {{- end }}
+            {{- if (or .Values.responsesAsConfigmap .Values.responsesFromConfigmap .Values.persistence.responses.enabled) }}
+            - mountPath: /home/wiremock/storage/__files
+              name: responses-data
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      initContainers:
+        {{- if (or .Values.mappingsAsConfigmap .Values.mappingsFromConfigmap) }}
+        - name: copy-mappings
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}"
+          imagePullPolicy: {{ .Values.initContainer.image.pullPolicy }}
+          command:
+            - bash
+            - -c
+            - |
+              # Copy all JSON files from all subdirectories
+              find /data/mappings -type f -name "*.json" -exec cp {} /home/wiremock/storage/mappings/ \;
+              echo "Copied mapping files:"
+              ls -lah /home/wiremock/storage/mappings/
+          resources:
+            {{- toYaml .Values.initContainer.resources | nindent 12 }}
+          volumeMounts:
+            {{- $files := .Files }}
+            {{- $subdirs := dict }}
+            {{- range $path, $_ := $files.Glob "mappings/**/*.json" }}
+              {{- $relativePath := trimPrefix "mappings/" $path }}
+              {{- if contains "/" $relativePath }}
+                {{- $subdir := dir $relativePath | trimPrefix "mappings/" }}
+                {{- $_ := set $subdirs $subdir true }}
+              {{- end }}
+            {{- end }}
+            {{- range $subdir, $_ := $subdirs }}
+            - mountPath: /data/mappings/{{ $subdir }}
+              name: mappings-{{ $subdir }}
+            {{- end }}
+            - mountPath: /home/wiremock/storage/mappings
+              name: mappings-data
+            {{- with .Values.initContainer.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- end }}
+        {{- if (or .Values.responsesAsConfigmap .Values.responsesFromConfigmap) }}
+        - name: copy-responses
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}"
+          imagePullPolicy: {{ .Values.initContainer.image.pullPolicy }}
+          command:
+            - bash
+            - -c
+            - |
+              # Copy all JSON files from all subdirectories
+              find /data/responses -type f -name "*.json" -exec cp {} /home/wiremock/storage/__files/ \;
+              echo "Copied response files:"
+              ls -lah /home/wiremock/storage/__files/
+          resources:
+            {{- toYaml .Values.initContainer.resources | nindent 12 }}
+          volumeMounts:
+            {{- $files := .Files }}
+            {{- $subdirs := dict }}
+            {{- range $path, $_ := $files.Glob "__files/**/*.json" }}
+              {{- $relativePath := trimPrefix "__files/" $path }}
+              {{- if contains "/" $relativePath }}
+                {{- $subdir := dir $relativePath | trimPrefix "__files/" }}
+                {{- $_ := set $subdirs $subdir true }}
+              {{- end }}
+            {{- end }}
+            {{- range $subdir, $_ := $subdirs }}
+            - mountPath: /data/responses/{{ $subdir }}
+              name: responses-{{ $subdir }}
+            {{- end }}
+            - mountPath: /home/wiremock/storage/__files
+              name: responses-data
+            {{- with .Values.initContainer.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        {{- end }}
+        {{- with .Values.extraInitContainers }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- tpl (toYaml .) $ | nindent 8 }}
+      {{- end }}
+      volumes:
+        {{- if (or .Values.mappingsAsConfigmap .Values.mappingsFromConfigmap .Values.persistence.mappings.enabled) }}
+        - name: mappings-data
+          {{- if .Values.persistence.mappings.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "wiremock.fullname" . }}-mappings-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- if (or .Values.mappingsAsConfigmap .Values.mappingsFromConfigmap) }}
+        {{/* Create volume for each mappings subdirectory */}}
+        {{- $files := .Files }}
+        {{- $subdirs := dict }}
+        {{- range $path, $_ := $files.Glob "mappings/**/*.json" }}
+          {{- $relativePath := trimPrefix "mappings/" $path }}
+          {{- if contains "/" $relativePath }}
+            {{- $subdir := dir $relativePath | trimPrefix "mappings/" }}
+            {{- $_ := set $subdirs $subdir true }}
+          {{- end }}
+        {{- end }}
+        {{- range $subdir, $_ := $subdirs }}
+        - name: mappings-{{ $subdir }}
+          configMap:
+            name: {{ include "wiremock.fullname" $ }}-mappings-{{ $subdir }}
+        {{- end }}
+        {{- end }}
+        {{- if (or .Values.responsesAsConfigmap .Values.responsesFromConfigmap .Values.persistence.responses.enabled) }}
+        - name: responses-data
+          {{- if .Values.persistence.responses.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "wiremock.fullname" . }}-responses-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+        {{- if (or .Values.responsesAsConfigmap .Values.responsesFromConfigmap) }}
+        {{/* Create volume for each responses subdirectory */}}
+        {{- $files := .Files }}
+        {{- $subdirs := dict }}
+        {{- range $path, $_ := $files.Glob "__files/**/*.json" }}
+          {{- $relativePath := trimPrefix "__files/" $path }}
+          {{- if contains "/" $relativePath }}
+            {{- $subdir := dir $relativePath | trimPrefix "__files/" }}
+            {{- $_ := set $subdirs $subdir true }}
+          {{- end }}
+        {{- end }}
+        {{- range $subdir, $_ := $subdirs }}
+        - name: responses-{{ $subdir }}
+          configMap:
+            name: {{ include "wiremock.fullname" $ }}-responses-{{ $subdir }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

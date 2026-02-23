@@ -1,0 +1,21 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/branches/[a-zA-Z0-9-]+/operation-hours.*"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "transformers": ["response-template"],
+    "jsonBody": {
+      "openTime": "08:00:00",
+      "closingTime": "17:00:00",
+      "closed": false
+    }
+  }
+}

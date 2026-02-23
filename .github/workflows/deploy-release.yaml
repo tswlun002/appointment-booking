@@ -1,12 +1,137 @@
 name: Java CI/CD With Gradle 🛠️🔨🌩️🔥🔥😂😭
 on:
   workflow_dispatch: #Manual kickoff
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'generate-username-ui-register-module/**'
+      - 'validate-credential-module/**'
+      - '*.md'
+      - 'docs/**'
+
+# Prevent multiple deployments from running simultaneously
+concurrency:
+  group: deployment-${{ github.ref }}
+  cancel-in-progress: false  # Don't cancel in-progress deployments, queue new ones
 
 jobs:
-  build-app:
+  # Check if deployment should be skipped based on changed files
+  check-changes:
     runs-on: ubuntu-latest
-    container:
-      image: gradle:9.2.0
+    outputs:
+      should_deploy: ${{ steps.filter.outputs.should_deploy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for deployment-relevant changes
+        id: filter
+        run: |
+          # Get list of changed files
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "Manual trigger - proceeding with deployment"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          
+          # Check if all changes are in ignored folders
+          ONLY_KEYCLOAK_MODULES=true
+          for file in $CHANGED_FILES; do
+            if [[ ! "$file" =~ ^generate-username-ui-register-module/ ]] && \
+               [[ ! "$file" =~ ^validate-credential-module/ ]] && \
+               [[ ! "$file" =~ \.md$ ]] && \
+               [[ ! "$file" =~ ^docs/ ]]; then
+              ONLY_KEYCLOAK_MODULES=false
+              break
+            fi
+          done
+          
+          if [ "$ONLY_KEYCLOAK_MODULES" == "true" ] && [ -n "$CHANGED_FILES" ]; then
+            echo "Only Keycloak module changes detected - skipping deployment"
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "Deployment-relevant changes detected - proceeding"
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Cache and pull Docker images on host runner
+  cache-docker-images:
+    needs: check-changes
+    if: needs.check-changes.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cache Docker images
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
+        with:
+          key: docker-layer-cache-${{ runner.os }}-{hash}
+          restore-keys: |
+            docker-layer-cache-${{ runner.os }}-
+
+      - name: Pull Docker images for tests
+        run: |
+          docker pull postgres:17 &
+          docker pull quay.io/keycloak/keycloak:26.2.0 &
+          docker pull confluentinc/cp-kafka:7.7.6 &
+          docker pull wiremock/wiremock:latest &
+          docker pull alpine:3.17 &
+          wait
+
+      - name: Save Docker images to tar
+        run: |
+          mkdir -p /tmp/docker-images
+          docker save postgres:17 -o /tmp/docker-images/postgres.tar
+          docker save quay.io/keycloak/keycloak:26.2.0 -o /tmp/docker-images/keycloak.tar
+          docker save confluentinc/cp-kafka:7.7.6 -o /tmp/docker-images/kafka.tar
+          docker save wiremock/wiremock:latest -o /tmp/docker-images/wiremock.tar
+          docker save alpine:3.17 -o /tmp/docker-images/alpine.tar
+
+      - name: Upload Docker images artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images
+          retention-days: 1
+
+  # Build SPI modules with JDK 21 (required for Keycloak compatibility)
+  build-spi-modules:
+    needs: check-changes
+    if: needs.check-changes.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build validate-credential-module
+        id: build-validate
+        uses: ./.github/actions/build-spi-module
+        with:
+          MODULE_PATH: validate-credential-module
+          MODULE_NAME: validate-credential-module
+          JAVA_VERSION: '21'
+          RETENTION_DAYS: '1'
+
+      - name: Build generate-username-module
+        id: build-generate
+        uses: ./.github/actions/build-spi-module
+        with:
+          MODULE_PATH: generate-username-ui-register-module
+          MODULE_NAME: generate-username-module
+          JAVA_VERSION: '21'
+          RETENTION_DAYS: '1'
+
+  build-app:
+    needs:
+      - check-changes
+      - cache-docker-images
+      - build-spi-modules
+    if: needs.check-changes.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       actions: read
@@ -16,11 +141,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install Git
-        run: |
-          apt update -y
-          apt install -y git  #  Install Git
+        with:
+          fetch-depth: 0
 
       - name: Check branch status
         run: |
@@ -39,6 +161,21 @@ jobs:
           fi
           echo " $current_branch is up to date with origin/main"
 
+      - name: Download Docker images artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: /tmp/docker-images
+
+      - name: Load Docker images
+        run: |
+          docker load -i /tmp/docker-images/postgres.tar
+          docker load -i /tmp/docker-images/keycloak.tar
+          docker load -i /tmp/docker-images/kafka.tar
+          docker load -i /tmp/docker-images/wiremock.tar
+          docker load -i /tmp/docker-images/alpine.tar
+
+
       - name: Build with Gradle
         id: build
         uses: ./.github/actions/gradle-build
@@ -55,25 +192,47 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Upload image to registry
+      - name: Build and Push to Docker Hub
         id: upload
         uses: ./.github/actions/docker-build
         with:
           ARTIFACT_ID: "appointment-booking"
-          ARTIFACT_PATH: ${{ needs.build-app.outputs.ARTIFACT_PATH }}
-          MODULE: "appointment-booking"
-          IMAGE_REPOSITORY: ${{ vars.IMAGE_REPOSITORY }}
           VERSION: ${{ needs.build-app.outputs.VERSION }}
-          IMAGE_REGISTRY: ${{ vars.IMAGE_REGISTRY }}
-          REGISTRY_ACCESS_ID: ${{ secrets.IMAGE_ACCESS_KEY }}
-          REGISTRY_ACCESS_SECRET: ${{ secrets.IMAGE_SECRET_KEY }}
-          REGISTRY_REGION: ${{ vars.IMAGE_SERVER_REGION }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+          DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY }}
+          PUSH_LATEST: "false"
+
+  # Note: deploy job removed - build-docker now pushes directly to Docker Hub
+
+  update-helm:
+    name: Update Helm Chart
+    needs:
+      - build-app
+      - build-docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Helm Chart with new image
+        uses: ./.github/actions/update-helm-image
+        with:
+          ORGANIZATION: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+          MODULE: "appointment-booking-server"
+          ENVIRONMENT: ${{ vars.ENVIRONMENT || 'dev' }}
+          IMAGE: ${{ needs.build-docker.outputs.IMAGE_NAME }}
+          GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
+          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+
   release-notes:
     name: Create Release Notes
     needs:
       - build-app
       - build-docker
-#      - Deploy
+      - update-helm
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -84,7 +243,7 @@ jobs:
           BODY=$(gh release view $VERSION --json body --jq '.body')
           echo "$BODY" >> release-notes.md
           echo "" >> release-notes.md
-          echo "**Docker Image**: ${IMAGE}" >> release-notes.md
+          echo "**Docker Hub Image**: ${IMAGE}" >> release-notes.md
           gh release edit $VERSION --notes-file release-notes.md
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

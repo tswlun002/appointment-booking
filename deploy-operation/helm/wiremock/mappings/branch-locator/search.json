@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPathPattern": "/api/v1/branches",
+    "bodyPatterns": [
+      {
+        "matchesJsonPath": "$.[?((@.query) || (@.latitude && @.longitude))]"
+      },
+      {
+        "matchesJsonPath": "$.[?(@.take <= 500)]"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization"
+    },
+    "bodyFileName": "branches-search.json"
+  }
+}

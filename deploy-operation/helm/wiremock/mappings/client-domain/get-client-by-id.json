@@ -1,0 +1,25 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "GET",
+    "urlPathPattern": "/api/v1/clients/[0-9]{13}"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "transformers": ["response-template"],
+    "jsonBody": {
+      "username": "{{request.pathSegments.[3]}}",
+      "email": "client-{{request.pathSegments.[3]}}@example.com",
+      "firstname": "John",
+      "lastname": "Doe",
+      "idNumber": "{{request.pathSegments.[3]}}",
+      "isCapitecClient": true,
+      "status": "ACTIVE",
+      "verified": true,
+      "enabled": true
+    }
+  }
+}

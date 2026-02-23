@@ -1,0 +1,814 @@
+openapi: 3.1.0
+info:
+  title: Role Management API
+  description: API for managing client roles and role types (groups) in the appointment booking system
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+
+servers:
+  - url: /api/v1
+    description: Base API path
+
+tags:
+  - name: Client Roles
+    description: Operations for managing client roles
+  - name: Role Types
+    description: Operations for managing role types (groups)
+  - name: User Roles
+    description: Operations for managing user role assignments
+
+paths:
+  /roles/client/create:
+    post:
+      tags:
+        - Client Roles
+      summary: Create a client role
+      description: Creates a new client role in the system. Requires admin privileges.
+      operationId: createRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleDTO'
+            example:
+              name: "APPOINTMENT_MANAGER"
+              description: "Can manage appointments"
+      responses:
+        '201':
+          description: Role created successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Role created successfully"
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid role name format
+            - Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Role name must be at least 4 characters"
+                path: "/api/v1/roles/client/create"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            Conflict - Role already exists:
+            - A role with the same name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 409
+                error: "Conflict"
+                message: "Role already exists"
+                path: "/api/v1/roles/client/create"
+        '417':
+          description: |
+            Expectation Failed:
+            - Failed to create role in identity provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to create role"
+                path: "/api/v1/roles/client/create"
+        '500':
+          description: |
+            Internal Server Error:
+            - Role domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/client:
+    get:
+      tags:
+        - Client Roles
+      summary: Get a client role by name
+      description: Retrieves a client role by its name. Requires admin privileges.
+      operationId: getRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: roleName
+          in: query
+          required: true
+          description: The name of the role to retrieve
+          schema:
+            type: string
+            minLength: 4
+          example: "APPOINTMENT_MANAGER"
+      responses:
+        '200':
+          description: Role retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid role name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Not Found:
+            - Role with the specified name does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Role not found"
+                path: "/api/v1/roles/client"
+        '500':
+          description: |
+            Internal Server Error:
+            - Role domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/client/delete/{roleId}:
+    delete:
+      tags:
+        - Client Roles
+      summary: Delete a client role
+      description: Deletes a client role by its ID. Requires admin privileges.
+      operationId: deleteRole
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: roleId
+          in: path
+          required: true
+          description: The UUID of the role to delete
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '202':
+          description: Role deleted successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Role deleted successfully"
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid role ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Not Found:
+            - Role with the specified ID does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Role not found"
+                path: "/api/v1/roles/client/delete/550e8400-e29b-41d4-a716-446655440000"
+        '417':
+          description: |
+            Expectation Failed:
+            - Failed to delete role from identity provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to delete role"
+                path: "/api/v1/roles/client/delete/550e8400-e29b-41d4-a716-446655440000"
+        '500':
+          description: |
+            Internal Server Error:
+            - Role domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/client/assign/role/{roleId}/user/{username}:
+    put:
+      tags:
+        - User Roles
+      summary: Assign a client role to a user
+      description: |
+        Assigns a client role to a user. Requires admin privileges.
+        Users cannot assign roles to themselves.
+      operationId: assignClientRoleToUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: roleId
+          in: path
+          required: true
+          description: The UUID of the role to assign
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: username
+          in: path
+          required: true
+          description: The username of the user to assign the role to
+          schema:
+            type: string
+          example: "1234567890"
+      responses:
+        '202':
+          description: Role assigned to user successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Client role assigned to user successfully"
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid role ID or username
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden:
+            - Admin privileges required
+            - Users cannot assign roles to themselves
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Not Found:
+            - Role or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Role not found"
+                path: "/api/v1/roles/client/assign/role/550e8400-e29b-41d4-a716-446655440000/user/1234567890"
+        '417':
+          description: |
+            Expectation Failed:
+            - Failed to assign role to user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to assign role to user"
+                path: "/api/v1/roles/client/assign/role/550e8400-e29b-41d4-a716-446655440000/user/1234567890"
+        '500':
+          description: |
+            Internal Server Error:
+            - Domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/client/user/{username}:
+    get:
+      tags:
+        - User Roles
+      summary: Get user's client roles
+      description: Retrieves all client roles assigned to a user. Requires admin privileges.
+      operationId: getUserClientRoles
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: username
+          in: path
+          required: true
+          description: The username to get roles for
+          schema:
+            type: string
+          example: "1234567890"
+      responses:
+        '200':
+          description: User roles retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  format: uuid
+              example:
+                - "550e8400-e29b-41d4-a716-446655440000"
+                - "660e8400-e29b-41d4-a716-446655440001"
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid username
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Not Found:
+            - User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User not found"
+                path: "/api/v1/roles/client/user/1234567890"
+        '500':
+          description: |
+            Internal Server Error:
+            - Domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/group/create:
+    post:
+      tags:
+        - Role Types
+      summary: Create a role type (group)
+      description: Creates a new role type/group in the system. Requires admin privileges.
+      operationId: createRoleType
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleTypeDTO'
+            example:
+              name: "USER_CLIENT"
+      responses:
+        '201':
+          description: Role type created successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Role type created successfully"
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid group name format
+            - Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Group name must be at least 2 characters"
+                path: "/api/v1/roles/group/create"
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            Conflict - Role type already exists:
+            - A role type with the same name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 409
+                error: "Conflict"
+                message: "Role type already exists"
+                path: "/api/v1/roles/group/create"
+        '417':
+          description: |
+            Expectation Failed:
+            - Failed to create role type in identity provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to create role type"
+                path: "/api/v1/roles/group/create"
+        '500':
+          description: |
+            Internal Server Error:
+            - Role domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/group:
+    get:
+      tags:
+        - Role Types
+      summary: Get a role type (group)
+      description: Retrieves a role type/group by its name. Requires admin privileges.
+      operationId: getRoleType
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: name
+          in: query
+          required: true
+          description: The name of the role type to retrieve
+          schema:
+            type: string
+            minLength: 2
+          example: "USER_CLIENT"
+        - name: withRole
+          in: query
+          required: false
+          description: Whether to include associated roles in the response
+          schema:
+            type: boolean
+            default: false
+          example: true
+      responses:
+        '200':
+          description: Role type retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleType'
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid group name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Not Found:
+            - Role type with the specified name does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Role type not found"
+                path: "/api/v1/roles/group"
+        '500':
+          description: |
+            Internal Server Error:
+            - Role domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles/group/{groupId}/assign/roles:
+    put:
+      tags:
+        - Role Types
+      summary: Assign roles to a group
+      description: Assigns one or more client roles to a role type/group. Requires admin privileges.
+      operationId: assignRoleToGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+        - name: groupId
+          in: path
+          required: true
+          description: The UUID of the group to assign roles to
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                format: uuid
+              minItems: 1
+            example:
+              - "660e8400-e29b-41d4-a716-446655440001"
+              - "770e8400-e29b-41d4-a716-446655440002"
+      responses:
+        '202':
+          description: Roles assigned to group successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Roles assigned to group successfully"
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid group ID or role IDs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized - Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - Admin privileges required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: |
+            Not Found:
+            - Group or role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Group/role-type not found"
+                path: "/api/v1/roles/group/550e8400-e29b-41d4-a716-446655440000/assign/roles"
+        '417':
+          description: |
+            Expectation Failed:
+            - Failed to assign role to group
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to assign role to group"
+                path: "/api/v1/roles/group/550e8400-e29b-41d4-a716-446655440000/assign/roles"
+        '500':
+          description: |
+            Internal Server Error:
+            - Role domain error occurred
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token from authentication
+
+  parameters:
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique identifier for request tracing
+      schema:
+        type: string
+        format: uuid
+      example: "123e4567-e89b-12d3-a456-426614174000"
+
+  schemas:
+    RoleDTO:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 4
+          description: The name of the role (must be at least 4 characters)
+          example: "APPOINTMENT_MANAGER"
+        description:
+          type: string
+          description: A description of what this role allows
+          example: "Can manage appointments"
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the role
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          description: The name of the role
+          example: "APPOINTMENT_MANAGER"
+        description:
+          type: string
+          description: A description of what this role allows
+          example: "Can manage appointments"
+        clientRole:
+          type: boolean
+          description: Whether this is a client role
+          example: true
+
+    RoleTypeDTO:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          description: The name of the role type/group
+          example: "USER_CLIENT"
+
+    RoleType:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the role type
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        name:
+          type: string
+          description: The name of the role type
+          example: "USER_CLIENT"
+        rolesIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: List of role IDs associated with this role type
+          example:
+            - "660e8400-e29b-41d4-a716-446655440001"
+            - "770e8400-e29b-41d4-a716-446655440002"
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2026-02-08T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status description
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Validation failed"
+        path:
+          type: string
+          description: The request path that caused the error
+          example: "/api/v1/roles/client/create"

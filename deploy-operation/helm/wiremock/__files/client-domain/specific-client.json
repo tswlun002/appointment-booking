@@ -1,0 +1,13 @@
+{
+  "username": "9001015009087",
+  "email": "john.doe@example.com",
+  "firstname": "John",
+  "lastname": "Doe",
+  "idNumber": "9001015009087",
+  "isCapitecClient": true,
+  "status": "ACTIVE",
+  "verified": true,
+  "enabled": true,
+  "dateOfBirth": "1990-01-01",
+  "cellphone": "+27821234567"
+}

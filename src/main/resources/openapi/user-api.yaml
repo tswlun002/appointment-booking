@@ -1,0 +1,1182 @@
+openapi: 3.1.0
+info:
+  title: User API
+  description: |
+    API for user operations at Capitec.
+    Includes authentication (registration, verification, password reset) and
+    user management (profile, password change, account deletion).
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/users
+    description: User Service Base Path (v1)
+
+tags:
+  - name: Registration
+    description: User registration operations (public)
+  - name: Password Reset
+    description: Password reset operations for forgotten passwords (public)
+  - name: User Profile
+    description: User profile operations (authenticated)
+  - name: Password Management
+    description: Password change operations for authenticated users
+  - name: Account Management
+    description: Account deletion operations (authenticated)
+  - name: Utility
+    description: Utility operations
+
+paths:
+  # ==================== Authentication Endpoints (Public) ====================
+  /auth/register:
+    post:
+      tags:
+        - Registration
+      summary: Register a new user
+      description: |
+        Registers a new user account.
+        A verification code will be sent to the user's email.
+      operationId: registerUser
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserRequest'
+      responses:
+        '201':
+          description: User registered successfully, verification code sent
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Verification code, please confirm it to complete registration"
+        '400':
+          description: |
+            Invalid request parameters:
+            - Passwords don't match
+            - Missing required fields
+            - Invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                passwordMismatch:
+                  summary: Passwords don't match
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Passwords don't match"
+                    path: "/api/v1/users/auth/register"
+        '404':
+          description: |
+            Capitec client not found:
+            - User attempted to register as Capitec client but ID number not found in client domain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User does not exist as a Capitec client"
+                path: "/api/v1/users/auth/register"
+        '409':
+          description: |
+            Conflict with existing data:
+            - Email already registered
+            - ID number belongs to existing Capitec client (when registering as guest)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                emailExists:
+                  summary: Email already registered
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 409
+                    error: "Conflict"
+                    message: "User already exists with this email address"
+                    path: "/api/v1/users/auth/register"
+                idNumberConflict:
+                  summary: ID number belongs to Capitec client
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 409
+                    error: "Conflict"
+                    message: "This ID number is already registered as a Capitec client. Please register as an existing client."
+                    path: "/api/v1/users/auth/register"
+        '500':
+          description: |
+            Internal server error:
+            - Failed to generate unique username after multiple attempts
+            - Failed to persist user to identity provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                usernameGeneration:
+                  summary: Username generation failed
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 500
+                    error: "Internal Server Error"
+                    message: "Failed to generate unique username. Please try again."
+                    path: "/api/v1/users/auth/register"
+                persistFailed:
+                  summary: User persistence failed
+                  value:
+                    timestamp: "2026-02-07T10:30:00Z"
+                    status: 500
+                    error: "Internal Server Error"
+                    message: "Failed to register user. Please try again."
+                    path: "/api/v1/users/auth/register"
+
+  /auth/verify:
+    put:
+      tags:
+        - Registration
+      summary: Verify user registration
+      description: |
+        Verifies the user's email using the OTP code sent during registration.
+        Returns access token on successful verification.
+      operationId: verifyUser
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationRequest'
+      responses:
+        '200':
+          description: User verified successfully and auto-logged in
+          headers:
+            Set-Cookie:
+              description: Refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '202':
+          description: User verified successfully but auto-login failed. User must login manually.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "OTP verified successfully. Please can login"
+        '204':
+          description: User verified successfully but failed to write response body
+        '403':
+          description: |
+            Forbidden - Invalid OTP code:
+            - OTP code does not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 403
+                error: "Forbidden"
+                message: "Invalid OTP code"
+                path: "/api/v1/users/auth/verify"
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User not found"
+                path: "/api/v1/users/auth/verify"
+        '410':
+          description: |
+            Gone - OTP has expired:
+            - A new OTP has been sent to the user's email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 410
+                error: "Gone"
+                message: "OTP has expired. A new OTP has been sent to your email."
+                path: "/api/v1/users/auth/verify"
+        '417':
+          description: |
+            Expectation Failed - Verification status update failed:
+            - OTP was valid but failed to update user verification status
+            - User should retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Temporarily failed to update verification status. Please try again."
+                path: "/api/v1/users/auth/verify"
+        '423':
+          description: |
+            Locked - Too many failed OTP attempts:
+            - User account has been disabled due to too many failed attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 423
+                error: "Locked"
+                message: "Too many failed OTP attempts. Account has been locked."
+                path: "/api/v1/users/auth/verify"
+        '425':
+          description: |
+            Too Early - OTP resend cooldown not passed:
+            - User must wait before requesting a new OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 425
+                error: "Too Early"
+                message: "Please wait few minutes before requesting a new OTP."
+                path: "/api/v1/users/auth/verify"
+        '429':
+          description: |
+            Too Many Requests - OTP resend rate limit exceeded:
+            - Maximum OTP resend requests exceeded within time window
+            - User must wait for the window to reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many OTP requests. Please try again in 60 minutes."
+                path: "/api/v1/users/auth/verify"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/password/request-reset:
+    post:
+      tags:
+        - Password Reset
+      summary: Request password reset
+      description: |
+        Initiates password reset process for a user who forgot their password.
+        Sends OTP code to the user's email.
+      operationId: requestPasswordReset
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Password reset email sent
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Email verification sent to your email"
+        '400':
+          description: Invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/password/reset:
+    put:
+      tags:
+        - Password Reset
+      summary: Reset password
+      description: |
+        Resets the user's password using the OTP code sent via email.
+        Used when user has forgotten their password.
+      operationId: resetPassword
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Password updated successfully"
+        '400':
+          description: Invalid password format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: |
+            Unauthorized - Invalid OTP:
+            - OTP code does not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid OTP code"
+                path: "/api/v1/users/auth/password/reset"
+        '404':
+          description: |
+            User not found:
+            - No user exists with the provided email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User is not found"
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '410':
+          description: |
+            Gone - OTP has expired:
+            - A new OTP has been sent to the user's email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 410
+                error: "Gone"
+                message: "OTP has expired. A new OTP has been sent to your email."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '417':
+          description: |
+            Expectation Failed:
+            - Password update operation failed
+            - User should retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to update password. Please try again."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '423':
+          description: |
+            Locked - Too many failed OTP attempts:
+            - User account has been disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 423
+                error: "Locked"
+                message: "Too many failed OTP attempts. Account has been locked."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '425':
+          description: |
+            Too Early - OTP resend cooldown not passed:
+            - User must wait before requesting a new OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 425
+                error: "Too Early"
+                message: "Please wait few minutes before requesting a new OTP."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '429':
+          description: |
+            Too Many Requests - OTP resend rate limit exceeded:
+            - Maximum OTP resend requests exceeded within time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many OTP requests. Please try again in 60 minutes."
+                path: "/api/v1/users/auth/credentials/password/reset"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/generate/username:
+    get:
+      tags:
+        - Utility
+      summary: Generate a new username
+      description: |
+        Generates a unique username for use during registration.
+      operationId: generateUsername
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Username generated successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "user.abc123"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ==================== User Management Endpoints (Authenticated) ====================
+  /{username}:
+    get:
+      tags:
+        - User Profile
+      summary: Get user by username
+      description: |
+        Retrieves user information by username.
+        User can only access their own profile.
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: User's username
+          schema:
+            type: string
+            minLength: 5
+            maxLength: 50
+            example: "john.doe123"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '403':
+          description: Access denied - username mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Failed to fetch user"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /:
+    get:
+      tags:
+        - User Profile
+      summary: Get user by email
+      description: |
+        Retrieves user information by email.
+        User can only access their own profile.
+      operationId: getUserByEmail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: email
+          in: query
+          required: true
+          description: User's email address
+          schema:
+            type: string
+            format: email
+            example: "john.doe@example.com"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '403':
+          description: Access denied - email mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /password/update-request:
+    put:
+      tags:
+        - Password Management
+      summary: Request password change
+      description: |
+        Initiates password change for an authenticated user.
+        Verifies current password and sends OTP to email.
+      operationId: requestPasswordChange
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '200':
+          description: OTP sent to email
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Confirm OTP code sent to your email"
+        '401':
+          description: Invalid current password
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Password is invalid"
+        '403':
+          description: Access denied - username mismatch
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /password/update:
+    put:
+      tags:
+        - Password Management
+      summary: Update password
+      description: |
+        Updates the user's password using OTP verification.
+        Requires valid OTP from the password change request.
+      operationId: updatePassword
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordConfirm'
+      responses:
+        '200':
+          description: Password updated successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Password updated successfully"
+        '400':
+          description: Invalid password format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: |
+            Unauthorized - Invalid OTP:
+            - OTP code does not match
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid OTP code"
+                path: "/api/v1/users/credentials/password/update"
+        '403':
+          description: |
+            Forbidden:
+            - Access denied - username mismatch with authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 403
+                error: "Forbidden"
+                message: "Access denied"
+                path: "/api/v1/users/credentials/password/update"
+        '404':
+          description: |
+            User not found:
+            - No user exists with the provided username
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "User is not found"
+                path: "/api/v1/users/credentials/password/update"
+        '410':
+          description: |
+            Gone - OTP has expired:
+            - A new OTP has been sent to the user's email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 410
+                error: "Gone"
+                message: "OTP has expired. A new OTP has been sent to your email."
+                path: "/api/v1/users/credentials/password/update"
+        '417':
+          description: |
+            Expectation Failed:
+            - Password update operation failed
+            - User should retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to update password. Please try again."
+                path: "/api/v1/users/credentials/password/update"
+        '423':
+          description: |
+            Locked - Too many failed OTP attempts:
+            - User account has been disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 423
+                error: "Locked"
+                message: "Too many failed OTP attempts. Account has been locked."
+                path: "/api/v1/users/credentials/password/update"
+        '425':
+          description: |
+            Too Early - OTP resend cooldown not passed:
+            - User must wait before requesting a new OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 425
+                error: "Too Early"
+                message: "Please wait few minutes before requesting a new OTP."
+                path: "/api/v1/users/credentials/password/update"
+        '429':
+          description: |
+            Too Many Requests - OTP resend rate limit exceeded:
+            - Maximum OTP resend requests exceeded within time window
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-07T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many OTP requests. Please try again in 60 minutes."
+                path: "/api/v1/users/credentials/password/update"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /delete/request:
+    post:
+      tags:
+        - Account Management
+      summary: Request account deletion
+      description: |
+        Initiates account deletion process.
+        Verifies password and sends OTP to email for confirmation.
+      operationId: requestDeleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteUserRequest'
+      responses:
+        '200':
+          description: Delete request successful, OTP sent
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "User delete request successful. OTP code is sent to your email"
+        '400':
+          description: Delete request failed
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "User deletion request failed"
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /delete:
+    delete:
+      tags:
+        - Account Management
+      summary: Delete user account
+      description: |
+        Permanently deletes the user's account.
+        Requires valid OTP from the delete request.
+      operationId: deleteUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteUserConfirm'
+      responses:
+        '200':
+          description: User deleted successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "User deleted successfully"
+        '400':
+          description: Deletion failed - invalid OTP
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "User deletion failed, double check OTP"
+        '403':
+          description: Access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    # ==================== Registration Schemas ====================
+    NewUserRequest:
+      type: object
+      description: Request body for user registration
+      required:
+        - email
+        - password
+        - confirmPassword
+        - firstname
+        - lastname
+        - isCapitecClient
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
+          description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
+          example: "SecurePass123!"
+        confirmPassword:
+          type: string
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
+          description: User's password (min 8 characters, must include uppercase, lowercase, number, and special character)
+          example: "SecurePass123!"
+        firstname:
+          type: string
+          minLength: 2
+          pattern: "^[a-zA-Z]{2,}$"
+          description: User's first name (letters only, min 2 characters)
+          example: "John"
+        lastname:
+          type: string
+          minLength: 2
+          pattern: "^[a-zA-Z]{2,}$"
+          description: User's last name (letters only, min 2 characters)
+          example: "Doe"
+        idNumber:
+          type: string
+          pattern: "^\\d{13}$"
+          description: South African ID number (optional)
+          example: "9001015009087"
+        isCapitecClient:
+          type: boolean
+          description: Whether user is an existing Capitec client
+
+    VerificationRequest:
+      type: object
+      description: Request body for email verification
+      required:
+        - email
+        - otp
+        - isCapitecClient
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+        otp:
+          type: string
+          description: One-time password sent to email
+          minLength: 6
+          example: "123456"
+        isCapitecClient:
+          type: boolean
+          description: Whether user is an existing Capitec client
+    ForgotPasswordRequest:
+      type: object
+      description: Request body for forgot password request
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+
+    PasswordResetRequest:
+      type: object
+      description: Request body for password reset (forgot password)
+      required:
+        - email
+        - OTP
+        - newPassword
+        - confirmPassword
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+        OTP:
+          type: string
+          description: One-time password sent to email
+          example: "123456"
+        newPassword:
+          type: string
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
+          description: New password
+          example: "NewSecurePass123!"
+        confirmPassword:
+          type: string
+          pattern: "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!~@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?])(?!.*\\s).{6,}$"
+          description: Confirm password
+          example: "NewSecurePass123!"
+
+    TokenResponse:
+      type: object
+      description: Authentication token response
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        token_type:
+          type: string
+          description: Token type
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+          example: 3600
+        scope:
+          type: string
+          description: Token scope
+          example: "openid profile email"
+        id_token:
+          type: string
+          description: JWT identity token
+
+    # ==================== User Profile Schemas ====================
+    UserResponse:
+      type: object
+      description: User information
+      properties:
+        username:
+          type: string
+          description: User's unique username
+          example: "john.doe123"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+        firstname:
+          type: string
+          description: User's first name
+          example: "John"
+        lastname:
+          type: string
+          description: User's last name
+          example: "Doe"
+        verified:
+          type: boolean
+          description: Whether the user's email is verified
+          example: true
+        enabled:
+          type: boolean
+          description: Whether the user account is enabled
+          example: true
+
+    # ==================== Password Management Schemas ====================
+    ChangePasswordRequest:
+      type: object
+      description: Request to initiate password change
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: User's username
+          example: "john.doe123"
+        password:
+          type: string
+          description: Current password for verification
+          example: "CurrentPass123!"
+
+    ChangePasswordConfirm:
+      type: object
+      description: Request to confirm password change with OTP
+      required:
+        - username
+        - newPassword
+        - OTP
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: User's username
+          example: "john.doe123"
+        newPassword:
+          type: string
+          minLength: 8
+          description: New password
+          example: "NewSecurePass123!"
+        OTP:
+          type: string
+          description: One-time password sent to email
+          example: "123456"
+
+    # ==================== Account Management Schemas ====================
+    DeleteUserRequest:
+      type: object
+      description: Request to initiate account deletion
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: User's username
+          example: "john.doe123"
+        password:
+          type: string
+          description: Current password for verification
+          example: "CurrentPass123!"
+
+    DeleteUserConfirm:
+      type: object
+      description: Request to confirm account deletion with OTP
+      required:
+        - username
+        - OTP
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: User's username
+          example: "john.doe123"
+        OTP:
+          type: string
+          description: One-time password sent to email
+          example: "123456"
+
+    # ==================== Common Schemas ====================
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-28T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid request parameters"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/users/auth/register"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"

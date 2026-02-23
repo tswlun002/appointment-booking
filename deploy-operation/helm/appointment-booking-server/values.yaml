@@ -1,0 +1,233 @@
+replicaCount: 1
+# This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
+image:
+  pullPolicy: IfNotPresent
+  # Repository and Tag MANAGED BY DEVOPS REPO, MANUAL EDITING MIGHT CAUSE ERRORS!!!!!!!!!!
+  repository: appointment-booking-server # This sets the pull policy for images.
+  tag: "latest"
+
+# This is for the secretes for pulling an image from a private repository more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# This is to override the chart name.
+nameOverride: ""
+fullnameOverride: ""
+#This section builds out the service account more information can be found here: https://kubernetes.io/docs/concepts/security/service-accounts/
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  automount: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+# This is for setting Kubernetes Annotations to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/ 
+podAnnotations: {}
+# This is for setting Kubernetes Labels to a Pod.
+# For more information checkout: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+podLabels: {}
+podSecurityContext: {}
+# fsGroup: 2000
+
+securityContext: {}
+# capabilities:
+#   drop:
+#   - ALL
+# readOnlyRootFilesystem: true
+# runAsNonRoot: true
+# runAsUser: 1000
+
+# This is for setting up a service more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/
+service:
+  # This sets the service type more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  type: ClusterIP
+  # This sets the ports more information can be found here: https://kubernetes.io/docs/concepts/services-networking/service/#field-spec-ports
+  port: 8083
+  targetPort: 8083
+# This block is for setting up the ingress for more information can be found here: https://kubernetes.io/docs/concepts/services-networking/ingress/
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  hosts:
+      - host: ""
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: appointment-booking-server
+                port:
+                  number: 8083
+  tls: []
+
+# Allowed pod to call end-points of this service
+networkPolicy:
+  allowedPods:
+    - key: "app"
+      operator: "In"
+      values:
+        - "appointment-booking-web-client"
+        - "keycloak-idp"
+resources:
+  limits:
+    cpu: 256m
+    memory: 768Mi
+  requests:
+    cpu: 256m
+    memory: 768Mi
+# This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 8083
+  initialDelaySeconds: 30
+  failureThreshold: 6
+  periodSeconds: 20
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 8083
+  failureThreshold: 6
+  periodSeconds: 20
+#This section is for setting up autoscaling more information can be found here: https://kubernetes.io/docs/concepts/workloads/autoscaling/
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 75
+baseEnv:
+  - name: ENVIRONMENT
+    value: "default"
+  - name: JAVA_OPS
+    value: "-Xms512m -Xmx512m -XX:=ExitOutOfMemoryError -XX:+EnableDynamicAgentLoading"
+  - name: ROOT_LOGGING_LEVEL
+    value: ERROR
+  - name: APPLICATION_LOGGING_LEVEL
+    value: TRACE
+  - name: KAFKA_LOGGING_LEVEL
+    value: ERROR
+  - name: KEYCLOAK_LOGGING_LEVEL
+    value: DEBUG
+  - name: KEYCLOAK_LOGGING_LEVEL
+    value: ERROR
+
+  # ---- Database env ---------
+  - name: DATABASE_URL
+    value: ""
+  - name: DATABASE_USERNAME
+    value: ""
+  - name: DATABASE_PASSWORD
+    value: ""
+  - name: DATABASE_DATABASE
+    value: ""
+  - name: DATABASE_CATALOG
+    value: ""
+  - name: DATABASE_HOST
+    value: ""
+
+  # ---- Security & Auth Server env ---------
+  - name: AUTH_SERVER_TOKEN_URL
+    value: ""
+  - name: ISSUER_URI
+    value: ""
+  - name: CORS_ALLOWED_ORIGIN
+    value: ""
+  - name: CORS_CERTS_CACHE_PERIOD
+    value: "30"
+
+  # ---- Keycloak env ---------
+  - name: KEYCLOAK_REALM
+    value: ""
+  - name: KEYCLOAK_DOMAIN
+    value: ""
+  - name: KEYCLOAK_ADMIN_CLIENT_ID
+    value: ""
+  - name: KEYCLOAK_ADMIN_CLIENT_SECRETE
+    value: ""
+  - name: KEYCLOAK_ADMIN_SCOPE
+    value: "openid email profile"
+  - name: KEYCLOAK_ADMIN_GRANT_TYPE
+    value: "client_credentials"
+  - name: KEYCLOAK_CLIENT_TYPE
+    value: "authenticationClientId"
+  - name: KEYCLOAK_AUTH_URL
+    value: ""
+  - name: KEYCLOAK_USER_AUTH_TYPE
+    value: "password"
+  - name: KEYCLOAK_USERNAME
+    value: ""
+  - name: KEYCLOAK_PASSWORD
+    value: ""
+
+  # ---- OTP & Business Logic env ---------
+  - name: OTP_EXPIRE_DATETIME_IN_MINUTES
+    value: "5"
+  - name: OTP_NUMBER_VERIFICATION_ATTEMPTS
+    value: "3"
+  - name: SLOT_GENERATION_ROLLING_WINDOW_DAYS_INIT
+    value: "7"
+  - name: SLOT_GENERATION_ROLLING_WINDOW_DAYS_DAILY
+    value: "1"
+  - name: SLOT_SCHEDULAR_CRON
+    value:  "0 5 * * * *"
+  - name: APPOINTMENT_NO_SHOW_CRON
+    value: "0 */10 * * * *"
+  - name: APPOINTMENT_TO_MARK_NO_SHOW_SINCE
+    value: "30"
+
+  # ---- Kafka env ---------
+  - name: KAFKA_REPLICAS
+    value: "2"
+  - name: BROKER_BOOTSTRAP_SERVERS
+    value: ""
+  - name: EVENT_TOPICS
+    value: "registration-event,email-verified-event,
+            retryable-letter,dead-letter,complete-registration-event,
+            deleted-user-account-request-event,deleted-user-account-event,
+            password-reset-request-event,password-updated-event,
+            appointment-rescheduled,appointment-canceled,
+            attended-appointment,appointment-booked
+            "
+  - name: TRUSTED_PACKAGES_SUBDIRECTORIES
+    value: ""
+
+  # ---- Email env ---------
+  - name: MAIL_HOST
+    value: ""
+  - name: MAIL_PROTOCOL
+    value: "smtp"
+  - name: MAIL_PORT
+    value: ""
+  - name: MAIL_USERNAME
+    value: ""
+  - name: MAIL_PASSWORD
+    value: ""
+
+  # ---- External Clients env ---------
+  - name: CLIENT_DOMAIN_BASE_URL
+    value: ""
+  - name: HOLIDAYS_CLIENT_API
+    value: ""
+  - name: CAPITEC_BRANCH_LOCATOR_API
+    value: ""
+  - name: COOKIE_SAMESITE_TYPE
+    value: "NONE"
+active: true
+rbac:
+  create: true
+  resources:
+#    - "configmaps"
+    - "pods"
+    - "services"
+    - "endpoints"
+#    - "secrets"
+  verbs:
+    - "get"
+    - "list"
+    - "watch"

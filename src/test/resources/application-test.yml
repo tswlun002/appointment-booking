@@ -1,0 +1,93 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  liquibase:
+    enabled: true
+    change-log: classpath:db/migrations/changelog-master.xml
+#  sql:
+#    init:
+#      schema-locations: classpath:schema.sql
+#      mode: always
+DATABASE_CATALOG: ${DATABASE_CATALOG}
+
+# KEYCLOAK CONFIG
+keycloak:
+  realm: ${KEYCLOAK_REALM}
+  domain: ${KEYCLOAK_DOMAIN}
+  adminClientId: ${KEYCLOAK_ADMIN_CLIENT_ID}
+  adminClientSecret: ${KEYCLOAK_ADMIN_CLIENT_SECRETE}
+  scope: ${KEYCLOAK_ADMIN_SCOPE}
+  grant_type: ${KEYCLOAK_ADMIN_GRANT_TYPE}
+  client: ${KEYCLOAK_CLIENT_TYPE}
+  urls:
+    auth: ${KEYCLOAK_AUTH_URL}
+  user_auth_type: ${KEYCLOAK_USER_AUTH_TYPE}
+  password: ${KEYCLOAK_PASSWORD}
+  username: ${KEYCLOAK_USERNAME}
+
+#Roles
+default_roles:
+  users: ${DEFAULT_USERS_ROLES}
+  admin: ${DEFAULT_ADMIN_ROLES}
+
+# Logging
+logging:
+  level:
+    root: INFO
+    capitec.branch.appointment: TRACE
+    org.springframework.security: INFO
+    org.hibernate.SQL: TRACE
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.keycloak: TRACE
+    org.springframework.kafka: ERROR
+    org.apache.kafka: ERROR
+    org.springframework.mail: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} [%X{traceId}] - %msg%n"
+
+# Kafka
+kafka:
+  common-config:
+    security:
+      type: "NONE"
+  producer-config:
+    retries: 2
+    request-timeout-ms: 6000
+    deliver-time-out-ms: 36000
+  consumer-config:
+    none-retryable-exceptions:
+      - capitec.branch.appointment.exeption.MailSenderException
+      - org.eclipse.angus.mail.util.MailConnectException
+      - org.eclipse.angus.mail.util.MailConnectException
+      - org.apache.kafka.common.errors.TimeoutException
+      - org.apache.kafka.common.errors.NotEnoughReplicasAfterAppendException
+      - org.apache.kafka.common.errors.NotEnoughReplicasException
+      - org.springframework.kafka.support.serializer.DeserializationException
+      - jakarta.mail.MessagingException
+    session-timeout-ms: 30000
+    heartbeat-interval-ms: 10000
+    group-id: default-test
+    max-poll-interval-ms: 300000
+    max-partition-fetch-bytes-default: 1048576
+    poll-timeout-ms: 1000
+    max-poll-records: 10
+    auto-offset-reset: earliest
+  event-publisher-default-impl:
+    enabled: true
+  retry-default-impl:
+    enabled: false
+
+otp:
+  expire:
+    datetime: 5
+
+# RATE LIMITING
+rate-limit:
+  otp-resend:
+    max-attempts: 5
+    window-minutes: 60
+    cooldown-seconds: 60
+  login:
+    max-attempts: 5
+    window-minutes: 300

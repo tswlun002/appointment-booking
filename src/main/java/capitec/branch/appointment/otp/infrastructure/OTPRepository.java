@@ -1,0 +1,69 @@
+package capitec.branch.appointment.otp.infrastructure;
+
+import jakarta.validation.constraints.NotBlank;
+import capitec.branch.appointment.utils.Username;
+import org.springframework.data.jdbc.repository.query.Modifying;
+import org.springframework.data.jdbc.repository.query.Query;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.Set;
+
+@Repository
+interface OTPRepository extends CrudRepository<OTPEntity, Long> {
+
+
+    @Modifying
+    @Query(value = """
+                WITH revoked_otps AS (
+                    UPDATE otp SET status = 'REVOKED'
+                    WHERE  username = :username AND status IN ('RENEWED', 'CREATED')
+                    RETURNING  username 
+                )
+                INSERT INTO otp (code, created_date, expire_date, purpose, status, verification_attempts, username, updated_at,version) 
+                VALUES( :code, :creationDate, :expiresDate, :purpose, :status, :verificationAttempts, :username, :updatedAt, :version )
+            """
+           )
+    int  revokeAndInsertNewOtp(@Param("code") String code, @Param("creationDate") LocalDateTime creationDate,
+                               @Param("expiresDate") LocalDateTime expiresDate,
+                                @Param("purpose") String purpose,@Param("status") String status,@Param("verificationAttempts") int verificationAttempts,
+                               @Param("username") String username, @Param("updatedAt") LocalDateTime updatedAt,@Param("version") int version);
+    @Query("""
+               SELECT otp.id, otp.code,otp.purpose, otp.status ,otp.created_date,otp.expire_date ,
+                      otp.username, otp.verification_attempts, updated_at, version    FROM  otp as otp
+               WHERE otp.code=:code AND otp.username=:username AND status =:status
+            """)
+    Optional<OTPEntity> findOtpByCodeAndUserId(@Param("code") String code, @Param("username") String username, @Param("status") String status);
+
+    @Query("""
+               SELECT otp.id, otp.code,otp.purpose, otp.status ,otp.created_date,otp.expire_date , otp.username,
+                      otp.verification_attempts,updated_at, version  FROM  otp as otp
+               WHERE  otp.username=:username
+            """)
+    Set<OTPEntity> findOtpByUserId(@Username String username);
+
+    @Modifying
+    @Query("""
+            DELETE FROM otp as otp WHERE otp.username=:username
+            """)
+    boolean deleteByUserId(@NotBlank @Param("username") String username);
+
+    @Modifying
+    @Query("""
+        UPDATE otp SET  status = :newStatus, verification_attempts = :attempts, updated_at=NOW(),version = version+1 
+                   WHERE code = :code AND  username = :username AND status = :status
+        """)
+    int updateOTP(@Param("username") String username,@Param("code") String code, @Param("status") String status,
+                  @Param("newStatus") String newStatus, @Param("attempts") Integer attempts);
+
+   @Query("""
+            SELECT  otp.id, otp.code,otp.purpose, otp.status ,otp.created_date,otp.expire_date , otp.username ,
+                    otp.verification_attempts,updated_at, version  FROM  otp as otp
+               WHERE  otp.username=:username AND created_date >= :fromDate  ORDER BY  created_date  DESC  LIMIT 1
+       """)
+    Optional<OTPEntity> findLatestOTP(@Param("username") String username,@Param("fromDate")  LocalDateTime fromDate);
+
+
+}

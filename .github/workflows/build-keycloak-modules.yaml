@@ -1,0 +1,187 @@
+name: Build Keycloak Modules 🔐
+
+on:
+  workflow_dispatch: # Manual trigger
+    inputs:
+      module:
+        description: 'Module to build (all, generate-username, validate-credential)'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - generate-username
+          - validate-credential
+  push:
+    branches:
+      - main
+    paths:
+      - 'generate-username-ui-register-module/**'
+      - 'validate-credential-module/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'generate-username-ui-register-module/**'
+      - 'validate-credential-module/**'
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      generate-username: ${{ steps.filter.outputs.generate-username }}
+      validate-credential: ${{ steps.filter.outputs.validate-credential }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed modules
+        id: filter
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            MODULE="${{ github.event.inputs.module }}"
+            if [ "$MODULE" == "all" ] || [ "$MODULE" == "generate-username" ]; then
+              echo "generate-username=true" >> $GITHUB_OUTPUT
+            else
+              echo "generate-username=false" >> $GITHUB_OUTPUT
+            fi
+            if [ "$MODULE" == "all" ] || [ "$MODULE" == "validate-credential" ]; then
+              echo "validate-credential=true" >> $GITHUB_OUTPUT
+            else
+              echo "validate-credential=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Check for changes in each module
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+            
+            if echo "$CHANGED_FILES" | grep -q "^generate-username-ui-register-module/"; then
+              echo "generate-username=true" >> $GITHUB_OUTPUT
+            else
+              echo "generate-username=false" >> $GITHUB_OUTPUT
+            fi
+            
+            if echo "$CHANGED_FILES" | grep -q "^validate-credential-module/"; then
+              echo "validate-credential=true" >> $GITHUB_OUTPUT
+            else
+              echo "validate-credential=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  build-generate-username-module:
+    name: Build Generate Username Module
+    needs: detect-changes
+    if: needs.detect-changes.outputs.generate-username == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.build-spi.outputs.VERSION }}
+      ARTIFACT_NAME: ${{ steps.build-spi.outputs.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build SPI Module
+        id: build-spi
+        uses: ./.github/actions/build-spi-module
+        with:
+          MODULE_PATH: generate-username-ui-register-module
+          MODULE_NAME: generate-username-module
+          JAVA_VERSION: '21'
+          RETENTION_DAYS: '15'
+
+  update-helm-generate-username:
+    name: Update Helm - Generate Username SPI
+    needs:
+      - detect-changes
+      - build-generate-username-module
+    if: needs.detect-changes.outputs.generate-username == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Keycloak Helm with Generate Username SPI
+        uses: ./.github/actions/update-keycloak-spi
+        with:
+          ORGANIZATION: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+          MODULE_NAME: "generate-username"
+          JAR_ARTIFACT_NAME: ${{ needs.build-generate-username-module.outputs.ARTIFACT_NAME }}
+          VERSION: ${{ needs.build-generate-username-module.outputs.VERSION }}
+          GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
+          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+          NAMESPACE: ${{ vars.K8S_NAMESPACE || 'capitec' }}
+
+  build-validate-credential-module:
+    name: Build Validate Credential Module
+    needs: detect-changes
+    if: needs.detect-changes.outputs.validate-credential == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.build-spi.outputs.VERSION }}
+      ARTIFACT_NAME: ${{ steps.build-spi.outputs.ARTIFACT_NAME }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build SPI Module
+        id: build-spi
+        uses: ./.github/actions/build-spi-module
+        with:
+          MODULE_PATH: validate-credential-module
+          MODULE_NAME: validate-credential-module
+          JAVA_VERSION: '21'
+          RETENTION_DAYS: '15'
+
+  update-helm-validate-credential:
+    name: Update Helm - Validate Credential SPI
+    needs:
+      - detect-changes
+      - build-validate-credential-module
+    if: needs.detect-changes.outputs.validate-credential == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update Keycloak Helm with Validate Credential SPI
+        uses: ./.github/actions/update-keycloak-spi
+        with:
+          ORGANIZATION: ${{ github.repository_owner }}
+          REPOSITORY: ${{ github.event.repository.name }}
+          MODULE_NAME: "validate-credential"
+          JAR_ARTIFACT_NAME: ${{ needs.build-validate-credential-module.outputs.ARTIFACT_NAME }}
+          VERSION: ${{ needs.build-validate-credential-module.outputs.VERSION }}
+          GIT_REPO_ACCESS_TOKEN: ${{ secrets.GIT_REPO_ACCESS_TOKEN }}
+          APP_GITHUB_EMAIL: ${{ vars.APP_GITHUB_EMAIL }}
+          APP_GITHUB_USERNAME: ${{ vars.APP_GITHUB_USERNAME }}
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+          NAMESPACE: ${{ vars.K8S_NAMESPACE || 'capitec' }}
+
+  summary:
+    name: Build Summary
+    needs:
+      - detect-changes
+      - build-generate-username-module
+      - build-validate-credential-module
+      - update-helm-generate-username
+      - update-helm-validate-credential
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "## Keycloak Modules Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Module | Built | Helm Updated |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|--------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Generate Username UI Register | ${{ needs.detect-changes.outputs.generate-username }} | ${{ needs.update-helm-generate-username.result == 'success' && '✅' || needs.detect-changes.outputs.generate-username == 'false' && '⏭️ Skipped' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Credential | ${{ needs.detect-changes.outputs.validate-credential }} | ${{ needs.update-helm-validate-credential.result == 'success' && '✅' || needs.detect-changes.outputs.validate-credential == 'false' && '⏭️ Skipped' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifact Retention:** 15 days" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts from the Actions tab." >> $GITHUB_STEP_SUMMARY
+

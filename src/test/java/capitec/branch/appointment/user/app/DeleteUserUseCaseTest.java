@@ -1,0 +1,71 @@
+package capitec.branch.appointment.user.app;
+
+
+import capitec.branch.appointment.user.app.dto.NewUserDtO;
+import capitec.branch.appointment.user.app.dto.UsernameCommand;
+import jakarta.ws.rs.NotFoundException;
+import capitec.branch.appointment.AppointmentBookingApplicationTests;
+import capitec.branch.appointment.otp.domain.OTP;
+import capitec.branch.appointment.otp.domain.OTPService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+
+public class DeleteUserUseCaseTest extends AppointmentBookingApplicationTests {
+
+    @Autowired
+    RegisterUserUseCase registerUserUseCase;
+    @Autowired
+    GetUserQuery getUserQuery;
+    @Autowired
+    OTPService otpService;
+    @Autowired
+    DeleteUserUseCase deleteUserUseCase;
+
+
+    @ParameterizedTest
+    @CsvSource(delimiter = ';',
+            value = {
+                    "alicelei@myuct.ac.za;AliceLei;XiaolingFerreira;@KrVgfjl65;78d4517d-d110-4bc4-96b3-ea77f4283cf4",
+                    "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"
+            })
+    void deleteExistingUserRequest(String email, String firstname, String lastname, String password, String traceId) {
+        var userRegister = new NewUserDtO(email, firstname, lastname, password, password);
+        var user = registerUserUseCase.execute(userRegister, traceId);
+        boolean isDeleted = deleteUserUseCase.deleteUserRequest(user.getUsername(), password, traceId);
+        assertThat(isDeleted).isTrue();
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = ';',
+            value = {
+                    "alicelei@myuct.ac.za;AliceLei;XiaolingFerreira;@KrVgfjl65;78d4517d-d110-4bc4-96b3-ea77f4283cf4",
+                    "gopalflores1@cput.ac.za;Gopal;Flores;1wcB2OsQFV6_;e23f32b9-3dea-41ed-ac8d-fa283dacb424"
+            })
+    void deleteExistingUser(String email, String firstname, String lastname, String password, String traceId) {
+        var userRegister = new NewUserDtO(email, firstname, lastname, password, password);
+        var user = registerUserUseCase.execute(userRegister, traceId);
+        OTP otp1 = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
+                .findFirst().orElseThrow();
+        otp1.validate(otp1.getCode());
+        deleteUserUseCase.deleteUserRequest(user.getUsername(), password, traceId);
+        OTP otp = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
+                .findFirst().orElseThrow();
+        boolean isDeleted = deleteUserUseCase.deleteUser(user.getUsername(), otp.getCode(), traceId);
+        assertThat(isDeleted).isTrue();
+        assertThatThrownBy(() -> getUserQuery.execute(new UsernameCommand(user.getUsername()), UUID.randomUUID().toString()))
+                .isInstanceOf(NotFoundException.class)
+                .hasMessage("User is not found");
+
+        Optional<OTP> otpEntity = otpService.find(user.getUsername()).stream().sorted((a, b) -> b.getCreationDate().compareTo(a.getCreationDate()))
+                .findFirst();
+        assertThat(otpEntity.isEmpty()).isTrue();
+    }
+}

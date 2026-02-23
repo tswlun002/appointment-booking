@@ -1,0 +1,536 @@
+openapi: 3.1.0
+info:
+  title: Authentication API
+  description: |
+    API for authentication operations at Capitec.
+    Provides endpoints for login, logout, token refresh, password verification, and admin impersonation.
+    
+    ## Rate Limiting
+    - Login attempts are rate limited to 5 failed attempts per hour
+    - After exceeding the limit, the account is temporarily locked
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/auth
+    description: Authentication Service Base Path (v1)
+
+tags:
+  - name: Authentication
+    description: User authentication operations
+  - name: Token Management
+    description: Token refresh and management
+  - name: Password Verification
+    description: Password verification operations
+  - name: Admin
+    description: Admin-only operations
+
+paths:
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticates a user with email and password.
+        Returns access token in response body and sets refresh token in HTTP-only cookie.
+        
+        **Rate Limiting:**
+        - Maximum 5 failed login attempts per hour
+        - After 5 failed attempts, account is locked for 1 hour
+        - Successful login resets the failed attempt counter
+      operationId: login
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Refresh token cookie (HTTP-only, secure)
+              schema:
+                type: string
+                example: "refresh_token=abc123; Path=/; HttpOnly; Secure"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid email format
+            - Missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Email must be valid"
+                path: "/api/v1/auth/login"
+        '401':
+          description: |
+            Unauthorized - Invalid credentials:
+            - Wrong email or password
+            - Shows remaining attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid credentials. 4 attempt(s) remaining."
+                path: "/api/v1/auth/login"
+        '428':
+          description: |
+            Precondition Required:
+            - User email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 428
+                error: "Precondition Required"
+                message: "User is not verified. Please verify your email first."
+                path: "/api/v1/auth/login"
+        '429':
+          description: |
+            Too Many Requests - Rate limit exceeded:
+            - More than 5 failed login attempts in 1 hour
+            - Account temporarily locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 429
+                error: "Too Many Requests"
+                message: "Too many failed login attempts. Account locked for 45 minutes."
+                path: "/api/v1/auth/login"
+        '500':
+          description: |
+            Internal Server Error:
+            - Authentication domain error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /refresh:
+    post:
+      tags:
+        - Token Management
+      summary: Refresh access token
+      description: |
+        Refreshes the access token using the refresh token from cookie.
+        Returns new access token and updates refresh token cookie.
+      operationId: refreshToken
+      parameters:
+        - name: Cookie
+          in: header
+          required: true
+          description: Cookie header containing refresh_token
+          schema:
+            type: string
+            example: "refresh_token=abc123"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          headers:
+            Set-Cookie:
+              description: New refresh token cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Missing refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Refresh token is required"
+                path: "/api/v1/auth/refresh"
+        '401':
+          description: |
+            Unauthorized:
+            - Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid or expired refresh token"
+                path: "/api/v1/auth/refresh"
+        '428':
+          description: |
+            Precondition Required:
+            - User email not verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 428
+                error: "Precondition Required"
+                message: "User is not verified. Please verify your email first."
+                path: "/api/v1/auth/refresh"
+        '500':
+          description: |
+            Internal Server Error:
+            - Authentication domain error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /credentials/password/verify:
+    post:
+      tags:
+        - Password Verification
+      summary: Verify user's current password
+      description: |
+        Verifies if the provided password matches the user's current password.
+        Used before sensitive operations like password change or account deletion.
+      operationId: verifyPassword
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCredentialRequest'
+      responses:
+        '200':
+          description: Password is valid
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Password is valid."
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Missing username or password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Username is required"
+                path: "/api/v1/auth/credentials/password/verify"
+        '401':
+          description: |
+            Unauthorized:
+            - Invalid credentials
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Invalid credentials"
+        '500':
+          description: |
+            Internal Server Error:
+            - Authentication domain error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/impersonate/{username}:
+    post:
+      tags:
+        - Admin
+      summary: Admin impersonate user
+      description: |
+        Allows an admin to impersonate another user for support purposes.
+        Requires both 'impersonate' and 'admin' roles.
+      operationId: adminImpersonateUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: username
+          in: path
+          required: true
+          description: Username of the user to impersonate
+          schema:
+            type: string
+            minLength: 5
+            maxLength: 50
+            example: "1234567890"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Impersonation successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Invalid username format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Invalid username format"
+                path: "/api/v1/auth/admin/impersonate/invalid"
+        '401':
+          description: |
+            Unauthorized:
+            - Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden:
+            - Insufficient permissions (requires 'impersonate' and 'admin' roles)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 403
+                error: "Forbidden"
+                message: "Access denied - insufficient permissions"
+                path: "/api/v1/auth/admin/impersonate/1234567890"
+        '417':
+          description: |
+            Expectation Failed:
+            - Failed to impersonate user (user may not exist)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 417
+                error: "Expectation Failed"
+                message: "Failed to impersonate user. User may not exist."
+                path: "/api/v1/auth/admin/impersonate/1234567890"
+        '500':
+          description: |
+            Internal Server Error:
+            - Authentication domain error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: |
+        Logs out the user by invalidating their refresh token.
+        Requires 'app_user' role.
+      operationId: logout
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: Cookie
+          in: header
+          required: true
+          description: Cookie header containing refresh_token
+          schema:
+            type: string
+            example: "refresh_token=abc123"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Logout successful
+        '400':
+          description: |
+            Bad Request - Validation failed:
+            - Missing refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2026-02-08T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Refresh token is required"
+                path: "/api/v1/auth/logout"
+        '401':
+          description: |
+            Unauthorized:
+            - Missing or invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden:
+            - Requires 'app_user' role
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: |
+            Internal Server Error:
+            - Authentication domain error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token from login
+
+  parameters:
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    LoginRequest:
+      type: object
+      description: Login credentials
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john.doe@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: User's password (minimum 8 characters with uppercase, lowercase, number, and special character)
+          example: "SecurePass123!"
+
+    UserCredentialRequest:
+      type: object
+      description: User credentials for verification
+      required:
+        - username
+        - Password
+      properties:
+        username:
+          type: string
+          minLength: 10
+          maxLength: 10
+          description: User's username (10-digit number)
+          example: "1234567890"
+        Password:
+          type: string
+          minLength: 8
+          description: User's password
+          example: "SecurePass123!"
+
+    TokenResponse:
+      type: object
+      description: Authentication token response
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        token_type:
+          type: string
+          description: Token type
+          example: "Bearer"
+        expires_in:
+          type: integer
+          description: Token expiry in seconds
+          example: 3600
+        scope:
+          type: string
+          description: Token scope
+          example: "openid profile email"
+        id_token:
+          type: string
+          description: JWT identity token
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-02-08T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 401
+        error:
+          type: string
+          description: HTTP error type
+          example: "Unauthorized"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid credentials"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/auth/login"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"

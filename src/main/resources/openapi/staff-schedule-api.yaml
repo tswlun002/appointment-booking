@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: Staff Schedule API
+  description: |
+    API for managing staff work schedules at Capitec branches.
+    Supports setting weekly schedules, assigning staff to specific days, and querying working staff.
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/staff-schedules
+    description: Staff Schedule Service Base Path (v1)
+
+tags:
+  - name: Staff Scheduling
+    description: Staff schedule management operations
+
+paths:
+  /weekly:
+    post:
+      tags:
+        - Staff Scheduling
+      summary: Set weekly staff schedule
+      description: |
+        Sets the weekly staff schedule for a branch.
+        Maps staff usernames to specific dates for the week.
+      operationId: setWeeklySchedule
+      parameters:
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetWeeklyScheduleRequest'
+      responses:
+        '201':
+          description: Weekly schedule set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchStaffScheduleResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}/assign:
+    post:
+      tags:
+        - Staff Scheduling
+      summary: Assign staff to a specific day
+      description: |
+        Assigns a staff member to work at a branch on a specific day.
+        The branch schedule must already exist for that day.
+      operationId: assignStaffToDay
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignStaffToDayRequest'
+      responses:
+        '201':
+          description: Staff assigned successfully
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Branch schedule not found for the given day
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Staff already scheduled to work on that day
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}:
+    get:
+      tags:
+        - Staff Scheduling
+      summary: Get branch staff schedule
+      description: |
+        Retrieves the complete staff schedule for a branch.
+      operationId: getBranchSchedule
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved branch schedule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchStaffScheduleResponse'
+        '404':
+          description: Branch schedule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}/working:
+    get:
+      tags:
+        - Staff Scheduling
+      summary: Get working staff for a date
+      description: |
+        Retrieves the list of staff members working at a branch on a specific date.
+        Defaults to today's date if no date is provided.
+      operationId: getWorkingStaff
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - name: date
+          in: query
+          required: false
+          description: Date to query (defaults to today)
+          schema:
+            type: string
+            format: date
+          example: "2026-01-28"
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved working staff
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkingStaffResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}/days:
+    delete:
+      tags:
+        - Staff Scheduling
+      summary: Cancel working days
+      description: |
+        Cancels working days for a branch based on days of the week.
+        Affects future dates within the next 7 days matching the specified days.
+      operationId: cancelWorkingDays
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelWorkingDaysRequest'
+      responses:
+        '204':
+          description: Working days cancelled successfully
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    SetWeeklyScheduleRequest:
+      type: object
+      description: Request body for setting weekly staff schedule
+      required:
+        - branchId
+        - weeklyStaff
+      properties:
+        branchId:
+          type: string
+          minLength: 2
+          maxLength: 50
+          description: Branch identifier
+          example: "470010"
+        weeklyStaff:
+          type: object
+          description: Map of dates to staff usernames
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            "2026-01-28": ["john.doe123", "jane.smith456"]
+            "2026-01-29": ["john.doe123"]
+            "2026-01-30": ["jane.smith456", "bob.jones789"]
+
+    AssignStaffToDayRequest:
+      type: object
+      description: Request body for assigning staff to a specific day
+      required:
+        - username
+        - day
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: Staff username
+          example: "john.doe123"
+        day:
+          type: string
+          format: date
+          description: Date to assign the staff member
+          example: "2026-01-28"
+
+    CancelWorkingDaysRequest:
+      type: object
+      description: Request body for cancelling working days
+      required:
+        - days
+      properties:
+        days:
+          type: array
+          description: Days of the week to cancel
+          items:
+            type: string
+            enum:
+              - MONDAY
+              - TUESDAY
+              - WEDNESDAY
+              - THURSDAY
+              - FRIDAY
+              - SATURDAY
+              - SUNDAY
+          example: ["SATURDAY", "SUNDAY"]
+
+    BranchStaffScheduleResponse:
+      type: object
+      description: Response containing branch staff schedule
+      required:
+        - branchId
+        - weeklyStaff
+      properties:
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        weeklyStaff:
+          type: object
+          description: Map of dates to staff usernames
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            "2026-01-28": ["john.doe123", "jane.smith456"]
+            "2026-01-29": ["john.doe123"]
+
+    WorkingStaffResponse:
+      type: object
+      description: Response containing working staff for a date
+      required:
+        - branchId
+        - date
+        - staff
+        - totalCount
+      properties:
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        date:
+          type: string
+          format: date
+          description: The queried date
+          example: "2026-01-28"
+        staff:
+          type: array
+          description: List of staff usernames working on the date
+          items:
+            type: string
+          example: ["john.doe123", "jane.smith456"]
+        totalCount:
+          type: integer
+          description: Total number of working staff
+          example: 2
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-28T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid request parameters"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/staff-schedules/weekly"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"

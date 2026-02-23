@@ -1,0 +1,479 @@
+openapi: 3.1.0
+info:
+  title: Staff Appointment API
+  description: |
+    API for staff/consultant operations on appointments at Capitec branches.
+    Supports starting service, completing appointments, marking no-shows, and viewing branch appointments.
+  version: 1.0.0
+  contact:
+    name: Capitec Branch Appointment Team
+    email: support@capitecbank.co.za
+
+servers:
+  - url: /api/v1/staff/appointments
+    description: Staff Appointment Service Base Path (v1)
+
+tags:
+  - name: Staff Appointments
+    description: Staff/Consultant appointment operations
+
+paths:
+  /{appointmentId}/start:
+    patch:
+      tags:
+        - Staff Appointments
+      summary: Start serving a customer
+      description: |
+        Staff/Consultant starts serving the customer.
+        Appointment must be in CHECKED_IN status.
+      operationId: startAppointmentService
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartServiceRequest'
+      responses:
+        '200':
+          description: Service started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Invalid appointment status for starting service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{appointmentId}/complete:
+    patch:
+      tags:
+        - Staff Appointments
+      summary: Complete an appointment
+      description: |
+        Marks the appointment as completed after service is finished.
+        Appointment must be in IN_PROGRESS status.
+      operationId: completeAppointment
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteAppointmentRequest'
+      responses:
+        '200':
+          description: Appointment completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Invalid appointment status for completion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /{appointmentId}/no-show:
+    patch:
+      tags:
+        - Staff Appointments
+      summary: Mark customer as no-show
+      description: |
+        Staff marks the customer as no-show when they fail to arrive.
+        Appointment must be in BOOKED status and past the grace window.
+      operationId: markNoShow
+      parameters:
+        - $ref: '#/components/parameters/AppointmentId'
+        - $ref: '#/components/parameters/TraceId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoShowRequest'
+      responses:
+        '200':
+          description: Appointment marked as no-show
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Invalid appointment status for no-show
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /branches/{branchId}:
+    get:
+      tags:
+        - Staff Appointments
+      summary: Get appointments for a branch
+      description: |
+        Retrieves all appointments for a specific branch on a given date.
+        Used by staff to view daily appointment schedule.
+      operationId: getBranchAppointments
+      parameters:
+        - name: branchId
+          in: path
+          required: true
+          description: Branch identifier
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 50
+          example: "470010"
+        - name: date
+          in: query
+          required: true
+          description: Date to filter appointments (ISO format)
+          schema:
+            type: string
+            format: date
+          example: "2026-01-28"
+        - name: status
+          in: query
+          required: false
+          description: Filter appointments by status
+          schema:
+            $ref: '#/components/schemas/AppointmentStatus'
+        - $ref: '#/components/parameters/TraceId'
+      responses:
+        '200':
+          description: Successfully retrieved branch appointments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentsResponse'
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Branch not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    AppointmentId:
+      name: appointmentId
+      in: path
+      required: true
+      description: Unique appointment identifier
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+    TraceId:
+      name: Trace-Id
+      in: header
+      required: true
+      description: Unique trace identifier for request tracking
+      schema:
+        type: string
+        format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+
+  schemas:
+    StartServiceRequest:
+      type: object
+      description: Request body for starting appointment service
+      required:
+        - consultantId
+      properties:
+        consultantId:
+          type: string
+          minLength: 5
+          maxLength: 50
+          description: Username of the consultant starting the service
+          example: "consultant.smith"
+
+    CompleteAppointmentRequest:
+      type: object
+      description: Optional request body for completion details
+      properties:
+        serviceNotes:
+          type: string
+          maxLength: 1000
+          description: Notes about the service provided
+          example: "Customer opened a new savings account"
+
+    NoShowRequest:
+      type: object
+      description: Optional request body for no-show details
+      properties:
+        notes:
+          type: string
+          maxLength: 500
+          description: Additional notes about the no-show
+          example: "Customer did not arrive after 15 minutes wait"
+
+    AppointmentResponse:
+      type: object
+      description: Detailed appointment information
+      required:
+        - id
+        - slotId
+        - branchId
+        - customerUsername
+        - serviceType
+        - status
+        - reference
+        - dateTime
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique appointment identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        slotId:
+          type: string
+          format: uuid
+          description: Associated slot identifier
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        branchId:
+          type: string
+          description: Branch identifier
+          example: "470010"
+        branchName:
+          type: string
+          description: Branch name
+          example: "Rondebosch"
+          nullable: true
+        branchAddress:
+          type: string
+          description: Branch full address
+          example: "Shop G21, Cnr Main & Belmont Road, Fountain Centre, Rondebosch, 7700"
+          nullable: true
+        customerUsername:
+          type: string
+          description: Customer username
+          example: "john.doe123"
+        serviceType:
+          type: string
+          description: Type of service requested
+          example: "Account Opening"
+        status:
+          $ref: '#/components/schemas/AppointmentStatus'
+        reference:
+          type: string
+          pattern: "^APT-\\d{4}-\\d{7}$"
+          description: Human-readable appointment reference
+          example: "APT-2026-0000001"
+        dateTime:
+          type: string
+          format: date-time
+          description: Appointment date and time
+          example: "2026-01-28T10:00:00"
+        createdAt:
+          type: string
+          format: date-time
+          description: When the appointment was created
+          example: "2026-01-20T15:30:00"
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the appointment was last updated
+          example: "2026-01-20T15:30:00"
+        checkedInAt:
+          type: string
+          format: date-time
+          description: When the customer checked in
+          example: "2026-01-28T09:55:00"
+          nullable: true
+        inProgressAt:
+          type: string
+          format: date-time
+          description: When the service started
+          example: "2026-01-28T10:02:00"
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          description: When the service was completed
+          example: "2026-01-28T10:45:00"
+          nullable: true
+        terminatedAt:
+          type: string
+          format: date-time
+          description: When the appointment was terminated (cancelled/no-show)
+          example: "2026-01-28T10:15:00"
+          nullable: true
+        terminatedBy:
+          type: string
+          description: Username of who terminated the appointment
+          example: "staff.jones"
+          nullable: true
+        terminationReason:
+          $ref: '#/components/schemas/AppointmentTerminationReason'
+        terminationNotes:
+          type: string
+          description: Notes about the termination
+          maxLength: 500
+          example: "Customer requested cancellation"
+          nullable: true
+        assignedConsultantId:
+          type: string
+          description: Username of the assigned consultant
+          example: "consultant.smith"
+          nullable: true
+        serviceNotes:
+          type: string
+          description: Notes about the service provided
+          maxLength: 1000
+          example: "Opened savings account, issued debit card"
+          nullable: true
+        previousSlotId:
+          type: string
+          format: uuid
+          description: Previous slot ID if rescheduled
+          example: "550e8400-e29b-41d4-a716-446655440002"
+          nullable: true
+        rescheduleCount:
+          type: integer
+          minimum: 0
+          maximum: 3
+          description: Number of times the appointment has been rescheduled
+          example: 1
+
+    AppointmentsResponse:
+      type: object
+      description: Response containing list of appointments
+      required:
+        - appointments
+        - totalCount
+      properties:
+        appointments:
+          type: array
+          description: List of appointments
+          items:
+            $ref: '#/components/schemas/AppointmentResponse'
+        totalCount:
+          type: integer
+          description: Total number of appointments
+          example: 5
+
+    AppointmentStatus:
+      type: string
+      description: Current status of the appointment
+      enum:
+        - BOOKED
+        - CHECKED_IN
+        - IN_PROGRESS
+        - COMPLETED
+        - CANCELLED
+        - NO_SHOW
+      example: BOOKED
+
+    AppointmentTerminationReason:
+      type: string
+      description: Reason for appointment termination
+      enum:
+        - CUSTOMER_CANCELLATION
+        - CUSTOMER_NO_SHOW
+        - STAFF_CANCELLATION
+        - CUSTOMER_RESCHEDULED
+      example: CUSTOMER_NO_SHOW
+      nullable: true
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the error occurred
+          example: "2026-01-28T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid appointment status for this operation"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/staff/appointments/550e8400-e29b-41d4-a716-446655440000/start"
+        traceId:
+          type: string
+          description: Trace ID for error tracking
+          example: "550e8400-e29b-41d4-a716-446655440000"

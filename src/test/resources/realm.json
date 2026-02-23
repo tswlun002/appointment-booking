@@ -1,0 +1,240 @@
+{
+  "realm": "appointment-booking-DEV",
+  "enabled": true,
+  "rememberMe": true,
+  "verifyEmail": true,
+  "loginWithEmailAllowed": true,
+  "registrationEmailAsUsername": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": true,
+  "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 604800,
+  "ssoSessionMaxLifespan": 1209600,
+  "refreshTokenMaxReuse": 0,
+  "eventsEnabled": true,
+  "adminEventsEnabled": true,
+  "registrationAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "eventsListeners": [
+    "jboss-logging",
+    "custom-username-generator-listener"
+  ],
+  "enabledEventTypes": [
+    "REGISTER",
+    "LOGIN",
+    "UPDATE_PROFILE",
+    "DELETE_ACCOUNT"
+  ],
+  "smtpServer": {
+    "host": "smtp.gmail.com",
+    "port": "587",
+    "from": "1iu@gmail.com",
+    "starttls": "true",
+    "auth": "true",
+    "user": "8t@gmail.com",
+    "password": "@Ts"
+  },
+  "requiredActions": [
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
+      "enabled": true,
+      "defaultAction": true,
+      "priority": 50,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 30,
+      "config": {}
+    },
+    {
+      "alias": "delete_account",
+      "name": "Delete Account",
+      "providerId": "delete_account",
+      "enabled": true,
+      "defaultAction": false,
+      "priority": 60,
+      "config": {}
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "appointment-booking",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "secret": "37B9EoUIVcDGxJexxDBuVismiDy53uMd",
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": true,
+      "publicClient": false,
+      "attributes": {
+        "standard.token.exchange.enabled": "true"
+      },
+      "redirectUris": [
+        "http://users-service:8081/*"
+      ],
+      "defaultClientScopes": [
+        "openid","email","profile","roles"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Admin role"
+      },
+      {
+        "name": "manage-users",
+        "description": "Manage users role"
+      },
+      {
+        "name": "view-users",
+        "description": "View users role"
+      },
+      {
+        "name": "manage-clients",
+        "description": "Manage clients role"
+      },
+      {
+        "name": "view-clients",
+        "description": "View clients role"
+      },
+      {
+        "name": "manage-realm-user-profile",
+        "description": "Manage realm user profile"
+      }
+    ],
+    "client":{
+      "appointment-booking": [
+        {
+          "name": "app_user",
+          "description": "Allow user to create appointment"
+        },
+        {
+          "name": "app_client",
+          "description": "Indicate user is a client"
+        },
+        {
+          "name": "app_guest",
+          "description": "Indicate user is a guest"
+        },
+        {
+          "name": "app_staff",
+          "description": "Allow to manage appointment group"
+        },
+        {
+          "name": "app_admin",
+          "description": "View performance summary of other appointments"
+        }
+      ]
+    }
+
+  },
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "1998iungatsewu@gmail.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "users",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "admin",
+        "manage-realm",
+        "manage-users",
+        "view-users",
+        "manage-clients",
+        "view-clients",
+        "manage-realm-user-profile"
+      ],
+      "clientRoles": {
+        "realm-management": [
+          "manage-clients", "view-clients",
+          "query-clients","manage-users",
+          "manage-realm-user-profile","view-users",
+          "manage-realm","view-realm",
+          "query-groups","query-users",
+          "query-clients","manage-groups",
+          "realm-admin","query-realms",
+          "token-exchange", "exchange",
+          "impersonation"
+        ],
+        "appointment-booking": [
+          "app_user",
+          "app_client",
+          "app_guest",
+          "app_staff",
+          "app_admin"
+
+        ]
+      }
+    },
+    {
+      "username": "service-account-appointment-booking",
+      "enabled": true,
+      "serviceAccountClientId": "appointment-booking",
+      "clientRoles": {
+        "realm-management": [
+          "manage-clients",
+          "view-clients",
+          "query-clients",
+          "manage-users",
+          "manage-realm-user-profile",
+          "view-users",
+          "manage-realm",
+          "view-realm",
+          "query-groups",
+          "query-users",
+          "manage-groups",
+          "realm-admin",
+          "query-realms",
+          "token-exchange",
+          "exchange",
+          "impersonation"
+
+        ]
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "USER_CLIENT",
+      "clientRoles": {
+        "appointment-booking": [
+          "app_user",
+          "app_client"
+        ]
+      }
+    },
+    {
+      "name": "USER_GUEST",
+      "clientRoles": {
+        "appointment-booking": [
+          "app_user",
+          "app_guest"
+        ]
+      }
+    },
+    {
+      "name": "ADMIN",
+      "clientRoles": {
+        "appointment-booking": [
+          "app_admin"
+        ]
+      }
+    }
+  ]
+}

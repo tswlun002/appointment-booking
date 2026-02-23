@@ -1,0 +1,274 @@
+package capitec.branch.appointment.user.app;
+
+import capitec.branch.appointment.exeption.OTPExpiredException;
+import capitec.branch.appointment.user.app.dto.ChangePasswordDTO;
+import capitec.branch.appointment.user.app.dto.PasswordResetDTO;
+import capitec.branch.appointment.user.app.event.PasswordResetRequestEvent;
+import capitec.branch.appointment.user.app.event.PasswordUpdatedEvent;
+import capitec.branch.appointment.user.app.port.OtpValidationPort;
+import capitec.branch.appointment.user.app.port.UserPersistencePort;
+import capitec.branch.appointment.user.app.port.UserQueryPort;
+import capitec.branch.appointment.user.domain.User;
+import capitec.branch.appointment.user.domain.UserDomainException;
+import capitec.branch.appointment.user.domain.UserPasswordService;
+import capitec.branch.appointment.utils.UseCase;
+import capitec.branch.appointment.utils.CustomerEmail;
+import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitPurpose;
+import capitec.branch.appointment.sharekernel.ratelimit.domain.RateLimitService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.Objects;
+
+@Slf4j
+@UseCase
+@RequiredArgsConstructor
+@Validated
+public class PasswordResetUseCase {
+
+    private final UserPersistencePort userPersistencePort;
+    private final UserQueryPort userQueryPort;
+    private final UserPasswordService userPasswordService;
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final OtpValidationPort otpValidationPort;
+    private final RateLimitService rateLimitService;
+
+    @Value("${rate-limit.otp-resend.max-attempts:5}")
+    private int maxAttempts;
+
+    @Value("${rate-limit.otp-resend.window-minutes:60}")
+    private int windowMinutes;
+
+    @Value("${rate-limit.otp-resend.cooldown-seconds:60}")
+    private int cooldownSeconds;
+
+    public void passwordResetRequest(@CustomerEmail String email, String traceId) {
+        log.info("Password reset requested. email: {}, traceId: {}", email, traceId);
+
+        User user = findUserByEmailOrThrow(email, traceId);
+        publishPasswordResetRequestEvent(user, traceId);
+
+        log.info("Password reset request event issued. username: {}, traceId: {}", user.getUsername(), traceId);
+    }
+
+    public boolean passwordChangeRequest(String username, String password, String traceId) {
+        log.info("Password change requested. username: {}, traceId: {}", username, traceId);
+
+        User user = findUserByUsernameOrThrow(username, traceId);
+        boolean isVerified = userPersistencePort.verifyUserCurrentPassword(username, password, traceId);
+
+        if (isVerified) {
+            publishPasswordResetRequestEvent(user, traceId);
+            log.info("Password change request event issued. username: {}, traceId: {}", username, traceId);
+        } else {
+            log.warn("Password verification failed. username: {}, traceId: {}", username, traceId);
+        }
+
+        return isVerified;
+    }
+
+    public void passwordReset(@Valid PasswordResetDTO passwordResetDTO, String traceId) {
+
+        if(!Objects.equals(passwordResetDTO.confirmPassword(),passwordResetDTO.newPassword())){
+            log.info("New password does not match with confirm password, traceId: {}", traceId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Password do not match");
+        }
+
+        User user = findUserByEmailOrThrow(passwordResetDTO.email(), traceId);
+
+        try {
+            log.info("Password reset initiated. email: {}, traceId: {}", passwordResetDTO.email(), traceId);
+
+
+            validateOtpOrThrow(user, passwordResetDTO.OTP(), traceId);
+            resetRateLimit(user.getUsername());
+            updatePasswordOrThrow(user, passwordResetDTO.newPassword(), traceId);
+            publishPasswordUpdatedEvent(user, passwordResetDTO.OTP(), traceId);
+
+            log.info("Password reset completed. username: {}, traceId: {}", user.getUsername(), traceId);
+
+        } catch (IllegalArgumentException | IllegalStateException e) {
+
+            log.warn("Validation failed. email: {}, traceId: {}, error: {}", user.getUsername(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (UserDomainException e) {
+
+            publishPasswordResetRequestEvent(user, traceId);
+            log.error("User domain error. username: {}, traceId: {}, error: {}", user.getUsername(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to updated password , new otp sent to email. Please try again", e);
+
+        } catch (ResponseStatusException e) {
+            throw e;
+        }
+        catch (Exception e) {
+
+            log.error("Failed to reset user password. username: {}, traceId: {}, error: {}",  traceId, e.getMessage());
+
+            log.info("Issue new otp for user for a failed to change password");
+            publishPasswordResetRequestEvent(user, traceId);
+
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Failed to updated password , new otp sent to email. Please try again", e);
+        }
+    }
+
+    public void passwordChange(@Valid ChangePasswordDTO changePasswordDTO, String traceId) {
+
+        User user = findUserByUsernameOrThrow(changePasswordDTO.username(), traceId);
+
+        try {
+            log.info("Password change initiated. username: {}, traceId: {}", changePasswordDTO.username(), traceId);
+
+            validateOtpOrThrow(user, changePasswordDTO.OTP(), traceId);
+            resetRateLimit(user.getUsername());
+            updatePasswordOrThrow(user, changePasswordDTO.newPassword(), traceId);
+            publishPasswordUpdatedEvent(user, changePasswordDTO.OTP(), traceId);
+
+            log.info("Password change completed. username: {}, traceId: {}", user.getUsername(), traceId);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Validation failed. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (UserDomainException e) {
+            publishPasswordResetRequestEvent(user, traceId);
+            log.error("User domain error. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to updated password , new otp sent to email. Please try again", e);
+        } catch (ResponseStatusException e) {
+            throw e;
+        }
+        catch (Exception e) {
+
+            log.error("Failed to reset user password. username: {}, traceId: {}, error: {}", changePasswordDTO.username(), traceId, e.getMessage());
+
+            log.info("Issue new otp for user for a failed password reset");
+            publishPasswordResetRequestEvent(user, traceId);
+
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"Failed to updated password , new otp sent to email. Please try again", e);
+        }
+    }
+
+
+    private User findUserByEmailOrThrow(String email, String traceId) {
+        return userQueryPort.getUserByEmail(email)
+                .orElseThrow(() -> {
+                    log.error("User not found. email: {}, traceId: {}", email, traceId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "User is not found");
+                });
+    }
+
+    private User findUserByUsernameOrThrow(String username, String traceId) {
+        return userQueryPort.getUserByUsername(username)
+                .orElseThrow(() -> {
+                    log.error("User not found. username: {}, traceId: {}", username, traceId);
+                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "User is not found");
+                });
+    }
+
+    private void validateOtpOrThrow(User user, String otp, String traceId) {
+        try {
+            boolean isValid = otpValidationPort.validateOtp(user.getUsername(), otp, traceId);
+
+            if (!isValid) {
+                log.warn("OTP validation failed. username: {}, traceId: {}", user.getUsername(), traceId);
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid OTP code");
+            }
+
+        } catch (OTPExpiredException e) {
+            handleExpiredOtp(user, traceId, e);
+        } catch (ResponseStatusException e) {
+            handleOtpValidationError(user.getUsername(), traceId, e);
+        }
+    }
+
+    private void handleExpiredOtp(User user, String traceId, OTPExpiredException e) {
+        log.warn("OTP expired. username: {}, traceId: {}", user.getUsername(), traceId);
+
+        checkRateLimitOrThrow(user.getUsername(), traceId);
+        recordResendAttempt(user.getUsername());
+        publishPasswordResetRequestEvent(user, traceId);
+
+        log.info("New OTP sent after expiry. username: {}, traceId: {}", user.getUsername(), traceId);
+
+        throw new ResponseStatusException(
+                HttpStatus.GONE,
+                "OTP has expired. A new OTP has been sent to your email.",
+                e
+        );
+    }
+
+    private void handleOtpValidationError(String username, String traceId, ResponseStatusException e) {
+        if (HttpStatus.LOCKED.equals(e.getStatusCode())) {
+            log.error("OTP locked due to too many attempts. Disabling user. username: {}, traceId: {}", username, traceId);
+            userPersistencePort.updateUserStatus(username, false);
+        }
+        throw e;
+    }
+
+    private void updatePasswordOrThrow(User user, String newPassword, String traceId) {
+        // 1. Update password through domain service (validates and updates User domain object)
+        User updatedUser = userPasswordService.changePassword(user, newPassword);
+
+        // 2. Persist the updated user to infrastructure (Keycloak)
+        boolean persisted = userPersistencePort.resetPassword(updatedUser);
+
+        if (!persisted) {
+            log.error("Failed to persist password. username: {}, traceId: {}", user.getUsername(), traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.EXPECTATION_FAILED,
+                    "Failed to update password. Please try again."
+            );
+        }
+    }
+
+    // ==================== Rate Limit Methods ====================
+
+    private void checkRateLimitOrThrow(String username, String traceId) {
+        if (!rateLimitService.isCooldownPassed(username, RateLimitPurpose.OTP_RESEND, cooldownSeconds)) {
+            log.warn("OTP resend cooldown not passed. username: {}, traceId: {}", username, traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_EARLY,
+                    "Please wait few minutes before requesting a new OTP."
+            );
+        }
+
+        if (rateLimitService.isLimitExceeded(username, RateLimitPurpose.OTP_RESEND, maxAttempts, windowMinutes)) {
+            long secondsUntilReset = rateLimitService.find(username, RateLimitPurpose.OTP_RESEND)
+                    .map(rl -> rl.getSecondsUntilReset(windowMinutes))
+                    .orElse(0L);
+            log.warn("OTP resend rate limit exceeded. username: {}, secondsUntilReset: {}, traceId: {}",
+                    username, secondsUntilReset, traceId);
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    String.format("Too many OTP requests. Please try again in %d minutes.", secondsUntilReset / 60 + 1)
+            );
+        }
+    }
+
+    private void recordResendAttempt(String username) {
+        rateLimitService.recordAttempt(username, RateLimitPurpose.OTP_RESEND, windowMinutes);
+    }
+
+    private void resetRateLimit(String username) {
+        rateLimitService.reset(username, RateLimitPurpose.OTP_RESEND);
+    }
+
+    // ==================== Event Publishing Methods ====================
+
+    private void publishPasswordResetRequestEvent(User user, String traceId) {
+        String fullName = user.getFirstname() + " " + user.getLastname();
+        applicationEventPublisher.publishEvent(
+                new PasswordResetRequestEvent(user.getUsername(), user.getEmail(), fullName, traceId)
+        );
+    }
+
+    private void publishPasswordUpdatedEvent(User user, String otp, String traceId) {
+        String fullName = user.getFirstname() + " " + user.getLastname();
+        applicationEventPublisher.publishEvent(
+                new PasswordUpdatedEvent(user.getUsername(), user.getEmail(), fullName, otp, traceId)
+        );
+    }
+}
