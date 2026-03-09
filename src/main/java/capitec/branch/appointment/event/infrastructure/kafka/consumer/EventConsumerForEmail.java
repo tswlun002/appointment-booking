@@ -13,6 +13,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.function.Function;
 
 @Slf4j
@@ -70,8 +71,8 @@ public class EventConsumerForEmail {
 
         String traceId = metadata.traceId();
         log.info("Received confirmation type event, traceId: {}", traceId);
-
-        eventPublisher.publishEvent(eventMapperToEmail.eventToConfirmationEmail(metadata.value(), metadata.topic(), traceId));
+        LocalDateTime dateTime = metadata.publishTime();
+        eventPublisher.publishEvent(eventMapperToEmail.eventToConfirmationEmail(metadata.value(), metadata.topic(),dateTime, traceId));
 
 
     }
@@ -83,7 +84,8 @@ public class EventConsumerForEmail {
         String traceId = metadata.traceId();
         log.info("Received recover confirmation type event, traceId: {}", traceId);
         String originalTopic = getOriginalTopic.apply(metadata);
-        ConfirmationEmail event = eventMapperToEmail.eventToConfirmationEmail(metadata.value(), originalTopic, traceId);
+        LocalDateTime dateTime = metadata.publishTime();
+        ConfirmationEmail event = eventMapperToEmail.eventToConfirmationEmail(metadata.value(), originalTopic,dateTime, traceId);
         eventPublisher.publishEvent(event);
 
     }
