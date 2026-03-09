@@ -27,7 +27,6 @@ public class Appointment {
     protected static final String BOOKING_REF_REGEX = "^APT-\\d{"+BOOKING_REF_YEAR_LENGTH+"}-\\d{"+BOOKING_REF_SEQUENCE_LENGTH+"}$";
     private static final int BOOKING_MAX_REFERENCE_LENGTH = 20;
 
-    // --- Identity and Foreign Keys ---
     @NotNull(message = "Appointment ID cannot be null")
     private final UUID id;
 
@@ -201,9 +200,12 @@ public class Appointment {
             LOGGER.error("Consultant ID is not valid. {}", ValidatorMessages.USERNAME_MESSAGE);
             throw new IllegalArgumentException("Consultant ID is not valid");
         }
-         if(currentTime.isAfter(dateTime.plusMinutes(GRACE_WINDOW_MINUTES))) {
-             LOGGER.error("Start time plus grace window passed. Current time: {}, start+grace period:{}" , currentTime, dateTime.plusMinutes(GRACE_WINDOW_MINUTES));
-             throw   new IllegalArgumentException("Cannot start service, start time plus grace period has passed");
+        if(currentTime == null) {
+            throw new IllegalArgumentException("Current time cannot be null");
+        }
+         if(currentTime.isBefore(dateTime)) {
+             LOGGER.error("Cannot start service before start time. Current time: {}, start time:{}" , currentTime, dateTime);
+             throw   new IllegalArgumentException("Cannot start service before start time");
          }
 
         if (this.status != AppointmentStatus.CHECKED_IN) {
@@ -231,6 +233,13 @@ public class Appointment {
         if (this.status != AppointmentStatus.IN_PROGRESS) {
             LOGGER.error("Cannot complete. Appointment must be in progress. Current status: {}" , this.status);
             throw new IllegalStateException("Cannot complete. Appointment must be in progress.");
+        }
+        if(currentTime == null) {
+            throw new IllegalArgumentException("Current time cannot be null");
+        }
+        if(currentTime.isBefore(dateTime)) {
+            LOGGER.error("Cannot complete service before start time. Current time: {}, start time:{}" , currentTime, dateTime);
+            throw   new IllegalArgumentException("Cannot complete service before start time");
         }
 
         this.status = AppointmentStatus.COMPLETED;
