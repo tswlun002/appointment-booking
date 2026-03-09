@@ -15,7 +15,7 @@ public interface NotificationService {
                     @NotEmpty Set<@CustomerEmail String> recipients,
                     @NotBlank String subject,
                     @NotBlank String emailTemplate,
-                    @NotBlank String traceId) throws MailSenderException;
+                    @NotBlank String traceId);
 
   //  void sendAppointmentEmail(String hostEmail,Set<String> recipientEmail,String bookingConfirmationSubject, String bookingConfirmationBody, String traceId) throws MailSenderException;
 
