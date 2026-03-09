@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -143,6 +144,17 @@ public class AppointmentServiceImpl implements AppointmentService, AppointmentQu
             return appointments.stream().map(appointmentMapper::toDomain).collect(Collectors.toSet());
         } catch (Exception e) {
             log.error("Failed to get unattended appointments from DB.\n", e);
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean checkNoFutureAppointmentForCustomer(String username, LocalDateTime fromDate) {
+        try {
+            return appointmentRepository.checkFutureAppointmentForCustomer(username, fromDate);
+
+        } catch (Exception e) {
+            log.error("Failed to get check user appointments from DB.\n", e);
             throw e;
         }
     }
