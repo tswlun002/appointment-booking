@@ -23,15 +23,15 @@ BEGIN
             branch_id            VARCHAR(36) NOT NULL,
             status               VARCHAR(16) NOT NULL DEFAULT 'AVAILABLE',
             created_at           TIMESTAMP   DEFAULT LOCALTIMESTAMP,
-            last_modified_date   TIMESTAMP   DEFAULT LOCALTIMESTAMP,
-            version              INTEGER     DEFAULT 1,
+            last_modified_date   TIMESTAMP,
+            version              INTEGER,
             CONSTRAINT positive_booking_count CHECK (booking_count >= 0),
             CONSTRAINT positive_max_booking_capacity CHECK (max_booking_capacity >= 0),
-            CONSTRAINT positive_version CHECK (version >= 1),
+            CONSTRAINT positive_version CHECK (version >= 0),
             CONSTRAINT booking_capacity_check CHECK (booking_count <= max_booking_capacity),
             CONSTRAINT start_before_end CHECK (start_time < end_time),
             CONSTRAINT unique_slot_per_branch_day UNIQUE (branch_id, day, start_time, end_time),
-            CONSTRAINT check_day_within_year CHECK (day <= CURRENT_DATE + INTERVAL '365 days')
+            CONSTRAINT check_day_within_year CHECK (day <= CURRENT_DATE + INTERVAL '366 days')
             );
     END IF;
 END $$;
