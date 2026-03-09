@@ -1,8 +1,7 @@
 package capitec.branch.appointment.exeption;
 
-import jakarta.mail.MessagingException;
 
-public class MailSenderException extends MessagingException {
+public class MailSenderException extends RuntimeException {
     public MailSenderException(String s, Exception e) {
         super(s, e);
     }
