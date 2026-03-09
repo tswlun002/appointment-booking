@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -181,4 +182,13 @@ interface AppointmentRepository extends CrudRepository<AppointmentEntity, UUID> 
             @Param("offset") int offset,
             @Param("limit") int limit
     );
+    @Query("""
+    SELECT EXISTS (
+        SELECT 1
+        FROM appointment
+        WHERE customer_username = :username
+        AND date_time >= :fromDate AND status IN ('BOOKED', 'CHECKED_IN', 'IN_PROGRESS')
+    )
+    """)
+    boolean checkFutureAppointmentForCustomer(@Param("username") String username, @Param("fromDate") LocalDateTime fromDate);
 }
