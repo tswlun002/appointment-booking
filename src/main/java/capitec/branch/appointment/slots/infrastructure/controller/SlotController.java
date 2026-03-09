@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -80,6 +81,7 @@ public class SlotController {
 
         List<SlotResponse> slotResponses = slots.stream()
                 .map(this::toResponse)
+                .sorted(Comparator.comparing(SlotResponse::startTime)) // Sort by start time
                 .toList();
 
         log.info("Found {} slots for branch: {}, date: {}, traceId: {}",
@@ -128,6 +130,7 @@ public class SlotController {
                         Map.Entry::getKey,
                         entry -> entry.getValue().stream()
                                 .map(this::toResponse)
+                                .sorted(Comparator.comparing(SlotResponse::startTime))
                                 .toList()
                 ));
 
