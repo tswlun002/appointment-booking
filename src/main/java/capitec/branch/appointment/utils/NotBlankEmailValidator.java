@@ -2,6 +2,7 @@ package capitec.branch.appointment.utils;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.validator.internal.constraintvalidators.AbstractEmailValidator;
 
 /**
@@ -33,19 +34,21 @@ public class NotBlankEmailValidator implements ConstraintValidator<CustomerEmail
 
     @Override
     public boolean isValid(CharSequence value, ConstraintValidatorContext context) {
-        // Check for null
-        if (value == null) {
-            return false;
-        }
-
-        // Check for blank (empty or whitespace only)
-        String stringValue = value.toString();
-        if (stringValue.isBlank()) {
+        if (StringUtils.isBlank(value)) {
             return false;
         }
 
         // Check email format using Hibernate's validator
         return emailFormatValidator.isValid(value, context);
+    }
+
+    public static boolean isValid(CharSequence value) {
+        if (StringUtils.isBlank(value)) {
+            return false;
+        }
+
+        // Check email format using Hibernate's validator
+        return new EmailFormatValidator().isValid(value, null);
     }
 }
 

@@ -9,9 +9,13 @@ import org.apache.commons.lang3.StringUtils;
 public class OTPCodeValidator implements ConstraintValidator<OTPCode, String> {
     @Override
     public boolean isValid(String s, ConstraintValidatorContext constraintValidatorContext) {
-        var value =StringUtils.isNotBlank(s) &&
-                StringUtils.length(s)== OTP.CODE_FIELD_LENGTH;
 
-        return value;
+        return StringUtils.isNotBlank(s) &&
+                StringUtils.length(s)== OTP.CODE_FIELD_LENGTH;
+    }
+    public static boolean isValid(String s) {
+
+        return StringUtils.isNotBlank(s) &&
+                StringUtils.length(s)== OTP.CODE_FIELD_LENGTH;
     }
 }
