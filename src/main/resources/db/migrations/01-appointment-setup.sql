@@ -46,7 +46,7 @@ END $$;
 -- ROLLBACK DROP TABLE appointment
 
 -- changeset Lunga:14a
-CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_booking_action_day_status ON appointment (customer_username, day)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_booking_action_day_status ON appointment (customer_username)
     WHERE status IN ('BOOKED', 'CHECKED_IN', 'IN_PROGRESS');
 -- ROLLBACK DROP INDEX idx_unique_booking_action_day_status;
 
