@@ -132,7 +132,7 @@ public class UpdateSlotStatusUseCase {
                 throw  new ResponseStatusException(HttpStatus.CONFLICT, "Slot is fully booked.",ex);
             }
             catch (IllegalStateException | IllegalArgumentException ex) {
-                log.warn("Slot with id: {} is not booked", slotId, ex);
+                log.warn("Slot with id: {} is not updated", slotId, ex);
                 throw  new  ResponseStatusException(HttpStatus.BAD_REQUEST, ex.getMessage(), ex);
             }
             catch (Exception e) {
