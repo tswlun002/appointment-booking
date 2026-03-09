@@ -6,26 +6,23 @@ import capitec.branch.appointment.notification.domain.ConfirmationEmail;
 import capitec.branch.appointment.notification.domain.Notification;
 import capitec.branch.appointment.notification.domain.NotificationService;
 import capitec.branch.appointment.notification.domain.OTPEmail;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
-import org.springframework.validation.annotation.Validated;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Set;
 
 @Slf4j
-@Validated
 @Service
 @RequiredArgsConstructor
-public class EmailSendUseCase {
+public class SendUserEmailUseCase {
     @Value("${otp.expire.datetime}")
     private long expireDatetime;
     @Value("${otp.expire.chron-units}")
@@ -53,14 +50,21 @@ public class EmailSendUseCase {
     private String supportEmail;
 
     @EventListener(OTPEmail.class)
-    public void sendOTPEmail(@Valid OTPEmail event) throws MailSenderException {
+    public void sendOTPEmail( OTPEmail event)  {
         try {
             log.debug("Event:{}", event);
 
             log.info("Sending OTP email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
             String subject = getSubject(event.eventType());
-            String body = buildEmailBody(event.eventType(), event.fullname(), event.OTPCode());
+
+            var metadata = Map.of(
+                    "otpCode", event.OTPCode(),
+                    "expireDatetime", String.valueOf(expireDatetime),
+                    "expireTimeUnits", chronUnits.name()
+            );
+
+            String body = buildEmailBody(event.eventType(), event.fullname(), metadata);
             log.debug("Body:{}", body);
             notificationService.sendEmail(hostEmail, Set.of(event.email()), subject, body, event.traceId());
 
@@ -72,11 +76,14 @@ public class EmailSendUseCase {
     }
 
     @EventListener(ConfirmationEmail.class)
-    public void sendConfirmationEmail(@Valid ConfirmationEmail event) throws MailSenderException {
+    public void sendConfirmationEmail( ConfirmationEmail event) throws MailSenderException {
         log.info("Sending confirmation email. eventType: {}, traceId: {}", event.eventType(), event.traceId());
 
         String subject = getSubject(event.eventType());
-        String body = buildEmailBody(event.eventType(), event.fullname(), null);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm");
+        var metadata = Map.of("passwordResetedDateTime", event.createdAt().format(dateTimeFormatter));
+
+        String body = buildEmailBody(event.eventType(), event.fullname(), metadata);
         notificationService.sendEmail(hostEmail, Set.of(event.email()), subject, body, event.traceId());
 
         log.info("Confirmation email sent successfully. traceId: {}", event.traceId());
@@ -90,19 +97,16 @@ public class EmailSendUseCase {
         return subject;
     }
 
-    private String buildEmailBody(Notification.UserEventType eventType, String fullname, String otpCode) {
+    private String buildEmailBody(Notification.UserEventType eventType, String fullname, Map<String, String> otherValuesToParse) {
         Context context = new Context();
         context.setVariable("eventType", eventType.name());
         context.setVariable("fullname", fullname);
         context.setVariable("subject", getSubject(eventType));
         context.setVariable("supportEmail", supportEmail);
 
-        if (otpCode != null) {
-            context.setVariable("otpCode", otpCode);
-            context.setVariable("expireDatetime", expireDatetime);
-            context.setVariable("expireTimeUnits", chronUnits.name());
-        }
+        otherValuesToParse.forEach(context::setVariable);
 
+        log.debug("Context data: {}", context.getVariableNames().stream().map(n->n+":"+context.getVariable(n)).toList());
         return templateEngine.process(USER_NOTIFICATION_TEMPLATE, context);
     }
 }
