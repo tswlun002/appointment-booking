@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Map;
 
@@ -28,7 +29,8 @@ public interface EventMapperToEmail {
     @Mapping(source = "event.email", target = "email")
     @Mapping(source = "traceId", target = "traceId")
     @Mapping(source = "topic", target = "eventType",qualifiedByName = "topicToEventType")
-    ConfirmationEmail eventToConfirmationEmail(OTPMetadata event, String topic, String traceId);
+    @Mapping(source = "createdAt", target = "createdAt")
+    ConfirmationEmail eventToConfirmationEmail(OTPMetadata event, String topic, LocalDateTime createdAt, String traceId);
 
     //---------------------------------------Appointment Email---------------------------------------
     @Mapping(target = "fullname", ignore = true)
