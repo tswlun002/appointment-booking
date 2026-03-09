@@ -95,7 +95,8 @@ class UpdateSlotStatusUseCaseTest extends SlotTestBase {
         // If your SlotEntity uses 'int version', this should pass if persistence works.
         assertThat(updatedSlot.getVersion())
                 .as("Slot version should be updated")
-                .isGreaterThan(beforeSlot.getVersion());
+                .isGreaterThan(beforeSlot.getVersion())
+                .isEqualTo(2);
     }
     @Test
     void execute_WhenMultipleBookAction_UntilSlotIsBook_Successfully() {
