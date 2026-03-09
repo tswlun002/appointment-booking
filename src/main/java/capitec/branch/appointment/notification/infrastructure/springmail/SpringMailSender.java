@@ -36,7 +36,7 @@ public class SpringMailSender implements NotificationService {
             @NotEmpty Set<@CustomerEmail String> recipients,
             @NotBlank String subject,
             @NotBlank String emailTemplate,
-            @NotBlank String traceId) throws MailSenderException {
+            @NotBlank String traceId) {
 
         log.info("Sending email. subject: {}, recipients: {}, traceId: {}", subject, recipients.size(), traceId);
 
