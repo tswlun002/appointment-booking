@@ -95,14 +95,19 @@ public class BookAppointmentUseCase {
     @Transactional
     public Appointment execute(@Valid AppointmentDTO appointmentDTO){
 
-
+       if(appointmentService.checkNoFutureAppointmentForCustomer(appointmentDTO.customerUsername(),LocalDateTime.now())){
+              log.error("User already have existing booked appointment,customer {}", appointmentDTO.customerUsername());
+              throw new ResponseStatusException(HttpStatus.CONFLICT, "User already have existing booked appointment.");
+       };
         LocalDateTime dateTime = appointmentDTO.day().atTime(appointmentDTO.startTime());
-        var appointment = new Appointment(appointmentDTO.slotId(), appointmentDTO.branchId(), appointmentDTO.customerUsername(),
-                appointmentDTO.serviceType(), dateTime);
 
-        log.debug("Book appointment created: {}", appointment);
-
+        Appointment appointment=null;
         try {
+
+           appointment = new Appointment(appointmentDTO.slotId(), appointmentDTO.branchId(), appointmentDTO.customerUsername(),
+                    appointmentDTO.serviceType(), dateTime);
+            log.debug("Book appointment created: {}", appointment);
+
             updateSlotStatePort.reserve(appointmentDTO.slotId(), LocalDateTime.now());
             appointment= appointmentService.book(appointment);
 
