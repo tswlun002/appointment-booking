@@ -17,6 +17,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Use case for handling customer-initiated appointment updates.
@@ -96,14 +97,20 @@ public class CustomerUpdateAppointmentUseCase {
     @Transactional
     public Appointment execute(CustomerUpdateAppointmentAction action) {
 
-        var appointmentId = action.getId();
-        Appointment appointment = appointmentQueryPort.findById(appointmentId).orElseThrow(() -> {
-                    log.error("Appointment not found. Appointment id {}", appointmentId);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found.");
-                });
-        var previousState = appointment.getStatus();
+
+        AppointmentStatus previousState;
+        UUID appointmentId =null;
+        Appointment appointment;
 
         try {
+
+            appointmentId = action.getId();
+            UUID finalAppointmentId = appointmentId;
+            appointment = appointmentQueryPort.findById(appointmentId).orElseThrow(() -> {
+                log.error("Appointment not found. Appointment id {}", finalAppointmentId);
+                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found.");
+            });
+             previousState = appointment.getStatus();
 
             LocalDateTime now = LocalDateTime.now();
 

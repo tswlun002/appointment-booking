@@ -25,10 +25,18 @@ public class GetAppointmentUseCase {
     public Appointment execute(@Valid GetAppointmentByIdQuery query) {
         log.info("Fetching appointment by ID: {}", query.appointmentId());
 
-        return appointmentQueryPort.findById(query.appointmentId())
-                .orElseThrow(() -> {
-                    log.warn("Appointment not found: {}", query.appointmentId());
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found");
-                });
+        try {
+            return appointmentQueryPort.findById(query.appointmentId())
+                    .orElseThrow(() -> {
+                        log.info("Appointment not found: {}", query.appointmentId());
+                        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found");
+                    });
+        } catch (ResponseStatusException e) {
+            throw e;
+        }
+        catch (Exception e) {
+            log.error("Failed to get appointment by ID: {}", query.appointmentId(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to retrieve customer appointment", e);
+        }
     }
 }
