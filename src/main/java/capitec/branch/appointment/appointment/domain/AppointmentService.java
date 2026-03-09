@@ -1,8 +1,10 @@
 package capitec.branch.appointment.appointment.domain;
 
+import capitec.branch.appointment.utils.Username;
 import jakarta.validation.Valid;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,4 +33,6 @@ public interface AppointmentService {
      * Business rule: Get unattended appointments for marking as no-show.
      */
     Collection<Appointment> getUnAttendedAppointments(LocalDate appointmentDate, UUID lastProcessedId, int limit);
+
+    boolean checkNoFutureAppointmentForCustomer(@Username String username, LocalDateTime fromDate);
 }
