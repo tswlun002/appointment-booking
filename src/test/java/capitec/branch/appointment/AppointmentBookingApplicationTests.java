@@ -15,19 +15,14 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.awaitility.Awaitility.await;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 @Slf4j
 @SpringBootTest(properties = "spring.profiles.active=test", webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -261,7 +256,7 @@ public class AppointmentBookingApplicationTests {
 
             // Mock Nager server
             //wiremockNagerServer.start();
-            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
+            //await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
             registry.add("holidays-client.baseurl", () ->
                     String.format("http://%s:%d",
                             wiremockContainer.getHost(),
@@ -269,7 +264,7 @@ public class AppointmentBookingApplicationTests {
 
             // Capitec Branch Locator API (uses same WireMock server as client-domain)
             //wiremockClientDomainServer.start();
-            await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
+            //await().atMost(Duration.ofMinutes(2)).until(() -> wiremockContainer.isRunning());
             registry.add("capitec.branch-locator-api.url", () ->
                     String.format("http://%s:%d/branches",
                             wiremockContainer.getHost(),
