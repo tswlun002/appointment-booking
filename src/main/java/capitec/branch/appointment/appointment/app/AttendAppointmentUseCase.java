@@ -98,18 +98,26 @@ public class AttendAppointmentUseCase {
 
     @Transactional
     public Appointment execute(AttendingAppointmentStateTransitionAction action) {
-        Appointment appointment = resolveAppointment(action);
-        AppointmentStatus previousStatus = appointment.getStatus();
 
-        action.execute(appointment, LocalDateTime.now());
+
+        AppointmentStatus previousStatus;
+        Appointment appointment=null;
 
         try {
+
+             appointment = resolveAppointment(action);
+            previousStatus = appointment.getStatus();
+            action.execute(appointment, LocalDateTime.now());
+
             appointment = appointmentService.update(appointment);
 
         }
         catch (IllegalStateException  | IllegalArgumentException e){
             log.error("Illegal state/argument exception. Appointment id {}", appointment.getId(), e);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(),e);
+        } catch (ResponseStatusException e) {
+            log.info("error: ",e);
+            throw e;
         }
         catch (OptimisticLockConflictException e) {
             log.warn("Concurrent modification detected for appointment: {}", appointment.getId());
