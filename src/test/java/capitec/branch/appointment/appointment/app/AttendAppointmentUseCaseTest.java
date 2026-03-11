@@ -184,7 +184,9 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             attendAppointmentUseCase.execute(action);
 
             assertThatThrownBy(() -> attendAppointmentUseCase.execute(action))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Cannot check in. Appointment must be booked.");
         }
     }
 
@@ -204,11 +206,12 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should start service successfully and publish event")
-        void shouldStartServiceSuccessfully()  {
+        void shouldStartServiceSuccessfully() throws InterruptedException {
             var action = new AttendingAppointmentStateTransitionAction.StartService(
                     bookedAppointment.getId(),
                     staffUsername
             );
+            Thread.sleep(Duration.ofSeconds(5).toMillis()); // Ensure different timestamp for events
 
             attendAppointmentUseCase.execute(action);
 
@@ -267,7 +270,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             );
 
             assertThatThrownBy(() -> attendAppointmentUseCase.execute(action))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(ResponseStatusException.class);
         }
     }
 
@@ -276,7 +279,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
     class CompleteAppointmentTests {
 
         @BeforeEach
-        void startServiceFirst() {
+        void startServiceFirst() throws InterruptedException {
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
                     bookedAppointment.getBranchId(),
                     bookedAppointment.getDateTime().toLocalDate(),
@@ -288,6 +291,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                     bookedAppointment.getId(),
                     staffUsername
             );
+            Thread.sleep(Duration.ofSeconds(5).toMillis()); // Ensure different timestamp for events
+
             attendAppointmentUseCase.execute(startService);
         }
 
@@ -414,7 +419,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should throw exception when cancelling COMPLETED appointment")
-        void shouldThrowWhenCancellingCompleted() {
+        void shouldThrowWhenCancellingCompleted() throws InterruptedException {
             // Complete the appointment first
             var checkIn = new AttendingAppointmentStateTransitionAction.CheckIn(
                     bookedAppointment.getBranchId(),
@@ -422,11 +427,11 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                     customer.getUsername()
             );
             attendAppointmentUseCase.execute(checkIn);
-
             var startService = new AttendingAppointmentStateTransitionAction.StartService(
                     bookedAppointment.getId(),
                     staffUsername
             );
+            Thread.sleep(Duration.ofSeconds(5).toMillis()); // Ensure different timestamp for events
             attendAppointmentUseCase.execute(startService);
 
             var complete = new AttendingAppointmentStateTransitionAction.CompleteAttendingAppointment(
@@ -442,7 +447,9 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             );
 
             assertThatThrownBy(() -> attendAppointmentUseCase.execute(cancelAction))
-                    .isInstanceOf(IllegalStateException.class);
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Only BOOKED, CHECKED_IN, or IN_PROGRESS appointments can be cancelled by staff.");
         }
 
         @Test
@@ -455,7 +462,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             );
 
             assertThatThrownBy(() -> attendAppointmentUseCase.execute(action))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(ResponseStatusException.class)
+                    .hasCauseInstanceOf(IllegalArgumentException.class);
         }
     }
 
@@ -465,7 +473,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
 
         @Test
         @DisplayName("Should complete full appointment lifecycle: BOOKED → CHECKED_IN → IN_PROGRESS → COMPLETED")
-        void shouldCompleteFullLifecycle() {
+        void shouldCompleteFullLifecycle() throws InterruptedException {
             // Initial state
             assertThat(bookedAppointment.getStatus()).isEqualTo(BOOKED);
 
@@ -479,6 +487,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
             );
             Appointment afterCheckIn = appointmentQueryPort.findById(bookedAppointment.getId()).orElseThrow();
             assertThat(afterCheckIn.getStatus()).isEqualTo(CHECKED_IN);
+            Thread.sleep(Duration.ofSeconds(5).toMillis()); // Ensure different timestamp for events
 
             // Start service
             attendAppointmentUseCase.execute(

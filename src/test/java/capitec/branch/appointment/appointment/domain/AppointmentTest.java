@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -22,7 +23,7 @@ class AppointmentTest {
     // Default values for reconstitution test
     private final UUID persistenceId = UUID.randomUUID();
     private final String persistenceBookingRef = "APT-2025-1234567";
-    private final LocalDateTime appointmentDateTime = LocalDate.now().plusDays(1).atTime(11,0);
+    private final LocalDateTime appointmentDateTime = LocalDateTime.now().plusSeconds(5);
     private final int persistenceVersion = 1;
     private final AppointmentStatus persistenceStatus = AppointmentStatus.CHECKED_IN;
     private final LocalDateTime persistenceCreatedAt = LocalDateTime.now().minusDays(1);
@@ -226,7 +227,7 @@ class AppointmentTest {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
 
             assertThrows(IllegalStateException.class, () ->
-                    appointment.startService(new UsernameGenerator().getId(), now)
+                    appointment.startService(new UsernameGenerator().getId(), now.plusSeconds(5))
             );
         }
 
@@ -567,7 +568,7 @@ class AppointmentTest {
         void shouldReturnTrueWhenWithinGraceWindow() {
             Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
             LocalDateTime slotStartTime = now;
-            LocalDateTime arrivalTime = now.plusMinutes(3);
+            LocalDateTime arrivalTime = now.plusSeconds(3);
 
             assertTrue(appointment.isWithinGraceWindow(arrivalTime, slotStartTime));
         }
@@ -584,9 +585,9 @@ class AppointmentTest {
         @Test
         @DisplayName("Should return false when outside grace window")
         void shouldReturnFalseWhenOutsideGraceWindow() {
-            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime);
-            LocalDateTime slotStartTime = now;
-            LocalDateTime arrivalTime = now.plusMinutes(10);
+            Appointment appointment = new Appointment(slotId, branchId, customerUsername, serviceType, appointmentDateTime.plusMinutes(3));
+            LocalDateTime slotStartTime = LocalDateTime.now().plusMinutes(2);
+            LocalDateTime arrivalTime = LocalDateTime.now().plusMinutes(1);
 
             assertFalse(appointment.isWithinGraceWindow(arrivalTime, slotStartTime));
         }

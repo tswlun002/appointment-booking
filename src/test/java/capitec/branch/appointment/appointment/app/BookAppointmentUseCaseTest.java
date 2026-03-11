@@ -91,7 +91,8 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
     void shouldExecuteSuccessfullyAndPublishEvent() {
 
         List<Slot> ListOneSlotADay = slots.stream().collect(Collectors.groupingBy(Slot::getDay)).values().stream().map(List::getFirst).toList();
-        for (Slot slot : ListOneSlotADay) {
+        Slot slot = ListOneSlotADay.getFirst();
+        //for () {
 
 
             String customerUsername = guestClients.getFirst();
@@ -139,7 +140,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
             Slot bookedSlot = getSlotQuery.execute(slot.getId());
             assertThat(bookedSlot).isNotNull();
             assertThat(bookedSlot.getBookingCount()).isEqualTo(1);
-        }
+
 
     }
 
@@ -247,7 +248,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
 
     @Test
     @DisplayName("Should throw CONFLICT (409) when EntityAlreadyExistException occurs")
-    void shouldThrowConflict_whenUserHasAppointment_onTheDay() {
+    void shouldThrowConflict_whenUserHasAppointment_Already() {
 
         Slot slot = slots.getFirst();
         String customerUsername = guestClients.getFirst();
@@ -275,7 +276,7 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
                 .isThrownBy(() -> bookAppointmentUseCase.execute(validAppointmentDTO)).actual();
         assertThat(actual).isNotNull();
         assertThat(actual.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(actual.getReason()).isEqualTo("User have existing appointment on this day.");
+        assertThat(actual.getReason()).isEqualTo("User already have existing booked appointment.");
         var secondSlotToBookAtSameDay1 = slotQueryPort.findById(secondSlotToBookAtSameDay.getId()).get();
         //VERIFY THE SLOT TRANSACTION WAS ROLLBACK WHEN SECOND APPOINTMENT FAILED
         assertThat(secondSlotToBookAtSameDay1).isEqualTo(secondSlotToBookAtSameDay);

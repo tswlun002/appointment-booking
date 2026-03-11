@@ -27,7 +27,7 @@ class SendUserEmailUseCaseTest  extends AppointmentBookingApplicationTests {
         var passResetEvent = new OTPEmail(
                 "AhmadMiao1@gmail.com",
                 "Ahmad Miao",
-                "#2151bc",
+                "#2151b",
                 "af13dccf-3596-465f-ae5c-c1bdaf256502",
                 Notification.UserEventType.PASSWORD_RESET_REQUEST_EVENT
         );

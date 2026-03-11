@@ -47,6 +47,7 @@ import org.springframework.kafka.test.utils.KafkaTestUtils;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -88,6 +89,8 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     protected SlotCleanupPort slotCleanupPort;
     @Autowired
     private AddBranchAppointmentInfoUseCase addBranchAppointmentInfoUseCase;
+    @Autowired
+    private AddBranchOperationHourOverride addBranchOperationHourOverride;
 
     private WireMock capitecApiWireMock;
 
@@ -112,7 +115,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
         setUpCustomers();
         setUpSlots();
 
-        slots = getNext7DaySlotsQuery.execute(branch.getBranchId(),LocalDate.now().plusDays(1))
+        slots = getNext7DaySlotsQuery.execute(branch.getBranchId(),LocalDate.now())
                 .values().stream().flatMap(List::stream).sorted(Comparator.comparing(Slot::getDay))
                 .collect(Collectors.toList());
     }
@@ -157,7 +160,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     // --- Utility Methods ---
 
     private void setUpSlots(){
-        slotGeneratorScheduler.execute();
+        slotGeneratorScheduler.executeWithRetry(Collections.emptySet(),LocalDate.now(),7);
     }
 
     private void setUpBranch() {
@@ -198,6 +201,14 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         2
                 );
                 addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
+                var dto1 = new BranchOperationHourOverrideDTO(
+                        day.getDate(),
+                        LocalTime.now().plusSeconds(5),
+                        LocalTime.now().plusHours(8).plusSeconds(5),
+                        false,
+                        "Test Override"
+                );
+                addBranchOperationHourOverride.execute(branch.getBranchId(), dto1);
             }
             else if(day.getDate().getDayOfWeek().equals(DayOfWeek.SATURDAY)){
                 BranchAppointmentInfoDTO dto = new BranchAppointmentInfoDTO(
@@ -208,6 +219,14 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
                         2
                 );
                 addBranchAppointmentInfoUseCase.execute(branch.getBranchId(), dto);
+                var dto1 = new BranchOperationHourOverrideDTO(
+                        day.getDate(),
+                        LocalTime.now().plusSeconds(5),
+                        LocalTime.now().plusHours(5).plusSeconds(5),
+                        false,
+                        "Test Override"
+                );
+                addBranchOperationHourOverride.execute(branch.getBranchId(), dto1);
             }
 
         }
