@@ -61,8 +61,7 @@ import capitec.branch.appointment.event.domain.DEAD_LETTER_STATUS;
                 entity.stackTrace(),
                 entity.traceId(),
                 entity.status(),
-                entity.publishTime(),
-                entity.data()
+                entity.publishTime()
         );
     }
 

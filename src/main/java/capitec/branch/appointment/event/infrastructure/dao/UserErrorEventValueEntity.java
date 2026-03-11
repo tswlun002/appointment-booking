@@ -37,14 +37,13 @@ record UserErrorEventValueEntity(
     @Embedded(onEmpty = Embedded.OnEmpty.USE_EMPTY)
     UserEventStatus status,
     @Column("published_time")
-    LocalDateTime publishTime,
-    String data
+    LocalDateTime publishTime
 
     
 ){
     public  UserErrorEventValueEntity (String entityId, UserErrorEventValueEntity entity){
         this(entityId,entity.key(),entity.value(),entity.topic(),entity.partition(),entity.offset(),entity.headers(),
                 entity.retryable(),entity.retryCount(),entity.nextRetryAt(),entity.exception(),entity.exceptionClass(),entity.exceptionCause(),
-                entity.stackTrace(),entity.traceId(),entity.status(),entity.publishTime(),entity.data);
+                entity.stackTrace(),entity.traceId(),entity.status(),entity.publishTime());
     }
 }
