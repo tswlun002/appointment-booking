@@ -275,7 +275,7 @@ components:
         distanceKm:
           type: number
           format: double
-          description: Distance from the search coordinates in kilometers (0 for area search)
+          description: Distance from the search coordinates in kilometers (null for area search)
           example: 1.25
         operationTimes:
           type: object
