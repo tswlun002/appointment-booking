@@ -53,7 +53,7 @@ public class SearchBranchesByAreaUseCase {
 
     private List<NearbyBranchDTO> mapToDto(List<BranchLocation> branches) {
         return branches.stream()
-                .map(branch -> NearbyBranchDTO.from(branch, 0))
+                .map(branch -> NearbyBranchDTO.from(branch, null))
                 .toList();
     }
 }

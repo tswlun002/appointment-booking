@@ -14,16 +14,16 @@ public record NearbyBranchDTO(
         String fullAddress,
         double latitude,
         double longitude,
-        double distanceKm,
+        Double distanceKm,
         Map<LocalDate, OperationTimeDTO> operationTimes,
         boolean businessBankCenter,
         boolean fromNearbyLocation
 ) {
-    public static NearbyBranchDTO from(BranchLocation branch, double distanceKm) {
+    public static NearbyBranchDTO from(BranchLocation branch, Double distanceKm) {
         return from(branch, distanceKm, false);
     }
 
-    public static NearbyBranchDTO from(BranchLocation branch, double distanceKm, boolean fromNearbyLocation) {
+    public static NearbyBranchDTO from(BranchLocation branch, Double distanceKm, boolean fromNearbyLocation) {
         return new NearbyBranchDTO(
                 branch.getBranchId(),
                 branch.getBranchCode(),
