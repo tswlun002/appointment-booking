@@ -31,7 +31,7 @@ public record NearbyBranchDTO(
                 branch.getAddress().getFullAddress(),
                 branch.getCoordinates().latitude(),
                 branch.getCoordinates().longitude(),
-                Math.round(distanceKm * 100.0) / 100.0,
+                distanceKm==null?null:Math.round(distanceKm * 100.0) / 100.0,
                 branch.getDailyOperationTimes().values()
                         .stream()
                         .collect(Collectors.toMap(OperationTime::day,
