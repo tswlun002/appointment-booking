@@ -70,6 +70,8 @@ class BookAppointmentUseCaseTest extends AppointmentTestBase {
                 new DefaultKafkaConsumerFactory<>(consumerProps);
         testConsumer = cf.createConsumer();
         testConsumer.subscribe(List.of(Topics.APPOINTMENT_BOOKED));
+       // wireMockGetHolidayByYearAndCountryCode(""+ LocalDate.now().getYear(), "ZA");
+
     }
     @AfterEach
     void tearDown() {

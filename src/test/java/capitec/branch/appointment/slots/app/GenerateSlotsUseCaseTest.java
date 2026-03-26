@@ -4,6 +4,7 @@ import capitec.branch.appointment.sharekernel.day.app.CheckHolidayQuery;
 import capitec.branch.appointment.sharekernel.day.domain.Day;
 import capitec.branch.appointment.slots.domain.Slot;
 import capitec.branch.appointment.slots.domain.SlotStatus;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -42,7 +43,7 @@ class GenerateSlotsUseCaseTest extends SlotTestBase {
    @Test
     public void testCreateNext7DaySlots_GeneratesCorrectCountsPerDayType() {
 
-        wireMockGetHolidayByYearAndCountryCode(""+LocalDate.now().getYear(), "ZA");
+        wireMockGetHolidayByYearAndCountryCode(capitecWireMock,""+LocalDate.now().getYear(), "ZA");
 
        LocalDate date = LocalDate.now().plusDays(1);
 

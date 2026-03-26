@@ -14,6 +14,7 @@ import capitec.branch.appointment.user.domain.User;
 import capitec.branch.appointment.sharekernel.EventToJSONMapper;
 import capitec.branch.appointment.sharekernel.EventTrigger;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -56,6 +57,8 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
     private User customer;
     private String staffUsername;
     private Consumer<String, String> testConsumer;
+    private WireMock capitecApiWireMock;
+
 
 
 
@@ -65,6 +68,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
         String customerUsername = guestClients.getFirst();
         customer = getUserQuery.execute(new UsernameCommand(customerUsername),UUID.randomUUID().toString());
         staffUsername = staff.getFirst();
+       // wireMockGetHolidayByYearAndCountryCode(""+ LocalDate.now().getYear(), "ZA");
 
         AppointmentDTO dto = new AppointmentDTO(
                 slot.getId(),
@@ -96,6 +100,7 @@ class AttendAppointmentUseCaseTest extends AppointmentTestBase {
                 new DefaultKafkaConsumerFactory<>(consumerProps);
         testConsumer = cf.createConsumer();
         testConsumer.subscribe(List.of(Topics.ATTENDED_APPOINTMENT,Topics.APPOINTMENT_CANCELED));
+
 
     }
     @AfterEach

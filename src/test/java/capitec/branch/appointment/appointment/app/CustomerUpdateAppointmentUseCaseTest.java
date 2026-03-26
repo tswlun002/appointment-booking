@@ -92,6 +92,8 @@ class CustomerUpdateAppointmentUseCaseTest extends AppointmentTestBase {
                 new DefaultKafkaConsumerFactory<>(consumerProps);
         testConsumer = cf.createConsumer();
         testConsumer.subscribe(List.of(Topics.APPOINTMENT_RESCHEDULED,Topics.APPOINTMENT_CANCELED));
+        //wireMockGetHolidayByYearAndCountryCode(""+ LocalDate.now().getYear(), "ZA");
+
 
     }
     @AfterEach

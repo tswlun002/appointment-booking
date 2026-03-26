@@ -108,6 +108,7 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
     private GetNext7DaySlotsQuery getNext7DaySlotsQuery;
 
 
+
     @BeforeEach
     public void setupBase() {
         setUpBranch();
@@ -118,6 +119,9 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
         slots = getNext7DaySlotsQuery.execute(branch.getBranchId(),LocalDate.now())
                 .values().stream().flatMap(List::stream).sorted(Comparator.comparing(Slot::getDay))
                 .collect(Collectors.toList());
+
+
+
     }
 
     @AfterEach
@@ -173,6 +177,8 @@ abstract class AppointmentTestBase extends AppointmentBookingApplicationTests {
 
         // Reset any previous stubs
         capitecApiWireMock.resetMappings();
+        wireMockGetHolidayByYearAndCountryCode(capitecApiWireMock,""+ LocalDate.now().getYear(), "ZA");
+
         stubCapitecApiSuccess(capitecApiWireMock, capitecApiBranchResponse());
         // Reset circuit breaker state before each test
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("branchLocatorCircuitBreaker");

@@ -16,12 +16,12 @@ import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
-import static com.github.tomakehurst.wiremock.client.WireMock.post;
-import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.awaitility.Awaitility.await;
 
 @Slf4j
@@ -294,7 +294,7 @@ public class AppointmentBookingApplicationTests {
                         """, user.getUsername(), user.getFirstname()
                 , user.getLastname(), user.getEmail(), true);
 
-        wireMock.register(WireMock.get(WireMock.urlPathEqualTo("/v1/clients"))
+        wireMock.register(get(WireMock.urlPathEqualTo("/v1/clients"))
                 .withQueryParam("IDNumber",WireMock.equalTo(idNumber))
                 .willReturn(WireMock.aResponse()
                         .withStatus(200)
@@ -302,14 +302,16 @@ public class AppointmentBookingApplicationTests {
                         .withBody(expectedBody)));
     }
 
-    public static   void wireMockGetHolidayByYearAndCountryCode(String year, String countryCode) {
+    public static   void wireMockGetHolidayByYearAndCountryCode(WireMock capitecApiWireMock,String year, String countryCode) {
 
         String uri = String.format("/api/v3/PublicHolidays/%s/%s", year, countryCode);
-        var  wireMock = new WireMock(wiremockContainer.getHost(), wiremockContainer.getFirstMappedPort());
+       // var  wireMock = new WireMock(wiremockContainer.getHost(), wiremockContainer.getFirstMappedPort());
+
+
         String expectedBody = """
                         [
                             {
-                                "date": "2025-01-01",
+                                "date": "_YEAR_-01-01",
                                 "localName": "New Year's Day",
                                 "name": "New Year's Day",
                                 "countryCode": "ZA",
@@ -322,7 +324,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-03-21",
+                                "date": "_YEAR_-03-21",
                                 "localName": "Human Rights Day",
                                 "name": "Human Rights Day",
                                 "countryCode": "ZA",
@@ -335,7 +337,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-04-18",
+                                "date": "_YEAR_-04-18",
                                 "localName": "Good Friday",
                                 "name": "Good Friday",
                                 "countryCode": "ZA",
@@ -348,7 +350,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-04-21",
+                                "date": "_YEAR_-04-21",
                                 "localName": "Family Day",
                                 "name": "Family Day",
                                 "countryCode": "ZA",
@@ -361,7 +363,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-04-28",
+                                "date": "_YEAR_-04-28",
                                 "localName": "Freedom Day",
                                 "name": "Freedom Day",
                                 "countryCode": "ZA",
@@ -374,7 +376,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-05-01",
+                                "date": "_YEAR_-05-01",
                                 "localName": "Workers' Day",
                                 "name": "Workers' Day",
                                 "countryCode": "ZA",
@@ -387,7 +389,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-06-16",
+                                "date": "_YEAR_-06-16",
                                 "localName": "Youth Day",
                                 "name": "Youth Day",
                                 "countryCode": "ZA",
@@ -400,7 +402,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-08-09",
+                                "date": "_YEAR_-08-09",
                                 "localName": "National Women's Day",
                                 "name": "National Women's Day",
                                 "countryCode": "ZA",
@@ -413,7 +415,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-09-24",
+                                "date": "_YEAR_-09-24",
                                 "localName": "Heritage Day",
                                 "name": "Heritage Day",
                                 "countryCode": "ZA",
@@ -426,7 +428,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-12-16",
+                                "date": "_YEAR_-12-16",
                                 "localName": "Day of Reconciliation",
                                 "name": "Day of Reconciliation",
                                 "countryCode": "ZA",
@@ -439,7 +441,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-12-25",
+                                "date": "_YEAR_-12-25",
                                 "localName": "Christmas Day",
                                 "name": "Christmas Day",
                                 "countryCode": "ZA",
@@ -452,7 +454,7 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             },
                             {
-                                "date": "2025-12-26",
+                                "date": "_YEAR_-12-26",
                                 "localName": "St. Stephen's Day",
                                 "name": "Day of Goodwill",
                                 "countryCode": "ZA",
@@ -465,14 +467,24 @@ public class AppointmentBookingApplicationTests {
                                 ]
                             }
                         ]
-                        """;
+                        """.replaceAll("_YEAR_",year);
 
-        wireMock.register(WireMock.get(WireMock.urlPathEqualTo(uri))
-                .willReturn(WireMock.aResponse()
-                        .withStatus(200)
-                        .withHeader("Content-Type", "application/json")
-                        .withBody(expectedBody)));
+//        wireMock.register(get(WireMock.urlPathEqualTo(uri))
+//                .willReturn(WireMock.aResponse()
+//                        .withStatus(200)
+//                        .withHeader("Content-Type", "application/json")
+//                        .withBody(expectedBody)));
+
+        capitecApiWireMock.register(
+                get(urlPathEqualTo(uri))
+                        .willReturn(aResponse()
+                                .withStatus(200)
+                                .withHeader("Content-Type", "application/json")
+                                .withBody(expectedBody))
+        );
     }
+
+
 
 
     @Test

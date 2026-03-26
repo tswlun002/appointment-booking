@@ -54,7 +54,7 @@ abstract class SlotTestBase extends AppointmentBookingApplicationTests {
     protected CacheManager cacheManagerBranches;
     @Autowired
     protected CircuitBreakerRegistry circuitBreakerRegistry;
-    private WireMock capitecWireMock;
+    protected WireMock capitecWireMock;
     @Autowired
     protected GetDateOfNextDaysQuery getDateOfNextDaysQuery;
 

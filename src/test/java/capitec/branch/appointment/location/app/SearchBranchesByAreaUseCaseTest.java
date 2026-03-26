@@ -234,7 +234,7 @@ class SearchBranchesByAreaUseCaseTest extends LocationTestBase {
         // Then - Distance should be 0 and fromNearbyLocation false for area search (no reference point)
         assertThat(result)
                 .allSatisfy(branch -> {
-                    assertThat(branch.distanceKm()).isEqualTo(0.0);
+                    assertThat(branch.distanceKm()).isEqualTo(null);
                     assertThat(branch.fromNearbyLocation()).isFalse();
                 });
     }

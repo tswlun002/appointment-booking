@@ -55,7 +55,7 @@ abstract class BranchTestBase extends AppointmentBookingApplicationTests {
         );
         // Reset any previous stubs
         capitecApiWireMock.resetMappings();
-        wireMockGetHolidayByYearAndCountryCode(""+ LocalDate.now().getYear(), "ZA");
+        wireMockGetHolidayByYearAndCountryCode(capitecApiWireMock,""+ LocalDate.now().getYear(), "ZA");
 
         // Reset circuit breaker state before each test
         CircuitBreaker cb = circuitBreakerRegistry.circuitBreaker("branchLocatorCircuitBreaker");
